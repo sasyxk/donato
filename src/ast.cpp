@@ -1,4 +1,5 @@
 #include "ast.h"
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
@@ -17,6 +18,45 @@ void Return::codegen(llvm::IRBuilder<>& builder) {
     //return retVal; 
 }
 
+
+WhileStm::WhileStm(Expr* c, Statement* w, Statement* nxt) : cond(c), whileExpr(w), next(nxt) {}
+
+void WhileStm::codegen(llvm::IRBuilder<>& builder) {
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* condWhileBB = llvm::BasicBlock::Create(builder.getContext(), "condWhile", func);
+    llvm::BasicBlock* bodyWhileBB = llvm::BasicBlock::Create(builder.getContext(), "bodyWhile", func);
+    llvm::BasicBlock* nextBB = llvm::BasicBlock::Create(builder.getContext(), "mergeWhile", func);
+
+    builder.CreateBr(condWhileBB);
+
+    builder.SetInsertPoint(condWhileBB);
+    llvm::Value* condVal = cond->codegen(builder);
+    //check if the condition is already a boolean value
+    if (!condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf");
+    }
+    builder.CreateCondBr(condVal, bodyWhileBB, nextBB);
+
+    symbolTable.emplace_back();
+
+    builder.SetInsertPoint(bodyWhileBB);
+    whileExpr->codegen(builder);
+    builder.CreateBr(condWhileBB);
+
+    symbolTable.pop_back();
+
+    builder.SetInsertPoint(nextBB);
+    if (next) {
+        next->codegen(builder);
+    }
+    /*else{
+        nextBB->eraseFromParent();
+    }*/
+    //
+}
+
+
 IfStm::IfStm(Expr* c, Statement* t, Statement* e, Statement* nxt) : cond(c), thenExpr(t), elseExpr(e), next(nxt) {}
 
 void IfStm::codegen(llvm::IRBuilder<>& builder) {
@@ -29,7 +69,7 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(builder.getContext(), "then", func);
     llvm::BasicBlock* elseBB = elseExpr ? llvm::BasicBlock::Create(ctx, "else", func) : nullptr;
-    llvm::BasicBlock* mergeBB = mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
 
     llvm::BasicBlock* parentMergeBB = mergeBlockStack.empty() ? nullptr : mergeBlockStack.top();
     mergeBlockStack.push(mergeBB);

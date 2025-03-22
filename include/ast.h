@@ -41,6 +41,15 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
+class WhileStm : public Statement {
+    Expr* cond;
+    Statement* whileExpr;
+    Statement* next;
+public:
+    WhileStm(Expr* c, Statement* w, Statement* nxt = nullptr);
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class IfStm : public Statement {
     Expr* cond;
     Statement* thenExpr;

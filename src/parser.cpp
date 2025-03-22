@@ -24,6 +24,7 @@ Token Tokenizer::nextToken() {
         if (word == "let") return Token(LET);
         if (word == "in") return Token(IN);
         if (word == "var") return Token(DVAR);
+        if (word == "while") return Token(WHILE);
         if (word == "return") return Token(RETURN);
         return Token(VAR, word);
     }
@@ -125,6 +126,23 @@ Statement* Parser::parseStm(){
         }
         Statement* next = parseStm();
         return new IfStm(condLeft,thenStd,elseStd, next);
+    }
+    if (currentToken.type == WHILE){
+        eat(WHILE);
+        eat(LPAREN);
+        Expr* condLeft = parseExpr();
+        if(currentToken.type == CONDOP){
+            std::string op = currentToken.value;
+            eat(CONDOP);
+            Expr* condRight = parseExpr();
+            condLeft = new BinaryCond(op, condLeft,condRight);
+        }
+        eat(RPAREN);
+        eat(LBRACE);
+        Statement* whileStd = parseStm();
+        eat(RBRACE);
+        Statement* next = parseStm();
+        return new WhileStm(condLeft,whileStd,next);
     }
     if (currentToken.type == VAR) {
         std::string var = currentToken.value;
