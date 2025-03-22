@@ -18,7 +18,6 @@ void Return::codegen(llvm::IRBuilder<>& builder) {
     //return retVal; 
 }
 
-
 WhileStm::WhileStm(Expr* c, Statement* w, Statement* nxt) : cond(c), whileExpr(w), next(nxt) {}
 
 void WhileStm::codegen(llvm::IRBuilder<>& builder) {
@@ -55,7 +54,6 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     }*/
     //
 }
-
 
 IfStm::IfStm(Expr* c, Statement* t, Statement* e, Statement* nxt) : cond(c), thenExpr(t), elseExpr(e), next(nxt) {}
 
@@ -198,8 +196,6 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     //return llvm::ConstantFP::get(ctx, llvm::APFloat(0.0));// return 0;
 }
 
-
-
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 
 llvm::Value* BinaryCond::codegen(llvm::IRBuilder<>& builder) {
@@ -278,8 +274,12 @@ llvm::Value* Var::codegen(llvm::IRBuilder<>& builder) {
 IfOp::IfOp(Expr* c, Expr* t, Expr* e) : cond(c), thenExpr(t), elseExpr(e) {}
 
 llvm::Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
+
     llvm::Value* condVal = cond->codegen(builder);
-    condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifcond");
+    //check if the condition is already a boolean value
+    if (!condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf");
+    }
     
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(builder.getContext(), "then", func);

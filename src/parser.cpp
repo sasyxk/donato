@@ -18,21 +18,21 @@ Token Tokenizer::nextToken() {
         size_t start = pos;
         while (pos < input.size() && isalnum(input[pos])) pos++;
         std::string word = input.substr(start, pos - start);
-        if (word == "if") return Token(IF);
-        if (word == "then") return Token(THEN);
-        if (word == "else") return Token(ELSE);
-        if (word == "let") return Token(LET);
-        if (word == "in") return Token(IN);
-        if (word == "var") return Token(DVAR);
-        if (word == "while") return Token(WHILE);
-        if (word == "return") return Token(RETURN);
+        if (word == "if") return Token(IF, word);
+        if (word == "then") return Token(THEN, word);
+        if (word == "else") return Token(ELSE, word);
+        if (word == "let") return Token(LET, word);
+        if (word == "in") return Token(IN, word);
+        if (word == "var") return Token(DVAR, word);
+        if (word == "while") return Token(WHILE, word);
+        if (word == "return") return Token(RETURN, word);
         return Token(VAR, word);
     }
-    if (c == '(') { pos++; return Token(LPAREN); }
-    if (c == ')') { pos++; return Token(RPAREN); }
-    if (c == '{') { pos++; return Token(LBRACE); }
-    if (c == '}') { pos++; return Token(RBRACE); }
-    if (c == ',') { pos++; return Token(COMMA); }
+    if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
+    if (c == ')') { pos++; return Token(RPAREN, std::string(1, c)); }
+    if (c == '{') { pos++; return Token(LBRACE, std::string(1, c)); }
+    if (c == '}') { pos++; return Token(RBRACE, std::string(1, c)); }
+    if (c == ',') { pos++; return Token(COMMA, std::string(1, c)); }
     if (c == '=' || c == '!' || c == '<' || c == '>') {
         if (pos + 1 < input.size()) {
             char next_c = input[pos + 1];
@@ -54,7 +54,7 @@ Token Tokenizer::nextToken() {
         }
     }
 
-    // Comment operator management
+    // Comment operator management /* ... */
     if (c == '/') {
         if (pos + 1 < input.size() && input[pos + 1] == '*') {
             pos += 2;
@@ -76,7 +76,7 @@ Token Tokenizer::nextToken() {
         return Token(OP, std::string(1, c));
     }
 
-    if (c == ';') { pos++; return Token(ENDEXPR); } //to be replaced with a carriage return
+    if (c == ';') { pos++; return Token(ENDEXPR, std::string(1, c)); } //to be replaced with a carriage return
 
     throw std::runtime_error("Unknown token: " + std::string(1, c));
 }
@@ -85,7 +85,7 @@ Parser::Parser(Tokenizer& t) : tokenizer(t), currentToken(t.nextToken()) {}
 
 void Parser::eat(TokenType expected) {
     if (currentToken.type != expected)
-        throw std::runtime_error("Unexpected Token");
+        throw std::runtime_error("Unexpected Token: '" + currentToken.value + "'");
     currentToken = tokenizer.nextToken();
 }
 
@@ -115,7 +115,6 @@ Statement* Parser::parseStm(){
     if(currentToken.type == IF) {
         eat(IF);
         eat(LPAREN);
-        //Expr* cond = parseExpr();   CORETTA
         Expr* condLeft = parseExpr();
         if(currentToken.type == CONDOP){
             std::string op = currentToken.value;
@@ -216,12 +215,26 @@ Expr* Parser::parseFactor() {
     }
     if (currentToken.type == IF) {
         eat(IF);
-        Expr* cond = parseExpr();
+        //Expr* cond = parseExpr();
+        bool isParent = false;
+        if(currentToken.type == LPAREN) {
+            eat(LPAREN);
+            isParent = true;
+        }
+        Expr* condLeft = parseExpr();
+        if(currentToken.type == CONDOP){
+            std::string op = currentToken.value;
+            eat(CONDOP);
+            Expr* condRight = parseExpr();
+            //optional, check 'and' 'or' with while
+            condLeft = new BinaryCond(op, condLeft,condRight);
+        }
+        if(isParent) eat(RPAREN);
         eat(THEN);
         Expr* thenExpr = parseExpr();
         eat(ELSE);
         Expr* elseExpr = parseExpr();
-        return new IfOp(cond, thenExpr, elseExpr);
+        return new IfOp(condLeft, thenExpr, elseExpr);
     }
     if (currentToken.type == LET) {
         eat(LET);
