@@ -32,12 +32,7 @@ Token Tokenizer::nextToken() {
     if (c == ')') { pos++; return Token(RPAREN); }
     if (c == '{') { pos++; return Token(LBRACE); }
     if (c == '}') { pos++; return Token(RBRACE); }
-    //if (c == '=') { pos++; return Token(EQ); }
     if (c == ',') { pos++; return Token(COMMA); }
-    /*if (c == '+' || c == '-' || c == '*' || c == '/') {
-        pos++;
-        return Token(OP, std::string(1, c));
-    }*/
     if (c == '=' || c == '!' || c == '<' || c == '>') {
         if (pos + 1 < input.size()) {
             char next_c = input[pos + 1];
@@ -56,6 +51,22 @@ Token Tokenizer::nextToken() {
         if (c == '<' || c == '>') {
             pos++;
             return Token(CONDOP, std::string(1, c));
+        }
+    }
+
+    // Comment operator management
+    if (c == '/') {
+        if (pos + 1 < input.size() && input[pos + 1] == '*') {
+            pos += 2;
+            size_t start = pos;
+            while (pos + 1 < input.size() && !(input[pos] == '*' && input[pos + 1] == '/')) {
+                pos++;
+            }
+            std::string commentContent = input.substr(start, pos - start);
+            if (pos + 1 < input.size()) {
+                pos += 2;
+            }
+            return Token(COMMENT, commentContent);
         }
     }
 
@@ -143,6 +154,11 @@ Statement* Parser::parseStm(){
         eat(RBRACE);
         Statement* next = parseStm();
         return new WhileStm(condLeft,whileStd,next);
+    }
+    if(currentToken.type == COMMENT){
+        eat(COMMENT);
+        Statement* next = parseStm();
+        return next;
     }
     if (currentToken.type == VAR) {
         std::string var = currentToken.value;
