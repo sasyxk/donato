@@ -26,6 +26,8 @@ Token Tokenizer::nextToken() {
         if (word == "var") return Token(DVAR, word);
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
+        if (word == "function") return Token(FUNCTION, word);
+        if (word == "call") return Token(CALL, word);
         return Token(VAR, word);
     }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
@@ -111,6 +113,29 @@ Statement* Parser::parseStm(){
         eat(RETURN);
         Expr* value = parse();
         return new Return(value);
+    }
+    if(currentToken.type == FUNCTION) {
+        eat(FUNCTION);
+        std::string typeFunc = currentToken.value;
+        eat(VAR);
+        std::string nameFunc = currentToken.value;
+        eat(VAR);
+        eat(LPAREN);
+        std::vector<std::pair<std::string, std::string>> parameters; // (type name),
+        do {
+            if(currentToken.type == RPAREN){break;}
+            std::string type = currentToken.value;
+            eat(VAR);
+            std::string param = currentToken.value;
+            eat(VAR);
+            parameters.emplace_back(type, param);
+        } while (currentToken.type == COMMA && (eat(COMMA), true));
+        eat(RPAREN);
+        eat(LBRACE);
+        Statement* functionBodyStatemets = parseStm();
+        eat(RBRACE);
+        Statement* next = parseStm();
+        return new Function(typeFunc,nameFunc,parameters,functionBodyStatemets,next);
     }
     if(currentToken.type == IF) {
         eat(IF);
@@ -235,6 +260,20 @@ Expr* Parser::parseFactor() {
         eat(ELSE);
         Expr* elseExpr = parseExpr();
         return new IfOp(condLeft, thenExpr, elseExpr);
+    }
+    if (currentToken.type == CALL) {
+        eat(CALL);
+        std::string funcName = currentToken.value;
+        eat(VAR);
+        eat(LPAREN);
+        std::vector<Expr*> args;
+        do {
+            if(currentToken.type == RPAREN){break;}
+            Expr* arg = parseExpr();
+            args.push_back(arg);
+        } while (currentToken.type == COMMA && (eat(COMMA), true));
+        eat(RPAREN);
+        return new CallFunc(funcName, args); 
     }
     if (currentToken.type == LET) {
         eat(LET);

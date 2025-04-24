@@ -8,14 +8,67 @@
 
 std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
 std::stack<llvm::BasicBlock*> mergeBlockStack;
+//extern llvm::Module* module;
+
+Function::Function(const std::string tf,const std::string nf, const std::vector<std::pair<std::string, std::string>> p,
+                   Statement *b, Statement *nxt) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b),next(nxt) {}
+
+void Function::codegen(llvm::IRBuilder<> &builder) {
+    std::vector<llvm::Type*> paramTypes;
+    for (const auto& param : parameters) {
+        llvm::Type* paramType;
+        if (param.first == "double") {
+            paramType = builder.getDoubleTy();
+        } else if (param.first == "int") {
+            paramType = builder.getInt32Ty();
+        } else {
+            throw std::runtime_error("Unknown parameter type: " + param.first);
+        }
+        paramTypes.push_back(paramType);
+    }
+
+    llvm::Type* returnType;
+    if (typeFunc == "double") {
+        returnType = builder.getDoubleTy();
+    } else if (typeFunc == "int") {
+        returnType = builder.getInt32Ty();
+    } else {
+        throw std::runtime_error("Invalid function type: " + typeFunc);
+    }
+
+    llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
+    llvm::Function* function = module->getFunction(nameFunc);
+
+    if (function && function->getFunctionType() == funcType) {
+        throw std::runtime_error("Redefinition of function: " + nameFunc);
+    }
+
+    function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
+
+    llvm::BasicBlock* entry = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
+    builder.SetInsertPoint(entry);
+    symbolTable.emplace_back();
+
+    llvm::Function::arg_iterator argIt = function->arg_begin();
+    for (const auto& param : parameters) {
+        llvm::Argument* arg = &*argIt++;
+        arg->setName(param.second);
+        llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
+        builder.CreateStore(arg, alloca);
+        symbolTable.back()[param.second] = alloca;
+    }
+
+    body->codegen(builder);
+    symbolTable.pop_back();
+
+    if (next) next->codegen(builder);
+}
 
 Return::Return(Expr* e) : expr(e) {}
 
 void Return::codegen(llvm::IRBuilder<>& builder) {
     llvm::Value* retVal = expr->codegen(builder);
-    builder.CreateRet(retVal);
-    
-    //return retVal; 
+    builder.CreateRet(retVal); 
 }
 
 WhileStm::WhileStm(Expr* c, Statement* w, Statement* nxt) : cond(c), whileExpr(w), next(nxt) {}
@@ -195,6 +248,36 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
 
     //return llvm::ConstantFP::get(ctx, llvm::APFloat(0.0));// return 0;
 }
+
+
+CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
+
+llvm::Value* CallFunc::codegen(llvm::IRBuilder<>& builder) {
+    // Search for the function in the module
+    llvm::Function* callee = module->getFunction(funcName);
+    if(!callee) {
+        throw std::runtime_error("Function not found: " + funcName);
+    }
+
+    // Check the correctness of the arguments
+    if(callee->arg_size() != args.size()) {
+        throw std::runtime_error("Argument count mismatch for " + funcName);
+    }
+
+    // Generate argument values
+    std::vector<llvm::Value*> argValues;
+    for(auto* arg : args) {
+        llvm::Value* val = arg->codegen(builder);
+        
+        if(val->getType() != callee->getFunctionType()->getParamType(argValues.size())) {
+            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
+        }
+        argValues.push_back(val);
+    }
+
+    return builder.CreateCall(callee, argValues, "calltmp");
+}
+
 
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 

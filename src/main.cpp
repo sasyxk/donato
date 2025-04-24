@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+llvm::Module* module = nullptr;
+
 int main(int argc, char** argv) {
     // Check if an argument (the input to compile) has been passed
     if (argc < 2) {
@@ -36,16 +38,16 @@ int main(int argc, char** argv) {
     
     // LLVM configuration
     llvm::LLVMContext context;
-    llvm::Module module("my_module", context);
+    module = new llvm::Module("my_module", context);
     llvm::IRBuilder<> builder(context);
     
     // Create main function
-    llvm::FunctionType* funcType = llvm::FunctionType::get(builder.getDoubleTy(), false);
-    llvm::Function* mainFunc = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "eval", &module);
+    //llvm::FunctionType* funcType = llvm::FunctionType::get(builder.getDoubleTy(), false);
+    //llvm::Function* mainFunc = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "eval", &module);
     
     // Code block
-    llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
-    builder.SetInsertPoint(entry);
+    //llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
+    //builder.SetInsertPoint(entry);
     
 
     symbolTable.push_back({});
@@ -56,8 +58,8 @@ int main(int argc, char** argv) {
     //builder.CreateRet(result);
     
     // Verify and generate executable
-    llvm::verifyModule(module, &llvm::errs());
-    generateExecutable(module, "output");
+    llvm::verifyModule(*module, &llvm::errs());
+    generateExecutable(*module, "output");
     
     return 0;
 }

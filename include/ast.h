@@ -6,9 +6,11 @@
 #include <utility>
 #include "llvm/IR/Value.h"
 #include "llvm/IR/IRBuilder.h"
+#include "codegen.h"
 
 extern std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
 extern std::stack<llvm::BasicBlock*> mergeBlockStack;
+extern llvm::Module* module;
 
 
 class Expr {
@@ -21,6 +23,18 @@ class Statement {
 public:
     virtual ~Statement() = default;
     virtual void codegen(llvm::IRBuilder<>& builder) = 0;
+};
+
+class Function : public Statement{
+    std::string typeFunc;
+    std::string nameFunc;
+    std::vector<std::pair<std::string, std::string>> parameters;
+    Statement* body;
+    Statement* next;
+public:
+    Function(const std::string tf,const std::string nf,const std::vector<std::pair<std::string, std::string>> p,
+             Statement* b, Statement* nxt = nullptr);
+    void codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class VarDecl : public Statement {
@@ -77,6 +91,14 @@ public:
 };
 */
 
+class CallFunc : public Expr {
+    std::string funcName;
+    std::vector<Expr*> args;
+    
+public:
+    CallFunc(const std::string& fn, std::vector<Expr*> a);    
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+};
 
 class BinaryCond : public Expr {
     std::string op;
