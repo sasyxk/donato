@@ -1,2 +1,0 @@
-var prova = let cane = 5 in cane + if cane == 5 then cane - 1 else cane + 1;
-return prova;

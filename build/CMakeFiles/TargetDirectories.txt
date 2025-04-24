@@ -1,7 +1,0 @@
-/home/donato/tryCompiler/build/CMakeFiles/intrinsics_gen.dir
-/home/donato/tryCompiler/build/CMakeFiles/omp_gen.dir
-/home/donato/tryCompiler/build/CMakeFiles/acc_gen.dir
-/home/donato/tryCompiler/build/CMakeFiles/RISCVTargetParserTableGen.dir
-/home/donato/tryCompiler/build/CMakeFiles/mycompiler.dir
-/home/donato/tryCompiler/build/CMakeFiles/edit_cache.dir
-/home/donato/tryCompiler/build/CMakeFiles/rebuild_cache.dir
