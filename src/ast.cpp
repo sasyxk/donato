@@ -7,7 +7,6 @@
 
 
 std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
-std::stack<llvm::BasicBlock*> mergeBlockStack;
 
 // Statements --------------
 
