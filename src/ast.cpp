@@ -8,10 +8,11 @@
 
 std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
 std::stack<llvm::BasicBlock*> mergeBlockStack;
-//extern llvm::Module* module;
+
+// Statements --------------
 
 Function::Function(const std::string tf,const std::string nf, const std::vector<std::pair<std::string, std::string>> p,
-    std::vector<Statement*> b, Statement *nxt) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b),next(nxt) {}
+    std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
     std::vector<llvm::Type*> paramTypes;
@@ -58,13 +59,10 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         symbolTable.back()[param.second] = alloca;
     }
 
-    //body->codegen(builder);
     for (Statement* stm : body) {
         stm->codegen(builder);
     }
     symbolTable.pop_back();
-
-    if (next) next->codegen(builder);
 }
 
 Return::Return(Expr* e) : expr(e) {}
@@ -74,7 +72,7 @@ void Return::codegen(llvm::IRBuilder<>& builder) {
     builder.CreateRet(retVal); 
 }
 
-WhileStm::WhileStm(Expr* c, std::vector<Statement*> w, Statement* nxt) : cond(c), whileExpr(w), next(nxt) {}
+WhileStm::WhileStm(Expr* c, std::vector<Statement*> w) : cond(c), whileExpr(w) {}
 
 void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::Function* func = builder.GetInsertBlock()->getParent();
@@ -96,7 +94,6 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.emplace_back();
 
     builder.SetInsertPoint(bodyWhileBB);
-    //whileExpr->codegen(builder);
     for (Statement* stm : whileExpr) {
         stm->codegen(builder);
     }
@@ -105,16 +102,9 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.pop_back();
 
     builder.SetInsertPoint(nextBB);
-    /*if (next) {
-        next->codegen(builder);
-    }*/
-    /*else{
-        nextBB->eraseFromParent();
-    }*/
-    //
 }
 
-IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e, Statement* nxt) : cond(c), thenExpr(t), elseExpr(e), next(nxt) {}
+IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e) : cond(c), thenExpr(t), elseExpr(e) {}
 
 void IfStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::Value* condVal = cond->codegen(builder);
@@ -128,9 +118,6 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::BasicBlock* elseBB = !elseExpr.empty() ? llvm::BasicBlock::Create(ctx, "else", func) : nullptr;
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
 
-    //llvm::BasicBlock* parentMergeBB = mergeBlockStack.empty() ? nullptr : mergeBlockStack.top();
-    //mergeBlockStack.push(mergeBB);
-
     if(!elseExpr.empty()){
         builder.CreateCondBr(condVal, thenBB, elseBB);
     }
@@ -139,75 +126,38 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
     }
 
     symbolTable.emplace_back();
-
-    //llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
     
     builder.SetInsertPoint(thenBB);
-    //thenExpr->codegen(builder);
     for (Statement* stm : thenExpr) {
         stm->codegen(builder);
     }
 
-    /*if (thenBB->getTerminator() && !elseExpr) {
-        mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
-        builder.CreateBr(mergeBB);
-    }*/
     if (!thenBB->getTerminator()) {
-        //mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
         builder.CreateBr(mergeBB);
     }
-    //builder.CreateBr(mergeBB);
 
     symbolTable.pop_back();
     symbolTable.emplace_back();
 
     if (!elseExpr.empty()) {
         builder.SetInsertPoint(elseBB);
-        //elseExpr->codegen(builder); 
         for (Statement* stm : elseExpr) {
             stm->codegen(builder);
         }
         if (!elseBB->getTerminator()) {
-            //if(!mergeBB) { mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);};
             builder.CreateBr(mergeBB);
         }
-        //builder.CreateBr(mergeBB);
     }
 
-    //mergeBlockStack.pop();
     symbolTable.pop_back();
 
-    //builder.SetInsertPoint(currentBlock);
-
     builder.SetInsertPoint(mergeBB);
-    /*if (next) {
-        next->codegen(builder);
-    }
-    if(parentMergeBB){
-        //jump into the merge of the previous IF if it doesn't have a terminator
-        if (!mergeBB->getTerminator()) {
-            builder.CreateBr(parentMergeBB);
-        }
-        
-    }
-    //no block jumps to the merge block
-    if (mergeBB->use_empty()) {
-        //removes the block from the function
-        llvm::outs() << "Remove block : " << mergeBB->getName() << "\n";
-        mergeBB->eraseFromParent();  
-    }*/
-    
-    //return llvm::ConstantFP::get(ctx, llvm::APFloat(0.0));
 }
 
-VarUpdt::VarUpdt(const std::string n, Expr* v, Statement* nxt) : nameVar(n), value(v), next(nxt) {}
+VarUpdt::VarUpdt(const std::string n, Expr* v) : nameVar(n), value(v) {}
 
 void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
-    
-    //llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
-    //llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
-
     bool checkVariable = false;
     llvm::AllocaInst* alloca;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
@@ -223,14 +173,9 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
     llvm::Value* val = value->codegen(builder);
     builder.CreateStore(val, alloca);
-
-    //if (next) next->codegen(builder);
-
-
-    //return llvm::ConstantFP::get(ctx, llvm::APFloat(0.0));// return 0;
 }
 
-VarDecl::VarDecl(const std::string n, Expr* v, Statement* nxt) : nameVar(n), value(v), next(nxt) {}
+VarDecl::VarDecl(const std::string n, Expr* v) : nameVar(n), value(v) {}
 
 void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     
@@ -255,13 +200,9 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     llvm::Value* val = value->codegen(builder);
     builder.CreateStore(val, alloca);
     symbolTable.back()[nameVar] = alloca;
-
-    //if (next) next->codegen(builder);
-
-
-    //return llvm::ConstantFP::get(ctx, llvm::APFloat(0.0));// return 0;
 }
 
+// Expressions --------------
 
 CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
 
@@ -338,19 +279,8 @@ Var::Var(const std::string& n) : name(n) {}
 llvm::Value* Var::codegen(llvm::IRBuilder<>& builder) {
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::outs() << "VAR the name of func is : " << func << "\n";
-    //llvm::AllocaInst* alloca = nullptr;
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
-    //for (auto& inst : *currentBlock) {
-    /*for (auto& inst : func->getEntryBlock()) {
-        if (auto* a = llvm::dyn_cast<llvm::AllocaInst>(&inst)) {
-            //llvm::outs() << "the name of var is : " << a->getName() << "\n";
-            if (a->getName() == name) {
-                alloca = a;
-                break;
-            }
-        }
-    }*/
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(name);
         if (found != it->end()) {
@@ -362,9 +292,6 @@ llvm::Value* Var::codegen(llvm::IRBuilder<>& builder) {
         }
     }
     throw std::runtime_error("Undefined variable: " + name);
-
-    //if (!alloca) throw std::runtime_error("Undefined variable: " + name);
-    //return builder.CreateLoad(alloca->getAllocatedType(), alloca, name + "_val");
 }
 
 IfOp::IfOp(Expr* c, Expr* t, Expr* e) : cond(c), thenExpr(t), elseExpr(e) {}
@@ -381,8 +308,6 @@ llvm::Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(builder.getContext(), "then", func);
     llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(builder.getContext(), "else",func);
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "ifcont",func);
-
-    //llvm::BasicBlock* StartBB = builder.GetInsertBlock();
     
     builder.CreateCondBr(condVal, thenBB, elseBB);
     
@@ -410,16 +335,11 @@ llvm::Value* LetOp::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.emplace_back();
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
-    //llvm::outs() << "LETOP the name of func is : " << func << "\n";
     llvm::LLVMContext& ctx = builder.getContext();
-
-    //llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
-    //builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
     
     for (auto& [name, expr] : bindings) {
         llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
         builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-        //llvm::outs() << "the value of "<< name <<" is : " << val << "\n";
         llvm::AllocaInst* alloca = builder.CreateAlloca(llvm::Type::getDoubleTy(ctx), nullptr, name);
 
         builder.SetInsertPoint(currentBlock);

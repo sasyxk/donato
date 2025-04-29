@@ -30,37 +30,33 @@ class Function : public Statement{
     std::string nameFunc;
     std::vector<std::pair<std::string, std::string>> parameters;
     std::vector<Statement*> body;
-    Statement* next;
 public:
     Function(const std::string tf,const std::string nf,const std::vector<std::pair<std::string, std::string>> p,
-        std::vector<Statement*> b, Statement* nxt = nullptr);
+        std::vector<Statement*> b);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class VarDecl : public Statement {
     std::string nameVar;
     Expr* value;
-    Statement* next;
 public:
-    VarDecl(const std::string n, Expr* v, Statement* nxt = nullptr);
+    VarDecl(const std::string n, Expr* v);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class VarUpdt : public Statement {
     std::string nameVar;
     Expr* value;
-    Statement* next;
 public:
-    VarUpdt(const std::string n, Expr* v, Statement* nxt = nullptr);
+    VarUpdt(const std::string n, Expr* v);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class WhileStm : public Statement {
     Expr* cond;
     std::vector<Statement*> whileExpr;
-    Statement* next;
 public:
-    WhileStm(Expr* c, std::vector<Statement*> w, Statement* nxt = nullptr);
+    WhileStm(Expr* c, std::vector<Statement*> w);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -68,9 +64,8 @@ class IfStm : public Statement {
     Expr* cond;
     std::vector<Statement*> thenExpr;
     std::vector<Statement*> elseExpr;
-    Statement* next;
 public:
-    IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e, Statement* nxt = nullptr);
+    IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -81,20 +76,9 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
-/*
-class Block : public Statement {
-    Statement* first;
-    Statement* rest;
-public:
-    Block(Statement* f, Statement* r = nullptr);
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
-};
-*/
-
 class CallFunc : public Expr {
     std::string funcName;
     std::vector<Expr*> args;
-    
 public:
     CallFunc(const std::string& fn, std::vector<Expr*> a);    
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
