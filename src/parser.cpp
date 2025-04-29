@@ -91,8 +91,7 @@ void Parser::eat(TokenType expected) {
     currentToken = tokenizer.nextToken();
 }
 
-bool Parser::hasMoreTokens()
-{
+bool Parser::hasMoreTokens(){
     if (currentToken.type != END) {
         return true;
     };
@@ -104,14 +103,13 @@ Statement* Parser::parseCode(){
     return stm;
 }
 
-Statement* Parser::parseStm(){ //bool_func
+Statement* Parser::parseStm(){
     if (currentToken.type == DVAR) {  // var try = Expr
         eat(DVAR);
         std::string var = currentToken.value;
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
-        //Statement* next = parseStm();
         return new VarDecl(var, value);
     }
     if(currentToken.type == RETURN) {
@@ -144,9 +142,7 @@ Statement* Parser::parseStm(){ //bool_func
             }
             functionBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
-        //Statement* functionBodyStatemets = parseStm();
         eat(RBRACE);
-        //Statement* next = parseStm();
         return new Function(typeFunc,nameFunc,parameters,functionBodyStatemets);
     }
     if(currentToken.type == IF) {
@@ -162,7 +158,6 @@ Statement* Parser::parseStm(){ //bool_func
         }
         eat(RPAREN);
         eat(LBRACE);
-        //Statement* thenStd = parseStm();
         std::vector<Statement*> elseStd;
         std::vector<Statement*> thenStd;
         do {
@@ -175,7 +170,6 @@ Statement* Parser::parseStm(){ //bool_func
         if(currentToken.type == ELSE){
             eat(ELSE);
             eat(LBRACE);
-            //elseStd = parseStm();
             do {
                 if(currentToken.type == FUNCTION){
                     throw std::runtime_error("Unexpected Statement token Function inside a ELSE");
@@ -184,7 +178,6 @@ Statement* Parser::parseStm(){ //bool_func
             } while (currentToken.type != RBRACE);
             eat(RBRACE);
         }
-        //Statement* next = parseStm();
         return new IfStm(condLeft,thenStd,elseStd);
     }
     if (currentToken.type == WHILE){
@@ -199,7 +192,6 @@ Statement* Parser::parseStm(){ //bool_func
         }
         eat(RPAREN);
         eat(LBRACE);
-        //Statement* whileStd = parseStm();
         std::vector<Statement*> whileStd;
         do {
             if(currentToken.type == FUNCTION){
@@ -208,7 +200,6 @@ Statement* Parser::parseStm(){ //bool_func
             whileStd.push_back(parseStm());
         } while (currentToken.type != RBRACE);
         eat(RBRACE);
-        //Statement* next = parseStm();
         return new WhileStm(condLeft,whileStd);
     }
     if(currentToken.type == COMMENT){
@@ -221,11 +212,9 @@ Statement* Parser::parseStm(){ //bool_func
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
-        //Statement* next = parseStm();
         return new VarUpdt(var, value);
     }
-    throw std::runtime_error("Unexpected Statement token");
-    return nullptr; // <- Useless
+    throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }
 
 Expr* Parser::parse() {

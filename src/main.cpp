@@ -33,39 +33,36 @@ int main(int argc, char** argv) {
     buffer << file.rdbuf();
     std::string code = buffer.str();
 	
+    // Parsing configuration
     Tokenizer tokenizer(code);
     Parser parser(tokenizer);
-
     std::vector<Statement*> ast;
-    do {
-        ast.push_back(parser.parseCode());
-    } while (parser.hasMoreTokens()); 
-    
-    //Statement* ast = parser.parseCode();
+
+    // Generate ast
+    try {
+        do {
+            ast.push_back(parser.parseCode());
+        } while (parser.hasMoreTokens());
+    } catch (const std::exception& e) {
+        std::cerr << "Error in parsing:: " << e.what() << std::endl;
+        return 1;
+    } 
     
     // LLVM configuration
     llvm::LLVMContext context;
     module = new llvm::Module("my_module", context);
     llvm::IRBuilder<> builder(context);
-    
-    // Create main function
-    //llvm::FunctionType* funcType = llvm::FunctionType::get(builder.getDoubleTy(), false);
-    //llvm::Function* mainFunc = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "eval", &module);
-    
-    // Code block
-    //llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
-    //builder.SetInsertPoint(entry);
-    
-
     symbolTable.push_back({});
 
     // Generate code
-    //ast->codegen(builder);
-    for (Statement* stm : ast) {
-        stm->codegen(builder);
-    }
-    //llvm::Value* result = ast->codegen(builder);
-    //builder.CreateRet(result);
+    try {
+        for (Statement* stm : ast) {
+            stm->codegen(builder);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error in codegen:: " << e.what() << std::endl;
+        return 1;
+    } 
     
     // Verify and generate executable
     llvm::verifyModule(*module, &llvm::errs());
