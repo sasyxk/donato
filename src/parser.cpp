@@ -91,23 +91,28 @@ void Parser::eat(TokenType expected) {
     currentToken = tokenizer.nextToken();
 }
 
+bool Parser::hasMoreTokens()
+{
+    if (currentToken.type != END) {
+        return true;
+    };
+    return false;
+}
+
 Statement* Parser::parseCode(){
     Statement* stm = parseStm();
-    if (currentToken.type != END) {
-        throw std::runtime_error("Unexpected tokens after Statement");
-    };
     return stm;
 }
 
-Statement* Parser::parseStm(){
+Statement* Parser::parseStm(){ //bool_func
     if (currentToken.type == DVAR) {  // var try = Expr
         eat(DVAR);
         std::string var = currentToken.value;
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
-        Statement* next = parseStm();
-        return new VarDecl(var, value, next);
+        //Statement* next = parseStm();
+        return new VarDecl(var, value);
     }
     if(currentToken.type == RETURN) {
         eat(RETURN);
@@ -132,10 +137,17 @@ Statement* Parser::parseStm(){
         } while (currentToken.type == COMMA && (eat(COMMA), true));
         eat(RPAREN);
         eat(LBRACE);
-        Statement* functionBodyStatemets = parseStm();
+        std::vector<Statement*> functionBodyStatemets;
+        do {
+            if(currentToken.type == FUNCTION){
+                throw std::runtime_error("Unexpected Statement token Function inside a Function");
+            }
+            functionBodyStatemets.push_back(parseStm());
+        } while (currentToken.type != RBRACE); 
+        //Statement* functionBodyStatemets = parseStm();
         eat(RBRACE);
-        Statement* next = parseStm();
-        return new Function(typeFunc,nameFunc,parameters,functionBodyStatemets,next);
+        //Statement* next = parseStm();
+        return new Function(typeFunc,nameFunc,parameters,functionBodyStatemets);
     }
     if(currentToken.type == IF) {
         eat(IF);
@@ -150,17 +162,30 @@ Statement* Parser::parseStm(){
         }
         eat(RPAREN);
         eat(LBRACE);
-        Statement* thenStd = parseStm();
-        Statement* elseStd = nullptr;
+        //Statement* thenStd = parseStm();
+        std::vector<Statement*> elseStd;
+        std::vector<Statement*> thenStd;
+        do {
+            if(currentToken.type == FUNCTION){
+                throw std::runtime_error("Unexpected Statement token Function inside a IF");
+            }
+            thenStd.push_back(parseStm());
+        } while (currentToken.type != RBRACE);
         eat(RBRACE);
         if(currentToken.type == ELSE){
             eat(ELSE);
             eat(LBRACE);
-            elseStd = parseStm();
+            //elseStd = parseStm();
+            do {
+                if(currentToken.type == FUNCTION){
+                    throw std::runtime_error("Unexpected Statement token Function inside a ELSE");
+                }
+                elseStd.push_back(parseStm());
+            } while (currentToken.type != RBRACE);
             eat(RBRACE);
         }
-        Statement* next = parseStm();
-        return new IfStm(condLeft,thenStd,elseStd, next);
+        //Statement* next = parseStm();
+        return new IfStm(condLeft,thenStd,elseStd);
     }
     if (currentToken.type == WHILE){
         eat(WHILE);
@@ -174,10 +199,17 @@ Statement* Parser::parseStm(){
         }
         eat(RPAREN);
         eat(LBRACE);
-        Statement* whileStd = parseStm();
+        //Statement* whileStd = parseStm();
+        std::vector<Statement*> whileStd;
+        do {
+            if(currentToken.type == FUNCTION){
+                throw std::runtime_error("Unexpected Statement token Function inside a ELSE");
+            }
+            whileStd.push_back(parseStm());
+        } while (currentToken.type != RBRACE);
         eat(RBRACE);
-        Statement* next = parseStm();
-        return new WhileStm(condLeft,whileStd,next);
+        //Statement* next = parseStm();
+        return new WhileStm(condLeft,whileStd);
     }
     if(currentToken.type == COMMENT){
         eat(COMMENT);
@@ -189,10 +221,11 @@ Statement* Parser::parseStm(){
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
-        Statement* next = parseStm();
-        return new VarUpdt(var, value, next);
+        //Statement* next = parseStm();
+        return new VarUpdt(var, value);
     }
-    return nullptr;
+    throw std::runtime_error("Unexpected Statement token");
+    return nullptr; // <- Useless
 }
 
 Expr* Parser::parse() {

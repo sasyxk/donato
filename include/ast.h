@@ -29,11 +29,11 @@ class Function : public Statement{
     std::string typeFunc;
     std::string nameFunc;
     std::vector<std::pair<std::string, std::string>> parameters;
-    Statement* body;
+    std::vector<Statement*> body;
     Statement* next;
 public:
     Function(const std::string tf,const std::string nf,const std::vector<std::pair<std::string, std::string>> p,
-             Statement* b, Statement* nxt = nullptr);
+        std::vector<Statement*> b, Statement* nxt = nullptr);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -57,20 +57,20 @@ public:
 
 class WhileStm : public Statement {
     Expr* cond;
-    Statement* whileExpr;
+    std::vector<Statement*> whileExpr;
     Statement* next;
 public:
-    WhileStm(Expr* c, Statement* w, Statement* nxt = nullptr);
+    WhileStm(Expr* c, std::vector<Statement*> w, Statement* nxt = nullptr);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class IfStm : public Statement {
     Expr* cond;
-    Statement* thenExpr;
-    Statement* elseExpr;
+    std::vector<Statement*> thenExpr;
+    std::vector<Statement*> elseExpr;
     Statement* next;
 public:
-    IfStm(Expr* c, Statement* t, Statement* e, Statement* nxt = nullptr);
+    IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e, Statement* nxt = nullptr);
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 

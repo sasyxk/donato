@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 llvm::Module* module = nullptr;
 
@@ -34,7 +35,13 @@ int main(int argc, char** argv) {
 	
     Tokenizer tokenizer(code);
     Parser parser(tokenizer);
-    Statement* ast = parser.parseCode();
+
+    std::vector<Statement*> ast;
+    do {
+        ast.push_back(parser.parseCode());
+    } while (parser.hasMoreTokens()); 
+    
+    //Statement* ast = parser.parseCode();
     
     // LLVM configuration
     llvm::LLVMContext context;
@@ -53,7 +60,10 @@ int main(int argc, char** argv) {
     symbolTable.push_back({});
 
     // Generate code
-    ast->codegen(builder);
+    //ast->codegen(builder);
+    for (Statement* stm : ast) {
+        stm->codegen(builder);
+    }
     //llvm::Value* result = ast->codegen(builder);
     //builder.CreateRet(result);
     

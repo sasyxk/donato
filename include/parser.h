@@ -33,4 +33,5 @@ public:
     Expr* parseTerm();
     Expr* parseFactor();
     void eat(TokenType expected);
+    bool hasMoreTokens();
 };
