@@ -67,6 +67,12 @@ int main(int argc, char** argv) {
     // Verify and generate executable
     llvm::verifyModule(*module, &llvm::errs());
     generateExecutable(*module, "output");
+
+    // Cleanup - deallocating the AST
+    for (Statement* stm : ast) {
+        delete stm;
+    }
+    ast.clear();
     
     return 0;
 }

@@ -33,6 +33,12 @@ class Function : public Statement{
 public:
     Function(const std::string tf,const std::string nf,const std::vector<std::pair<std::string, std::string>> p,
         std::vector<Statement*> b);
+    ~Function() {
+        for (Statement* stmt : body) {
+            delete stmt;
+        }
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -41,6 +47,10 @@ class VarDecl : public Statement {
     Expr* value;
 public:
     VarDecl(const std::string n, Expr* v);
+    ~VarDecl() {
+        delete value;
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -49,6 +59,10 @@ class VarUpdt : public Statement {
     Expr* value;
 public:
     VarUpdt(const std::string n, Expr* v);
+    ~VarUpdt() {
+        delete value;
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -57,6 +71,13 @@ class WhileStm : public Statement {
     std::vector<Statement*> whileExpr;
 public:
     WhileStm(Expr* c, std::vector<Statement*> w);
+    ~WhileStm() {
+        delete cond;
+        for (Statement* stmt : whileExpr) {
+            delete stmt;
+        }
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -66,6 +87,16 @@ class IfStm : public Statement {
     std::vector<Statement*> elseExpr;
 public:
     IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e);
+    ~IfStm() {
+        delete cond;
+        for (Statement* stmt : thenExpr) {
+            delete stmt;
+        }
+        for (Statement* stmt : elseExpr) {
+            delete stmt;
+        }
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -73,6 +104,10 @@ class Return : public Statement {
     Expr* expr;
 public:
     Return(Expr* e);
+    ~Return() {
+        delete expr;
+    }
+
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -80,7 +115,13 @@ class CallFunc : public Expr {
     std::string funcName;
     std::vector<Expr*> args;
 public:
-    CallFunc(const std::string& fn, std::vector<Expr*> a);    
+    CallFunc(const std::string& fn, std::vector<Expr*> a);  
+    ~CallFunc() {
+        for (Expr* arg : args) {
+            delete arg;
+        }
+    }
+
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -90,6 +131,11 @@ class BinaryCond : public Expr {
     Expr* right;
 public:
     BinaryCond(const std::string& o, Expr* l, Expr* r);
+    ~BinaryCond() {
+        delete left; 
+        delete right; 
+    }
+
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -99,6 +145,10 @@ class BinaryOp : public Expr {
     Expr* right;
 public:
     BinaryOp(const std::string& o, Expr* l, Expr* r);
+    ~BinaryOp() {
+        delete left; 
+        delete right; 
+    }
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -107,6 +157,9 @@ class UnaryOp : public Expr {
     Expr* x;
 public:
     UnaryOp(const std::string& o, Expr* x);
+    ~UnaryOp() {
+        delete x;  
+    }
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -130,6 +183,11 @@ class IfOp : public Expr {
     Expr* elseExpr;
 public:
     IfOp(Expr* c, Expr* t, Expr* e);
+    ~IfOp() {
+        delete cond;  
+        delete thenExpr; 
+        delete elseExpr; 
+    }
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -138,5 +196,11 @@ class LetOp : public Expr {
     Expr* body;
 public:
     LetOp(const std::vector<std::pair<std::string, Expr*>>& b, Expr* bod);
+    ~LetOp() {
+        delete body;  
+        for (auto& binding : bindings) {
+            delete binding.second;
+        }
+    }
     llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
 };
