@@ -20,6 +20,7 @@ add_executable(mycompiler
     src/parser.cpp 
     src/ast.cpp 
     src/codegen.cpp
+    src/type.cpp
 )
 
 # Link all libraries

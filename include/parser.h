@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "ast.h"
+#include "type.h"
 
 enum TokenType { DVAR, NUM, VAR, OP, IF, THEN, ELSE, LET, IN, COMMA,
                  LPAREN, RPAREN, EQ, END, ENDEXPR, RETURN,LBRACE ,RBRACE,
