@@ -9,9 +9,7 @@
 #include "codegen.h"
 
 extern std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
-extern std::stack<llvm::BasicBlock*> mergeBlockStack;
 extern llvm::Module* module;
-
 
 class Expr {
 public:
