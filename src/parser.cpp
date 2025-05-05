@@ -107,7 +107,6 @@ Statement* Parser::parseStm(){
     if (currentToken.type == DVAR) {  // var try = Expr
         eat(DVAR);
         std::string var = currentToken.value;
-        //Type* t = Type::fromString(var);
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
@@ -313,11 +312,9 @@ Expr* Parser::parseFactor() {
         return new LetOp(bindings, body);
     }
     if (currentToken.type == NUM) {
-        //double val = std::stod(currentToken.value);
-        std::string val = currentToken.value;
-        Type* type = Type::bestFitForString(val);
+        double val = std::stod(currentToken.value);
         eat(NUM);
-        return new Num(val,type);
+        return new Num(val);
     }
     if (currentToken.type == VAR) {
         std::string name = currentToken.value;

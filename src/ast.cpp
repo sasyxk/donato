@@ -6,8 +6,7 @@
 #include <iostream>
 
 
-
-std::vector<std::map<std::string, SymbolInfo>> symbolTable;
+std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
 
 // Statements --------------
 
@@ -56,18 +55,7 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         arg->setName(param.second);
         llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
         builder.CreateStore(arg, alloca);
-
-        //To updated
-        Type* paramType;
-        if (param.first == "double") {
-            paramType = new DoubleType(); 
-        } else if (param.first == "int") {
-            paramType = new IntType(32, true); 
-        } else {
-            throw std::runtime_error("Unknown parameter type: " + param.first);
-        }
-
-        symbolTable.back()[param.second] = {alloca, paramType};
+        symbolTable.back()[param.second] = alloca;
     }
 
     for (Statement* stm : body) {
@@ -79,8 +67,8 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
 Return::Return(Expr* e) : expr(e) {}
 
 void Return::codegen(llvm::IRBuilder<>& builder) {
-    Type* retVal = expr->codegen(builder);
-    builder.CreateRet(retVal->getLLVMValue()); 
+    llvm::Value* retVal = expr->codegen(builder);
+    builder.CreateRet(retVal); 
 }
 
 WhileStm::WhileStm(Expr* c, std::vector<Statement*> w) : cond(c), whileExpr(w) {}
@@ -95,14 +83,12 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     builder.CreateBr(condWhileBB);
 
     builder.SetInsertPoint(condWhileBB);
-    Type* condVal = cond->codegen(builder);
+    llvm::Value* condVal = cond->codegen(builder);
     //check if the condition is already a boolean value
-   if (!condVal->getLLVMValue()->getType()->isIntegerTy(1)) { //TO change into !dynamic_cast<const BoolType*>(condVal) != nullptr
-        Type* zero = Type::fromString("double");
-        zero->setLLVMValue(llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)));
-        condVal = Type::operateWith(builder, condVal, zero, "==");
+    if (!condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf");
     }
-    builder.CreateCondBr(condVal->getLLVMValue(), bodyWhileBB, nextBB);
+    builder.CreateCondBr(condVal, bodyWhileBB, nextBB);
 
     symbolTable.emplace_back();
 
@@ -120,18 +106,10 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
 IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e) : cond(c), thenExpr(t), elseExpr(e) {}
 
 void IfStm::codegen(llvm::IRBuilder<>& builder) {
-    Type* condVal = cond->codegen(builder);
+    llvm::Value* condVal = cond->codegen(builder);
     //check if the condition is already a boolean value
-    /*if (!condVal->getType()->isIntegerTy(1)) {
+    if (!condVal->getType()->isIntegerTy(1)) {
         condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf");
-    }*/
-    if (!condVal->getLLVMValue()->getType()->isIntegerTy(1)) { //TO change into !dynamic_cast<const BoolType*>(condVal) != nullptr
-        Type* zero = Type::fromString("double");
-        zero->setLLVMValue(llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)));
-        condVal = Type::operateWith(builder, condVal, zero, "==");
-        /*llvm::outs() << "Valore condVal il ==: ";
-        condVal1->getLLVMValue()->getType()->print(llvm::outs());
-        llvm::outs() << "\n";*/
     }
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
@@ -140,10 +118,10 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
 
     if(!elseExpr.empty()){
-        builder.CreateCondBr(condVal->getLLVMValue(), thenBB, elseBB);
+        builder.CreateCondBr(condVal, thenBB, elseBB);
     }
     else{
-        builder.CreateCondBr(condVal->getLLVMValue(), thenBB, mergeBB);
+        builder.CreateCondBr(condVal, thenBB, mergeBB);
     }
 
     symbolTable.emplace_back();
@@ -181,12 +159,10 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     bool checkVariable = false;
     llvm::AllocaInst* alloca;
-    Type* type;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(nameVar);
         if (found != it->end()) {
-            alloca = found->second.alloca;
-            type = found->second.type;
+            alloca = found->second;
             checkVariable = true;
             break;
         }
@@ -194,16 +170,8 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
-    Type* val = value->codegen(builder);
-    llvm::Value* llvmVal = val->getLLVMValue();
-    if(!(val == type)){
-        
-        if(!val->canCastTo(*type))
-            throw std::runtime_error("Updating variable '"+nameVar+"' with different type not allowed");
-        
-        llvmVal = val->generateCast(builder, val->getLLVMValue(),*type);
-    }
-    builder.CreateStore(llvmVal, alloca);
+    llvm::Value* val = value->codegen(builder);
+    builder.CreateStore(val, alloca);
 }
 
 VarDecl::VarDecl(const std::string n, Expr* v) : nameVar(n), value(v) {}
@@ -212,7 +180,7 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
-    //llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
+    llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
     bool checkVariable = false;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
@@ -224,25 +192,20 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     }
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
 
-    Type* val = value->codegen(builder);
-    llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-    llvm::AllocaInst* alloca = builder.CreateAlloca(val->toLLVMType(ctx), nullptr, nameVar);
+    llvm::AllocaInst* alloca = builder.CreateAlloca(llvm::Type::getDoubleTy(ctx), nullptr, nameVar);
+    builder.SetInsertPoint(currentBlock);  
 
-    builder.SetInsertPoint(currentBlock);
-    builder.CreateStore(val->getLLVMValue(), alloca);
-
-    llvm::outs() << "The variable allocated with name: " << alloca->getName() << "\n";
-
-    symbolTable.back()[nameVar] = {alloca, val};
-
+    llvm::Value* val = value->codegen(builder);
+    builder.CreateStore(val, alloca);
+    symbolTable.back()[nameVar] = alloca;
 }
 
 // Expressions --------------
 
 CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
 
-Type* CallFunc::codegen(llvm::IRBuilder<>& builder) {
+llvm::Value* CallFunc::codegen(llvm::IRBuilder<>& builder) {
     // Search for the function in the module
     llvm::Function* callee = module->getFunction(funcName);
     if(!callee) {
@@ -257,79 +220,62 @@ Type* CallFunc::codegen(llvm::IRBuilder<>& builder) {
     // Generate argument values
     std::vector<llvm::Value*> argValues;
     for(auto* arg : args) {
-        Type* val = arg->codegen(builder);
+        llvm::Value* val = arg->codegen(builder);
         
-        if(val->getLLVMValue()->getType() != callee->getFunctionType()->getParamType(argValues.size())) {
+        if(val->getType() != callee->getFunctionType()->getParamType(argValues.size())) {
             throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
         }
-        argValues.push_back(val->getLLVMValue());
+        argValues.push_back(val);
     }
 
-    llvm::Value* returnValue = builder.CreateCall(callee, argValues, "calltmp");
-    Type* returnTypeObj = new DoubleType(); //Let's assume for simplicity that it always returns double -------!!!
-    returnTypeObj->setLLVMValue(returnValue);
-    return returnTypeObj;
+    return builder.CreateCall(callee, argValues, "calltmp");
 }
 
 
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 
-Type* BinaryCond::codegen(llvm::IRBuilder<>& builder) {
-    Type* L = left->codegen(builder);
-    Type* R = right->codegen(builder);
-
-    return Type::operateWith(builder,L,R,op);
+llvm::Value* BinaryCond::codegen(llvm::IRBuilder<>& builder) {
+    llvm::Value* L = left->codegen(builder);
+    llvm::Value* R = right->codegen(builder);
+    //llvm::outs() << "the Rigth of BinaryCond  is : " << R->getName() << "\n";
+    if (op == "==") return builder.CreateFCmpOEQ(L, R, "eqtmp");
+    if (op == "<=") return builder.CreateFCmpOLE(L, R, "leqtmp");
+    if (op == ">=")  return builder.CreateFCmpOGE(L, R, "geqtmp");
+    if (op == ">") return builder.CreateFCmpOGT(L, R, "gtmp");
+    if (op == "<") return builder.CreateFCmpOLT(L, R, "ltmp");
+    if (op == "!=") return builder.CreateFCmpONE(L, R, "netmp");
+    throw std::runtime_error("Unknown operator");
 }
 
 BinaryOp::BinaryOp(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 
-Type* BinaryOp::codegen(llvm::IRBuilder<>& builder) {
-    Type* L = left->codegen(builder);
-    Type* R = right->codegen(builder);
-
-    return Type::operateWith(builder,L,R,op);
+llvm::Value* BinaryOp::codegen(llvm::IRBuilder<>& builder) {
+    llvm::Value* L = left->codegen(builder);
+    llvm::Value* R = right->codegen(builder);
+    //llvm::outs() << "the Rigth of Binary  is : " << R->getName() << "\n";
+    if (op == "+") return builder.CreateFAdd(L, R, "addtmp");
+    if (op == "-") return builder.CreateFSub(L, R, "subtmp");
+    if (op == "*") return builder.CreateFMul(L, R, "multmp");
+    if (op == "/") return builder.CreateFDiv(L, R, "divtmp");
+    throw std::runtime_error("Unknown operator");
 }
 
 UnaryOp::UnaryOp(const std::string& o, Expr* x) : op(o), x(x) {}
 
-Type* UnaryOp::codegen(llvm::IRBuilder<>& builder) {
-    Type* V = x->codegen(builder);
-    //return V->unaryOp();    /// To implement -----------------------------------------------!!!
-    return nullptr;
-    //builder.CreateFNeg(V, "negtmp");
+llvm::Value* UnaryOp::codegen(llvm::IRBuilder<>& builder) {
+    llvm::Value* V = x->codegen(builder);
+    return builder.CreateFNeg(V, "negtmp");
 }
 
-Num::Num(const std::string& v, Type* t) : val(v), type(t) {}
+Num::Num(double v) : val(v) {}
 
-Type* Num::codegen(llvm::IRBuilder<>& builder) {
-    llvm::LLVMContext& ctx = builder.getContext();
-    if (auto intType = dynamic_cast<IntType*>(type)) {
-        if (intType->isSigned()) {
-            intType->setLLVMValue(llvm::ConstantInt::get(
-                intType->toLLVMType(ctx), 
-                llvm::APInt(intType->getSize() * 8, std::stoll(val))
-            ));
-        } else {
-            intType->setLLVMValue(llvm::ConstantInt::get(
-                intType->toLLVMType(ctx), 
-                llvm::APInt(intType->getSize() * 8, std::stoull(val), false)
-            ));
-        }
-        return intType;
-    } 
-    else if (auto doubleType = dynamic_cast<DoubleType*>(type)) {
-        doubleType->setLLVMValue(llvm::ConstantFP::get(ctx, llvm::APFloat(std::stod(val))));
-        return doubleType;
-    }
-    
-    throw std::runtime_error("Unsupported type '" + type->toString()+"' in Num::codegen");
-    
-    //return llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(val));
+llvm::Value* Num::codegen(llvm::IRBuilder<>& builder) {
+    return llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(val));
 }
 
 Var::Var(const std::string& n) : name(n) {}
 
-Type* Var::codegen(llvm::IRBuilder<>& builder) {
+llvm::Value* Var::codegen(llvm::IRBuilder<>& builder) {
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::outs() << "VAR the name of func is : " << func << "\n";
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
@@ -337,14 +283,11 @@ Type* Var::codegen(llvm::IRBuilder<>& builder) {
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(name);
         if (found != it->end()) {
-            llvm::Value* loadedValue = builder.CreateLoad(
-                found->second.type->toLLVMType(builder.getContext()), 
-                found->second.alloca, 
+            return builder.CreateLoad(
+                llvm::Type::getDoubleTy(builder.getContext()), 
+                found->second, 
                 name + "_val"
             );
-            Type* resultType = found->second.type->clone();
-            resultType->setLLVMValue(loadedValue);
-            return resultType;
         }
     }
     throw std::runtime_error("Undefined variable: " + name);
@@ -352,15 +295,12 @@ Type* Var::codegen(llvm::IRBuilder<>& builder) {
 
 IfOp::IfOp(Expr* c, Expr* t, Expr* e) : cond(c), thenExpr(t), elseExpr(e) {}
 
-Type* IfOp::codegen(llvm::IRBuilder<>& builder) {
+llvm::Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
 
-    Type* condVal = cond->codegen(builder);
+    llvm::Value* condVal = cond->codegen(builder);
     //check if the condition is already a boolean value
-    if (!condVal->getLLVMValue()->getType()->isIntegerTy(1)) { //TO change into !dynamic_cast<const BoolType*>(condVal) != nullptr
-        //condVal->setLLVMValue(builder.CreateFCmpONE(condVal->getLLVMValue(), llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf"));
-        Type* zero = Type::fromString("double");
-        zero->setLLVMValue(llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)));
-        condVal = Type::operateWith(builder, condVal, zero, "==");
+    if (!condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(0.0)), "ifconf");
     }
     
     llvm::Function* func = builder.GetInsertBlock()->getParent();
@@ -368,62 +308,49 @@ Type* IfOp::codegen(llvm::IRBuilder<>& builder) {
     llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(builder.getContext(), "else",func);
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "ifcont",func);
     
-    builder.CreateCondBr(condVal->getLLVMValue(), thenBB, elseBB);
+    builder.CreateCondBr(condVal, thenBB, elseBB);
     
     builder.SetInsertPoint(thenBB);
-    Type* thenVal = thenExpr->codegen(builder);
+    llvm::Value* thenVal = thenExpr->codegen(builder);
     llvm::BasicBlock* thenExitBB = builder.GetInsertBlock();
     builder.CreateBr(mergeBB);
     
     builder.SetInsertPoint(elseBB);
-    Type* elseVal = elseExpr->codegen(builder);
+    llvm::Value* elseVal = elseExpr->codegen(builder);
     llvm::BasicBlock* elseExitBB = builder.GetInsertBlock();
     builder.CreateBr(mergeBB);
     
     builder.SetInsertPoint(mergeBB);
-
-    if(!(*thenVal == *elseVal)){
-        throw std::runtime_error("IfOp has branches with results of different types");
-    }
     
     llvm::PHINode* phi = builder.CreatePHI(llvm::Type::getDoubleTy(builder.getContext()), 2, "iftmp");
-    phi->addIncoming(thenVal->getLLVMValue(), thenExitBB);
-    phi->addIncoming(elseVal->getLLVMValue(), elseExitBB);
-
-    Type* phiType = thenVal;
-
-    phiType->setLLVMValue(phi);
-    return phiType;
+    phi->addIncoming(thenVal, thenExitBB);
+    phi->addIncoming(elseVal, elseExitBB);
+    return phi;
 }
 
 LetOp::LetOp(const std::vector<std::pair<std::string, Expr*>>& b, Expr* bod) : bindings(b), body(bod) {}
 
-Type* LetOp::codegen(llvm::IRBuilder<>& builder) {
+llvm::Value* LetOp::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.emplace_back();
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
     
     for (auto& [name, expr] : bindings) {
-        //llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
-        //builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-        //llvm::AllocaInst* alloca = builder.CreateAlloca(llvm::Type::getDoubleTy(ctx), nullptr, name);
-
-        //builder.SetInsertPoint(currentBlock);
-        Type* val = expr->codegen(builder);
         llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
         builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-        llvm::AllocaInst* alloca = builder.CreateAlloca(val->toLLVMType(ctx), nullptr, name);
+        llvm::AllocaInst* alloca = builder.CreateAlloca(llvm::Type::getDoubleTy(ctx), nullptr, name);
 
         builder.SetInsertPoint(currentBlock);
-        builder.CreateStore(val->getLLVMValue(), alloca);
+        llvm::Value* val = expr->codegen(builder);
+        builder.CreateStore(val, alloca);
 
         llvm::outs() << "The variable allocated with name: " << alloca->getName() << "\n";
 
-        symbolTable.back()[name] = {alloca, val};
+        symbolTable.back()[name] = alloca;
     }
 
-    Type* bodyVal = body->codegen(builder);
+    llvm::Value* bodyVal = body->codegen(builder);
 
     symbolTable.pop_back();
 
