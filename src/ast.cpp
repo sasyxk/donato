@@ -317,6 +317,14 @@ Value* DoubleNum::codegen(llvm::IRBuilder<>& builder) {
     return new DoubleValue(type->clone(), llvmValue, ctx);
 }
 
+BoolNum::BoolNum(bool v, Type* t) : val(v) , type(t) {}
+
+Value* BoolNum::codegen(llvm::IRBuilder<>& builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Value* llvmValue = llvm::ConstantInt::get(ctx, llvm::APInt(1, val ? 1 : 0));
+    return new BoolValue(type->clone(), llvmValue, ctx);
+}
+
 Var::Var(const std::string& n) : name(n) {}
 
 Value* Var::codegen(llvm::IRBuilder<>& builder) {

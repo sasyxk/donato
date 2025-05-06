@@ -178,6 +178,17 @@ public:
     Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
+class BoolNum : public Expr {
+    bool val;
+    Type* type;
+public:
+    BoolNum(bool v, Type* t);
+    ~BoolNum() {
+        delete type;  
+    }
+    Value* codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class Var : public Expr {
     std::string name;
 public:

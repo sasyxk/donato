@@ -12,6 +12,14 @@ Token Tokenizer::nextToken() {
     if (isdigit(c) || c == '.') {
         size_t start = pos;
         while (pos < input.size() && (isdigit(input[pos]) || input[pos] == '.')) pos++;
+        
+        // Check scientific notation
+        if (pos < input.size() && (input[pos] == 'e' || input[pos] == 'E')) {
+            pos++;
+            if (pos < input.size() && (input[pos] == '+' || input[pos] == '-')) pos++;
+
+            while (pos < input.size() && isdigit(input[pos])) pos++;
+        }
         return Token(NUM, input.substr(start, pos - start));
     }
     if (isalpha(c)) {
@@ -27,7 +35,11 @@ Token Tokenizer::nextToken() {
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
         if (word == "function") return Token(FUNCTION, word);
-        if (word == "double" || word == "int") return Token(TYPE, word);
+        if(word == "true" || word == "false") return Token(NUM, word);
+        if (word == "double" ||
+            word == "int"    ||
+            word == "bool"
+        ) return Token(TYPE, word);
         return Token(VAR, word);
     }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
@@ -220,7 +232,7 @@ Statement* Parser::parseStm(){
 Expr* Parser::parse() {
     Expr* expr = parseExpr();
     if (currentToken.type != ENDEXPR) {
-        throw std::runtime_error("Unexpected tokens after expression");
+        throw std::runtime_error("Unexpected tokens '"+currentToken.value+"' after expression");
     }
     eat(ENDEXPR);
     return expr;
@@ -324,10 +336,7 @@ Expr* Parser::parseFactor() {
 //-----------------------------------------------------------------------------------
 Expr* Parser::parseNum(std::string val){
     Type* type;
-    double num = std::stod(val);
-    type = new DoubleType();
-    return new DoubleNum(num,type);
-    /*if (val.find('.') != std::string::npos) {
+    if (val.find('.') != std::string::npos) {
         try {
             double num = std::stod(val);
             type = new DoubleType();
@@ -335,7 +344,15 @@ Expr* Parser::parseNum(std::string val){
         } catch (...) {
             throw std::runtime_error("Invalid floating-point stringValue: " + val);
         }
-    }*/
+    }
+
+    if (val == "true" || val == "false") {
+        bool boolVal = (val == "true");
+        type = new BoolType();
+        return new BoolNum(boolVal, type);
+    }
+
+    throw std::runtime_error("No valid type associated with value: '" + val + "'");
 }
 
 Type* Parser::parseType(std::string stringType){
