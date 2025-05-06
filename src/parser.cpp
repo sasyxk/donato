@@ -312,9 +312,9 @@ Expr* Parser::parseFactor() {
         return new LetOp(bindings, body);
     }
     if (currentToken.type == NUM) {
-        double val = std::stod(currentToken.value);
+        std::string val = currentToken.value;
         eat(NUM);
-        return new Num(val);
+        return parseNum(val);
     }
     if (currentToken.type == VAR) {
         std::string name = currentToken.value;
@@ -322,4 +322,22 @@ Expr* Parser::parseFactor() {
         return new Var(name);
     }
     throw std::runtime_error("Unexpected factor");
+}
+
+Expr *Parser::parseNum(std::string val)
+{
+    Type* type;
+    double num = std::stod(val);
+    type = new DoubleType();
+    return new DoubleNum(num,type);
+    /*if (val.find('.') != std::string::npos) {
+        try {
+            double num = std::stod(val);
+            type = new DoubleType();
+            return new DoubleNum(num,type);
+        } catch (...) {
+            throw std::runtime_error("Invalid floating-point stringValue: " + val);
+        }
+    }*/
+
 }

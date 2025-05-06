@@ -20,6 +20,10 @@ add_executable(mycompiler
     src/parser.cpp 
     src/ast.cpp 
     src/codegen.cpp
+    src/type.cpp
+    src/value.cpp
+    src/double_value.cpp
+    src/bool_value.cpp
 )
 
 # Link all libraries

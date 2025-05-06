@@ -2,19 +2,27 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <stack>
 #include <utility>
 #include "llvm/IR/Value.h"
 #include "llvm/IR/IRBuilder.h"
 #include "codegen.h"
+#include "type.h"
+#include "value.h"
+#include "double_value.h"
+#include "bool_value.h"
 
-extern std::vector<std::map<std::string, llvm::AllocaInst*>> symbolTable;
+struct SymbolInfo {
+    llvm::AllocaInst* alloca;  
+    Type* type;               
+};
+
+extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 extern llvm::Module* module;
 
 class Expr {
 public:
     virtual ~Expr() = default;
-    virtual llvm::Value* codegen(llvm::IRBuilder<>& builder) = 0;
+    virtual Value* codegen(llvm::IRBuilder<>& builder) = 0;
 };
 
 class Statement {
@@ -119,8 +127,7 @@ public:
             delete arg;
         }
     }
-
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class BinaryCond : public Expr {
@@ -133,8 +140,7 @@ public:
         delete left; 
         delete right; 
     }
-
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class BinaryOp : public Expr {
@@ -147,7 +153,7 @@ public:
         delete left; 
         delete right; 
     }
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class UnaryOp : public Expr {
@@ -158,21 +164,25 @@ public:
     ~UnaryOp() {
         delete x;  
     }
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
-class Num : public Expr {
+class DoubleNum : public Expr {
     double val;
+    Type* type;
 public:
-    Num(double v);
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    DoubleNum(double v, Type* t);
+    ~DoubleNum() {
+        delete type;  
+    }
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class Var : public Expr {
     std::string name;
 public:
     Var(const std::string& n);
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class IfOp : public Expr {
@@ -186,7 +196,7 @@ public:
         delete thenExpr; 
         delete elseExpr; 
     }
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class LetOp : public Expr {
@@ -200,5 +210,5 @@ public:
             delete binding.second;
         }
     }
-    llvm::Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
