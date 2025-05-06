@@ -6,7 +6,7 @@
 
 enum TokenType { DVAR, NUM, VAR, OP, IF, THEN, ELSE, LET, IN, COMMA,
                  LPAREN, RPAREN, EQ, END, ENDEXPR, RETURN,LBRACE ,RBRACE,
-                 CONDOP, WHILE, COMMENT, FUNCTION, CALL};
+                 CONDOP, WHILE, COMMENT, FUNCTION, TYPE};
 
 struct Token {
     TokenType type;
@@ -34,6 +34,7 @@ public:
     Expr* parseTerm();
     Expr* parseFactor();
     Expr* parseNum(std::string val);
+    Type* parseType(std::string stringType);
     void eat(TokenType expected);
     bool hasMoreTokens();
 };

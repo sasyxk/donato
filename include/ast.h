@@ -32,12 +32,12 @@ public:
 };
 
 class Function : public Statement{
-    std::string typeFunc;
+    Type* typeFunc;
     std::string nameFunc;
-    std::vector<std::pair<std::string, std::string>> parameters;
+    std::vector<std::pair<Type*, std::string>> parameters;
     std::vector<Statement*> body;
 public:
-    Function(const std::string tf,const std::string nf,const std::vector<std::pair<std::string, std::string>> p,
+    Function(Type* tf,const std::string nf,const std::vector<std::pair<Type*, std::string>> p,
         std::vector<Statement*> b);
     ~Function() {
         for (Statement* stmt : body) {

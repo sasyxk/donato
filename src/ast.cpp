@@ -9,31 +9,16 @@ std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 
 // Statements --------------
 
-Function::Function(const std::string tf,const std::string nf, const std::vector<std::pair<std::string, std::string>> p,
+Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
     std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
     std::vector<llvm::Type*> paramTypes;
+    llvm::LLVMContext& ctx = builder.getContext();
     for (const auto& param : parameters) {
-        llvm::Type* paramType;
-        if (param.first == "double") {
-            paramType = builder.getDoubleTy();
-        } else if (param.first == "int") {
-            paramType = builder.getInt32Ty();
-        } else {
-            throw std::runtime_error("Unknown parameter type: " + param.first);
-        }
-        paramTypes.push_back(paramType);
+        paramTypes.push_back(param.first->getLLVMType(ctx));
     }
-
-    llvm::Type* returnType;
-    if (typeFunc == "double") {
-        returnType = builder.getDoubleTy();
-    } else if (typeFunc == "int") {
-        returnType = builder.getInt32Ty();
-    } else {
-        throw std::runtime_error("Invalid function type: " + typeFunc);
-    }
+    llvm::Type* returnType = typeFunc->getLLVMType(ctx);
 
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
     llvm::Function* function = module->getFunction(nameFunc);
@@ -125,9 +110,9 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
-    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(builder.getContext(), "then", func);
+    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(ctx, "then", func);
     llvm::BasicBlock* elseBB = !elseExpr.empty() ? llvm::BasicBlock::Create(ctx, "else", func) : nullptr;
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(builder.getContext(), "merge",func);
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(ctx, "merge",func);
 
     if(!elseExpr.empty()){
         builder.CreateCondBr(condVal->getLLVMValue(), thenBB, elseBB);

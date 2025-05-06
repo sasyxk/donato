@@ -27,7 +27,7 @@ Token Tokenizer::nextToken() {
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
         if (word == "function") return Token(FUNCTION, word);
-        if (word == "call") return Token(CALL, word);
+        if (word == "double" || word == "int") return Token(TYPE, word);
         return Token(VAR, word);
     }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
@@ -119,16 +119,16 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
-        std::string typeFunc = currentToken.value;
-        eat(VAR);
+        Type* typeFunc = parseType(currentToken.value);
+        eat(TYPE);
         std::string nameFunc = currentToken.value;
         eat(VAR);
         eat(LPAREN);
-        std::vector<std::pair<std::string, std::string>> parameters; // (type name),
+        std::vector<std::pair<Type*, std::string>> parameters; // (type name),
         do {
             if(currentToken.type == RPAREN){break;}
-            std::string type = currentToken.value;
-            eat(VAR);
+            Type* type = parseType(currentToken.value);
+            eat(TYPE);
             std::string param = currentToken.value;
             eat(VAR);
             parameters.emplace_back(type, param);
@@ -143,7 +143,7 @@ Statement* Parser::parseStm(){
             functionBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
         eat(RBRACE);
-        return new Function(typeFunc,nameFunc,parameters,functionBodyStatemets);
+        return new Function(typeFunc, nameFunc, parameters, functionBodyStatemets);
     }
     if(currentToken.type == IF) {
         eat(IF);
@@ -283,20 +283,6 @@ Expr* Parser::parseFactor() {
         Expr* elseExpr = parseExpr();
         return new IfOp(condLeft, thenExpr, elseExpr);
     }
-    if (currentToken.type == CALL) {
-        eat(CALL);
-        std::string funcName = currentToken.value;
-        eat(VAR);
-        eat(LPAREN);
-        std::vector<Expr*> args;
-        do {
-            if(currentToken.type == RPAREN){break;}
-            Expr* arg = parseExpr();
-            args.push_back(arg);
-        } while (currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RPAREN);
-        return new CallFunc(funcName, args); 
-    }
     if (currentToken.type == LET) {
         eat(LET);
         std::vector<std::pair<std::string, Expr*>> bindings;
@@ -319,13 +305,24 @@ Expr* Parser::parseFactor() {
     if (currentToken.type == VAR) {
         std::string name = currentToken.value;
         eat(VAR);
+        if(currentToken.type == LPAREN){
+            eat(LPAREN);
+            std::vector<Expr*> args;
+            do {
+                if(currentToken.type == RPAREN){break;}
+                Expr* arg = parseExpr();
+                args.push_back(arg);
+            } while (currentToken.type == COMMA && (eat(COMMA), true));
+            eat(RPAREN);
+            return new CallFunc(name, args);
+        }
         return new Var(name);
     }
     throw std::runtime_error("Unexpected factor");
 }
 
-Expr *Parser::parseNum(std::string val)
-{
+//-----------------------------------------------------------------------------------
+Expr* Parser::parseNum(std::string val){
     Type* type;
     double num = std::stod(val);
     type = new DoubleType();
@@ -339,5 +336,13 @@ Expr *Parser::parseNum(std::string val)
             throw std::runtime_error("Invalid floating-point stringValue: " + val);
         }
     }*/
+}
 
+Type* Parser::parseType(std::string stringType){
+    if (stringType == "double") {
+        return new DoubleType();
+    } else if (stringType == "bool") {
+        return new BoolType();
+    }
+    throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }
