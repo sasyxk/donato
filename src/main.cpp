@@ -68,6 +68,20 @@ int main(int argc, char** argv) {
     llvm::verifyModule(*module, &llvm::errs());
     generateExecutable(*module, "output");
 
+    // Cleanup - deallocation Functions
+    for (auto& pair : symbolFunctions) {
+        delete pair.second; 
+    }
+    symbolFunctions.clear();
+
+    // Cleanup - deallocating Variables
+    for (auto& scope : symbolTable) {
+        for (auto& [name, info] : scope) {
+            delete info.type;
+        }
+    }
+    symbolTable.clear();
+
     // Cleanup - deallocating the AST
     for (Statement* stm : ast) {
         delete stm;
