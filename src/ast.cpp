@@ -23,9 +23,7 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
     llvm::Function* function = module->getFunction(nameFunc);
 
-    if (function && function->getFunctionType() == funcType) {
-        throw std::runtime_error("Redefinition of function: " + nameFunc);
-    }
+    if (function) throw std::runtime_error("Redefinition of function: " + nameFunc); //&& function->getFunctionType() == funcType
 
     function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
 
@@ -178,7 +176,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
     Value* val = value->codegen(builder);
-    if(!(val->getType() == type)){
+    if(!(*val->getType() == *type)){
         throw std::runtime_error(
             "Updated value of variable '"+
             nameVar+
@@ -398,7 +396,7 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
     
     builder.SetInsertPoint(mergeBB);
     
-    if(!(thenVal->getType() == elseVal->getType())){
+    if(!(*thenVal->getType() == *elseVal->getType())){
         throw std::runtime_error("IfOp has branches with results of different types");
     }
     
