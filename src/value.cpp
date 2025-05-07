@@ -1,6 +1,7 @@
 #include "value.h"
 #include "double_value.h"
 #include "bool_value.h"
+#include "signed_int_value.h"
 
 void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx) {
     if(type->getLLVMType(ctx) != value->getType()) {
@@ -28,5 +29,9 @@ Value* Value::createValue(Type *type, llvm::Value *llvmVal, llvm::LLVMContext &c
     else if (dynamic_cast<BoolType*>(type)) {
         return new BoolValue(type, llvmVal, ctx);
     } 
+    else if (const SignedIntType* intType = dynamic_cast<const SignedIntType*>(type)) {
+        return new SignedIntValue(type, llvmVal, ctx);
+    } 
+
     throw std::runtime_error("Unsupported type in Value::createValue: " + type->toString());
 }

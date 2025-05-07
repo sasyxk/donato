@@ -9,6 +9,7 @@
 #include "type.h"
 #include "value.h"
 #include "double_value.h"
+#include "signed_int_value.h"
 #include "bool_value.h"
 
 struct SymbolInfo {
@@ -17,6 +18,7 @@ struct SymbolInfo {
 };
 
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
+extern std::vector<std::pair<std::string, Type*>> symbolFunctions;
 extern llvm::Module* module;
 
 class Expr {
@@ -174,6 +176,17 @@ class DoubleNum : public Expr {
 public:
     DoubleNum(double v, Type* t);
     ~DoubleNum() {
+        delete type;  
+    }
+    Value* codegen(llvm::IRBuilder<>& builder) override;
+};
+
+class SignedIntNum : public Expr {
+    std::int64_t val;
+    Type* type;
+public:
+    SignedIntNum(std::int64_t v, Type* t);
+    ~SignedIntNum() {
         delete type;  
     }
     Value* codegen(llvm::IRBuilder<>& builder) override;

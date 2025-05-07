@@ -2,18 +2,6 @@
 #include "llvm/IR/IRBuilder.h"
 
 //Type-----------------------------------------------
-Type* Type::mapLLVMTypeToType(llvm::Type* llvmType){
-    
-    if (llvmType->isDoubleTy()) {
-        return new DoubleType();
-    } else if (llvmType->isIntegerTy(1)) {
-        return new BoolType();
-    }
-
-    throw std::runtime_error("Unsupported map llvm:Type to Type");
-    
-}
-
 
 // DoubleType----------------------------------------
 llvm::Type *DoubleType::getLLVMType(llvm::LLVMContext &ctx) const {
@@ -41,6 +29,8 @@ llvm::Type* SignedIntType::getLLVMType(llvm::LLVMContext &ctx) const {
             return llvm::Type::getInt32Ty(ctx);
         case 64:
             return llvm::Type::getInt64Ty(ctx);
+        default:
+            throw std::invalid_argument("Unsupported bit width for SignedIntType: " + std::to_string(bits));
     }
 }
 

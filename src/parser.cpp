@@ -37,8 +37,12 @@ Token Tokenizer::nextToken() {
         if (word == "function") return Token(FUNCTION, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||
-            word == "int"    ||
-            word == "bool"   
+            word == "bool"   ||
+            word == "int"    || 
+            word == "int8"   ||
+            word == "int16"  ||
+            word == "int32"  ||
+            word == "int64"    
         ) return Token(TYPE, word);
         if (word == "auto") return Token(AUTO, word);
         return Token(VAR, word);
@@ -354,6 +358,13 @@ Expr* Parser::parseNum(std::string val){
         return new BoolNum(boolVal, type);
     }
 
+    // INTEGER (32-bit)
+    try {
+        std::int64_t num = std::stoll(val); 
+        type = new SignedIntType(32);
+        return new SignedIntNum(num, type);
+    } catch (...) {}
+
     throw std::runtime_error("No valid type associated with value: '" + val + "'");
 }
 
@@ -366,6 +377,18 @@ Type* Parser::parseType(std::string stringType){
     }
     else if(stringType == "auto") {
         return nullptr;
+    }
+    else if(stringType == "int8"){
+        return new SignedIntType(8);
+    }
+    else if(stringType == "int16"){
+        return new SignedIntType(16);
+    }
+    else if(stringType == "int32" || stringType == "int"){
+        return new SignedIntType(32);
+    }
+    else if(stringType == "int64"){
+        return new SignedIntType(64);
     }
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }

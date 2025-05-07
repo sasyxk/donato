@@ -7,12 +7,20 @@
 
 std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 
+std::vector<std::pair<std::string, Type*>> symbolFunctions; //Name, return
+
 // Statements --------------
 
 Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
     std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
+
+    symbolFunctions.emplace_back(
+        nameFunc,
+        typeFunc->clone()
+    );
+
     std::vector<llvm::Type*> paramTypes;
     llvm::LLVMContext& ctx = builder.getContext();
     for (const auto& param : parameters) {
@@ -37,7 +45,7 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         arg->setName(param.second);
         llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
         builder.CreateStore(arg, alloca);
-        symbolTable.back()[param.second] = {alloca, Type::mapLLVMTypeToType(arg->getType())};
+        symbolTable.back()[param.second] = {alloca, param.first};
     }
 
     for (Statement* stm : body) {
@@ -268,10 +276,14 @@ Value* CallFunc::codegen(llvm::IRBuilder<>& builder) {
         delete value;
     }
 
-    //return builder.CreateCall(callee, argValues, "calltmp");
-
     llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-    Type* returnType = Type::mapLLVMTypeToType(callee->getReturnType());
+    Type* returnType;
+    for (const auto& func : symbolFunctions) {
+        if (func.first == funcName) {  
+            returnType = func.second->clone();
+            break;
+        }
+    }
     Value* returnValue = Value::createValue(returnType, llvmValueReturn, ctx);
 
     return returnValue;
@@ -331,6 +343,21 @@ Value* DoubleNum::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* llvmValue = llvm::ConstantFP::get(ctx, llvm::APFloat(val));
     return new DoubleValue(type->clone(), llvmValue, ctx);
+}
+
+SignedIntNum::SignedIntNum(std::int64_t v, Type* t) : val(v) , type(t) {}
+
+Value* SignedIntNum::codegen(llvm::IRBuilder<>& builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    unsigned bits = static_cast<SignedIntType*>(type)->getBits();
+
+    llvm::Value* llvmValue = llvm::ConstantInt::get(
+        llvm::IntegerType::get(ctx, bits),
+        val,
+        true
+    );
+    return new SignedIntValue(type->clone(), llvmValue, ctx);
 }
 
 BoolNum::BoolNum(bool v, Type* t) : val(v) , type(t) {}

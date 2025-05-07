@@ -5,8 +5,6 @@
 class Type {
 public:
     virtual ~Type() = default;
-
-    static Type* mapLLVMTypeToType(llvm::Type* llvmType);
     
     virtual bool operator==(const Type& other) const = 0;
 
@@ -26,6 +24,20 @@ public:
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
     std::string toString() const override {return "double";}
     Type* clone() const override { return new DoubleType(*this); }
+}; 
+
+class SignedIntType  : public Type{
+    unsigned bits;
+public:
+    SignedIntType (unsigned bits);
+    ~SignedIntType () override = default;
+
+    bool operator==(const Type& other) const override;
+
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    std::string toString() const override { return "int" + std::to_string(bits); }
+    Type* clone() const override { return new SignedIntType(*this); }
+    unsigned getBits() const {return bits;}
 }; 
 
 class BoolType : public Type{
