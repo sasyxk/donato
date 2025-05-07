@@ -24,8 +24,35 @@ bool DoubleType::operator==(const Type &other) const {
     return dynamic_cast<const DoubleType*>(&other) != nullptr;
 }
 
+//SignedIntType-------------------------------------
+SignedIntType::SignedIntType(unsigned bits) {
+    if(bits != 8 && bits != 16 && bits != 32 && bits != 64)
+        throw std::invalid_argument("Unsupported bit width for SignedIntType: " + std::to_string(bits));
+    this->bits = bits;
+}
+
+llvm::Type* SignedIntType::getLLVMType(llvm::LLVMContext &ctx) const {
+    switch (bits) {
+        case 8:
+            return llvm::Type::getInt8Ty(ctx);
+        case 16:
+            return llvm::Type::getInt16Ty(ctx);
+        case 32:
+            return llvm::Type::getInt32Ty(ctx);
+        case 64:
+            return llvm::Type::getInt64Ty(ctx);
+    }
+}
+
+bool SignedIntType::operator==(const Type &other) const {
+    if (const SignedIntType* otherInt = dynamic_cast<const SignedIntType*>(&other)) {
+        return otherInt->getBits() == bits;
+    }
+    return false;
+}
+
 // BoolType------------------------------------------
-llvm::Type *BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
+llvm::Type* BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
     return llvm::Type::getInt1Ty(ctx);
 }
 
