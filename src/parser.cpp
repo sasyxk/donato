@@ -35,11 +35,12 @@ Token Tokenizer::nextToken() {
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
         if (word == "function") return Token(FUNCTION, word);
-        if(word == "true" || word == "false") return Token(NUM, word);
+        if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||
             word == "int"    ||
-            word == "bool"
+            word == "bool"   
         ) return Token(TYPE, word);
+        if (word == "auto") return Token(AUTO, word);
         return Token(VAR, word);
     }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
@@ -116,13 +117,14 @@ Statement* Parser::parseCode(){
 }
 
 Statement* Parser::parseStm(){
-    if (currentToken.type == DVAR) {  // var try = Expr
-        eat(DVAR);
+    if (currentToken.type == TYPE || currentToken.type == AUTO) { 
+        Type* typeVar = parseType(currentToken.value);
+        typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = currentToken.value;
         eat(VAR);
         eat(EQ);
         Expr* value = parse();
-        return new VarDecl(var, value);
+        return new VarDecl(var, typeVar, value);
     }
     if(currentToken.type == RETURN) {
         eat(RETURN);
@@ -358,8 +360,12 @@ Expr* Parser::parseNum(std::string val){
 Type* Parser::parseType(std::string stringType){
     if (stringType == "double") {
         return new DoubleType();
-    } else if (stringType == "bool") {
+    } 
+    else if (stringType == "bool") {
         return new BoolType();
+    }
+    else if(stringType == "auto") {
+        return nullptr;
     }
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }

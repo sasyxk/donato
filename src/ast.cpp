@@ -190,7 +190,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     delete val;
 }
 
-VarDecl::VarDecl(const std::string n, Expr* v) : nameVar(n), value(v) {}
+VarDecl::VarDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
 void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     
@@ -210,7 +210,25 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     Value* val = value->codegen(builder);
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-    llvm::AllocaInst* alloca = builder.CreateAlloca(val->getType()->getLLVMType(ctx), nullptr, nameVar);
+    llvm::Type* typeVar;
+    if(!type){
+        typeVar = val->getType()->getLLVMType(ctx);
+        type = val->getType()->clone();
+    }
+    else{
+        if(!(*val->getType() == *type)){
+            throw std::runtime_error(
+                "Type mismatch for variable '" + 
+                nameVar + 
+                "': expected " + 
+                type->toString() + 
+                ", got " + 
+                val->getType()->toString()
+            );
+        }
+        typeVar = type->getLLVMType(ctx);
+    }
+    llvm::AllocaInst* alloca = builder.CreateAlloca(typeVar, nullptr, nameVar);
 
     builder.SetInsertPoint(currentBlock);
     builder.CreateStore(val->getLLVMValue(), alloca);

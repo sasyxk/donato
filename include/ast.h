@@ -51,8 +51,9 @@ public:
 class VarDecl : public Statement {
     std::string nameVar;
     Expr* value;
+    Type* type;
 public:
-    VarDecl(const std::string n, Expr* v);
+    VarDecl(const std::string n, Type* t, Expr* v);
     ~VarDecl() {
         delete value;
     }
