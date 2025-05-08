@@ -15,6 +15,41 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
     return value;
 }
 
+llvm::Value* createCheckedSignedArithmetic(
+    llvm::Intrinsic::ID op,
+    llvm::Value* l,
+    llvm::Value* r,
+    llvm::IRBuilder<>& builder,
+    const std::string& okBlockName = "arith_ok",
+    const std::string& errorBlockName = "arith_overflow"
+) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Type* intTy = l->getType();
+    llvm::Module* module = builder.GetInsertBlock()->getModule();
+    llvm::Function* currentFunction = builder.GetInsertBlock()->getParent();
+
+    llvm::Function* intrinsic = llvm::Intrinsic::getDeclaration(module, op, intTy);
+    llvm::Value* resultStruct = builder.CreateCall(intrinsic, { l, r }, okBlockName + "_with_overflow");
+
+    llvm::Value* result = builder.CreateExtractValue(resultStruct, 0, "result");
+    llvm::Value* overflow = builder.CreateExtractValue(resultStruct, 1, "overflow");
+
+    llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, okBlockName, currentFunction);
+    llvm::BasicBlock* errorBlock = llvm::BasicBlock::Create(ctx, errorBlockName, currentFunction);
+
+    builder.CreateCondBr(overflow, errorBlock, okBlock);
+
+    // Error Block
+    builder.SetInsertPoint(errorBlock);
+    builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
+    builder.CreateUnreachable();
+
+    // Continue Block
+    builder.SetInsertPoint(okBlock);
+    return result;
+}
+
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
@@ -22,6 +57,16 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
             return new SignedIntValue(this->getType()->clone(), result, ctx);
+            /*llvm::Value* result = createCheckedSignedArithmetic(
+                llvm::Intrinsic::sadd_with_overflow,
+                this->getLLVMValue(),
+                other->getLLVMValue(),
+                builder,
+                "addtmp_ok",
+                "addtmp_overflow"
+            );
+            return new SignedIntValue(this->getType()->clone(), result, ctx);
+            */
         }
     }
 
