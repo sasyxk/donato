@@ -97,11 +97,37 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 }
 
 Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
-    //todo Handle the INT_MIN / -1, unique "overflow" for div
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
+            llvm::Value* lhs = this->getLLVMValue();
+            llvm::Value* rhs = other->getLLVMValue();
+            llvm::Type* intTy = lhs->getType();
+            llvm::Module* module = builder.GetInsertBlock()->getModule();
+            llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
+
+            // Constants: INT_MIN and -1
+            llvm::Value* intMin = llvm::ConstantInt::get(intTy, llvm::APInt::getSignedMinValue(intTy->getIntegerBitWidth()));
+            llvm::Value* minusOne = llvm::ConstantInt::getSigned(intTy, -1);
+
+            // Comparisons
+            llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
+            llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
+            llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
+
+            llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
+            llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
+
+            builder.CreateCondBr(willOverflow, errBlock, okBlock);
+
+            // Error Block
+            builder.SetInsertPoint(errBlock);
+            builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
+            builder.CreateUnreachable();
+
+            // Continue Block
+            builder.SetInsertPoint(okBlock);
             llvm::Value* result = builder.CreateSDiv(this->getLLVMValue(), other->getLLVMValue(), "divtmp");
             return new SignedIntValue(this->getType()->clone(), result, ctx);
         }
@@ -226,7 +252,16 @@ Value* SignedIntValue::gte(Value* other, llvm::IRBuilder<>& builder) {
 Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
+    //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
+    llvm::Value* zero = llvm::ConstantInt::get(this->getType()->getLLVMType(ctx), 0);
+    llvm::Value* result = createCheckedIntegerArithmetic(
+        llvm::Intrinsic::ssub_with_overflow,
+        zero,  // 0 - x
+        this->getLLVMValue(),
+        builder,
+        "negtmp_ok",
+        "negtmp_overflow"
+    );
     return new SignedIntValue(this->getType()->clone(), result, ctx);
 }
 
