@@ -9,7 +9,6 @@ Token Tokenizer::nextToken() {
     if (pos >= input.size()) return Token(END);
 
     char c = input[pos];
-    std::cout << "condinction " << (isdigit(c) || c == '.' || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) << std::endl;
     if (isdigit(c) || c == '.' || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
         size_t start = pos;
         if(input[pos] == '-') pos++;
@@ -22,7 +21,6 @@ Token Tokenizer::nextToken() {
 
             while (pos < input.size() && isdigit(input[pos])) pos++;
         }
-        std::cout << "aura " << input.substr(start, pos - start) << std::endl; 
         return Token(NUM, input.substr(start, pos - start));
     }
     if (isalpha(c)) {
@@ -349,11 +347,13 @@ Expr* Parser::parseNum(std::string val){
     Type* type;
     if (val.find('.') != std::string::npos) {
         try {
-            double num = std::stod(val);
+            size_t pos;
+            double num = std::stod(val, &pos);
+            if (pos != val.size()) throw std::runtime_error("Invalid characters");
             type = new DoubleType();
-            return new DoubleNum(num,type);
-        } catch (...) {
-            throw std::runtime_error("Invalid floating-point stringValue: " + val);
+            return new DoubleNum(num, type);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Invalid floating-point string value: " + val + " (" + e.what() + ")");
         }
     }
 
