@@ -100,7 +100,7 @@ Token Tokenizer::nextToken() {
     throw std::runtime_error("Unknown token: " + std::string(1, c));
 }
 
-Parser::Parser(Tokenizer& t) : tokenizer(t), currentToken(t.nextToken()) {}
+Parser::Parser(Tokenizer& t, std::string lf) : tokenizer(t), currentToken(t.nextToken()) {}
 
 void Parser::eat(TokenType expected) {
     if (currentToken.type != expected)
@@ -133,13 +133,14 @@ Statement* Parser::parseStm(){
     if(currentToken.type == RETURN) {
         eat(RETURN);
         Expr* value = parse();
-        return new Return(value);
+        return new Return(value, lastFuncion);
     }
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
         Type* typeFunc = parseType(currentToken.value);
         eat(TYPE);
         std::string nameFunc = currentToken.value;
+        lastFuncion = nameFunc;
         eat(VAR);
         eat(LPAREN);
         std::vector<std::pair<Type*, std::string>> parameters; // (type name),
@@ -161,6 +162,7 @@ Statement* Parser::parseStm(){
             functionBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
         eat(RBRACE);
+        lastFuncion = "";
         return new Function(typeFunc, nameFunc, parameters, functionBodyStatemets);
     }
     if(currentToken.type == IF) {
@@ -361,7 +363,7 @@ Expr* Parser::parseNum(std::string val){
     // INTEGER (32-bit)
     try {
         std::int64_t num = std::stoll(val); 
-        type = new SignedIntType(32);
+        type = new SignedIntType(8);
         return new SignedIntNum(num, type);
     } catch (...) {}
 

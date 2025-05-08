@@ -111,8 +111,9 @@ public:
 
 class Return : public Statement {
     Expr* expr;
+    std::string funcName;
 public:
-    Return(Expr* e);
+    Return(Expr* e, std::string fn);
     ~Return() {
         delete expr;
     }

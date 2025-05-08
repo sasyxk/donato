@@ -58,10 +58,25 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     symbolTable.pop_back();
 }
 
-Return::Return(Expr* e) : expr(e) {}
+Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
 
 void Return::codegen(llvm::IRBuilder<>& builder) {
     Value* retVal = expr->codegen(builder);
+    Type* returnType;
+    for (const auto& func : symbolFunctions) {
+        if (func.first == funcName) {  
+            returnType = func.second->clone();
+            break;
+        }
+    }
+    if(!(*retVal->getType() == *returnType))
+        throw std::runtime_error(
+            "The returned type '" +
+            retVal->getType()->toString() + 
+            "' is not compatible with the type that the function '" +
+            funcName +
+            "', is supposed to return '"+returnType->toString()+"'"
+        );
     builder.CreateRet(retVal->getLLVMValue()); 
 }
 

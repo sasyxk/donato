@@ -25,8 +25,9 @@ public:
 class Parser {
     Tokenizer& tokenizer;
     Token currentToken;
+    std::string lastFuncion;
 public:
-    Parser(Tokenizer& t);
+    Parser(Tokenizer& t, std::string lastFuncion = "");
     Statement* parseCode();
     Statement* parseStm();
     Expr* parse();
