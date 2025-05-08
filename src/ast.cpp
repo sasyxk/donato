@@ -151,7 +151,7 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
         stm->codegen(builder);
     }
 
-    if (!thenBB->getTerminator()) {
+    if (!builder.GetInsertBlock()->getTerminator()) {
         builder.CreateBr(mergeBB);
     }
 
@@ -166,7 +166,7 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
         for (Statement* stm : elseExpr) {
             stm->codegen(builder);
         }
-        if (!elseBB->getTerminator()) {
+        if (!builder.GetInsertBlock()->getTerminator()) {
             builder.CreateBr(mergeBB);
         }
     }
