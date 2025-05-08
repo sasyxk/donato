@@ -9,8 +9,10 @@ Token Tokenizer::nextToken() {
     if (pos >= input.size()) return Token(END);
 
     char c = input[pos];
-    if (isdigit(c) || c == '.') {
+    std::cout << "condinction " << (isdigit(c) || c == '.' || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) << std::endl;
+    if (isdigit(c) || c == '.' || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
         size_t start = pos;
+        if(input[pos] == '-') pos++;
         while (pos < input.size() && (isdigit(input[pos]) || input[pos] == '.')) pos++;
         
         // Check scientific notation
@@ -20,6 +22,7 @@ Token Tokenizer::nextToken() {
 
             while (pos < input.size() && isdigit(input[pos])) pos++;
         }
+        std::cout << "aura " << input.substr(start, pos - start) << std::endl; 
         return Token(NUM, input.substr(start, pos - start));
     }
     if (isalpha(c)) {
@@ -95,7 +98,7 @@ Token Tokenizer::nextToken() {
         return Token(OP, std::string(1, c));
     }
 
-    if (c == ';') { pos++; return Token(ENDEXPR, std::string(1, c)); } //to be replaced with a carriage return
+    if (c == ';') { pos++; return Token(ENDEXPR, std::string(1, c)); }
 
     throw std::runtime_error("Unknown token: " + std::string(1, c));
 }
