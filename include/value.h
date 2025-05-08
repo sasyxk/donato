@@ -11,6 +11,14 @@ public:
 
     static void checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx);
     static Value* createValue(Type* type, llvm::Value* llvmVal, llvm::LLVMContext& ctx);
+    static llvm::Value* createCheckedIntegerArithmetic(
+        llvm::Intrinsic::ID op,
+        llvm::Value* l,
+        llvm::Value* r,
+        llvm::IRBuilder<>& builder,
+        const std::string& okBlockName = "arith_ok",
+        const std::string& errorBlockName = "arith_overflow"
+    );
 
     virtual Type* getType() const = 0;
     virtual llvm::Value* getLLVMValue() const = 0;

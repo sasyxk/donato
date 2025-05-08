@@ -15,49 +15,14 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
     return value;
 }
 
-llvm::Value* createCheckedSignedArithmetic(
-    llvm::Intrinsic::ID op,
-    llvm::Value* l,
-    llvm::Value* r,
-    llvm::IRBuilder<>& builder,
-    const std::string& okBlockName = "arith_ok",
-    const std::string& errorBlockName = "arith_overflow"
-) {
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    llvm::Type* intTy = l->getType();
-    llvm::Module* module = builder.GetInsertBlock()->getModule();
-    llvm::Function* currentFunction = builder.GetInsertBlock()->getParent();
-
-    llvm::Function* intrinsic = llvm::Intrinsic::getDeclaration(module, op, intTy);
-    llvm::Value* resultStruct = builder.CreateCall(intrinsic, { l, r }, okBlockName + "_with_overflow");
-
-    llvm::Value* result = builder.CreateExtractValue(resultStruct, 0, "result");
-    llvm::Value* overflow = builder.CreateExtractValue(resultStruct, 1, "overflow");
-
-    llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, okBlockName, currentFunction);
-    llvm::BasicBlock* errorBlock = llvm::BasicBlock::Create(ctx, errorBlockName, currentFunction);
-
-    builder.CreateCondBr(overflow, errorBlock, okBlock);
-
-    // Error Block
-    builder.SetInsertPoint(errorBlock);
-    builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
-    builder.CreateUnreachable();
-
-    // Continue Block
-    builder.SetInsertPoint(okBlock);
-    return result;
-}
-
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
-            llvm::Value* result = builder.CreateAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
-            return new SignedIntValue(this->getType()->clone(), result, ctx);
-            /*llvm::Value* result = createCheckedSignedArithmetic(
+            /*llvm::Value* result = builder.CreateAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
+            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
+            llvm::Value* result = createCheckedIntegerArithmetic(
                 llvm::Intrinsic::sadd_with_overflow,
                 this->getLLVMValue(),
                 other->getLLVMValue(),
@@ -66,7 +31,6 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
                 "addtmp_overflow"
             );
             return new SignedIntValue(this->getType()->clone(), result, ctx);
-            */
         }
     }
 
@@ -83,7 +47,16 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
-            llvm::Value* result = builder.CreateSub(this->getLLVMValue(), other->getLLVMValue(), "subtmp");
+            /*llvm::Value* result = builder.CreateSub(this->getLLVMValue(), other->getLLVMValue(), "subtmp");
+            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
+            llvm::Value* result = createCheckedIntegerArithmetic(
+                llvm::Intrinsic::ssub_with_overflow,
+                this->getLLVMValue(),
+                other->getLLVMValue(),
+                builder,
+                "addtmp_ok",
+                "addtmp_overflow"
+            );
             return new SignedIntValue(this->getType()->clone(), result, ctx);
         }
     }
@@ -101,7 +74,16 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
-            llvm::Value* result = builder.CreateMul(this->getLLVMValue(), other->getLLVMValue(), "multmp");
+            /*llvm::Value* result = builder.CreateMul(this->getLLVMValue(), other->getLLVMValue(), "multmp");
+            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
+            llvm::Value* result = createCheckedIntegerArithmetic(
+                llvm::Intrinsic::smul_with_overflow,
+                this->getLLVMValue(),
+                other->getLLVMValue(),
+                builder,
+                "addtmp_ok",
+                "addtmp_overflow"
+            );
             return new SignedIntValue(this->getType()->clone(), result, ctx);
         }
     }
@@ -115,6 +97,7 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 }
 
 Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
+    //todo Handle the INT_MIN / -1, unique "overflow" for div
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {

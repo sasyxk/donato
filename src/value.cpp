@@ -35,3 +35,38 @@ Value* Value::createValue(Type *type, llvm::Value *llvmVal, llvm::LLVMContext &c
 
     throw std::runtime_error("Unsupported type in Value::createValue: " + type->toString());
 }
+
+llvm::Value *Value::createCheckedIntegerArithmetic(
+    llvm::Intrinsic::ID op,
+    llvm::Value* l,
+    llvm::Value* r,
+    llvm::IRBuilder<>& builder,
+    const std::string& okBlockName,
+    const std::string& errorBlockName
+) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Type* intTy = l->getType();
+    llvm::Module* module = builder.GetInsertBlock()->getModule();
+    llvm::Function* currentFunction = builder.GetInsertBlock()->getParent();
+
+    llvm::Function* intrinsic = llvm::Intrinsic::getDeclaration(module, op, intTy);
+    llvm::Value* resultStruct = builder.CreateCall(intrinsic, { l, r }, okBlockName + "_with_overflow");
+
+    llvm::Value* result = builder.CreateExtractValue(resultStruct, 0, "result");
+    llvm::Value* overflow = builder.CreateExtractValue(resultStruct, 1, "overflow");
+
+    llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, okBlockName, currentFunction);
+    llvm::BasicBlock* errorBlock = llvm::BasicBlock::Create(ctx, errorBlockName, currentFunction);
+
+    builder.CreateCondBr(overflow, errorBlock, okBlock);
+
+    // Error Block
+    builder.SetInsertPoint(errorBlock);
+    builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
+    builder.CreateUnreachable();
+
+    // Continue Block
+    builder.SetInsertPoint(okBlock);
+    return result;
+}
