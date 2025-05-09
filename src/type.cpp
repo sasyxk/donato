@@ -19,6 +19,10 @@ bool DoubleType::operator==(const Type &other) const {
     return dynamic_cast<const DoubleType*>(&other) != nullptr;
 }
 
+bool DoubleType::isCastTo(Type *other) const {
+    return false;
+}
+
 //SignedIntType-------------------------------------
 SignedIntType::SignedIntType(unsigned bits) {
     if(bits != 8 && bits != 16 && bits != 32 && bits != 64)
@@ -52,6 +56,13 @@ bool SignedIntType::operator==(const Type &other) const {
     return false;
 }
 
+bool SignedIntType::isCastTo(Type *other) const {
+    if (dynamic_cast<const SignedIntType*>(other)) {
+        return true;
+    }
+    return false;
+}
+
 // BoolType------------------------------------------
 llvm::Type* BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
     return llvm::Type::getInt1Ty(ctx);
@@ -63,4 +74,8 @@ Value *BoolType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
 
 bool BoolType::operator==(const Type &other) const {
     return dynamic_cast<const BoolType*>(&other) != nullptr;
+}
+
+bool BoolType::isCastTo(Type *other) const {
+    return false;
 }

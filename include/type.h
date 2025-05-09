@@ -14,6 +14,7 @@ public:
     virtual Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) = 0;
     virtual std::string toString() const = 0;
     virtual Type* clone() const = 0;
+    virtual bool isCastTo(Type* other) const= 0;
 
 };
 
@@ -28,6 +29,7 @@ public:
     Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
     std::string toString() const override {return "double";}
     Type* clone() const override { return new DoubleType(*this); }
+    bool isCastTo(Type* other) const override;
 }; 
 
 class SignedIntType  : public Type{
@@ -42,6 +44,8 @@ public:
     Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
     std::string toString() const override { return "int" + std::to_string(bits); }
     Type* clone() const override { return new SignedIntType(*this); }
+    bool isCastTo(Type* other) const override;
+
     unsigned getBits() const {return bits;}
 }; 
 
@@ -56,6 +60,7 @@ public:
     Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
     std::string toString() const override {return "bool";}
     Type* clone() const override { return new BoolType(*this); }
+    bool isCastTo(Type* other) const override;
 }; 
 
 

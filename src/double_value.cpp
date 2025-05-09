@@ -183,3 +183,7 @@ Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder)
 
     return new BoolValue(new BoolType(), result, builder.getContext());
 }
+
+Value *DoubleValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
+    throw std::runtime_error("Imposible cast DoubleValue");
+}

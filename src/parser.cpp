@@ -366,7 +366,10 @@ Expr* Parser::parseNum(std::string val){
     // INTEGER (32-bit)
     try {
         std::int64_t num = std::stoll(val); 
-        type = new SignedIntType(8);
+        if(num > 20){type = new SignedIntType(16);}
+        else{
+            type = new SignedIntType(8);
+        }
         return new SignedIntNum(num, type);
     } catch (...) {}
 

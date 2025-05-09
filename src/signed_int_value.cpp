@@ -29,7 +29,7 @@ std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
         llvm::Value* newRight = builder.CreateSExt(right->getLLVMValue(), leftType->getLLVMType(ctx), "sext_right");
         return {left->getLLVMValue(), newRight, true};
     } else if (leftType->getBits() < rightType->getBits()) {
-        llvm::Value* newLeft = builder.CreateSExt(left->getLLVMValue(), rightType->getLLVMType(ctx), "sext_left");
+        llvm::Value* newLeft = builder.CreateSExt(left->getLLVMValue(), rightType->getLLVMType(ctx), "sext_left_aura");
         return {newLeft, right->getLLVMValue(), false};
     } else {
         return {left->getLLVMValue(), right->getLLVMValue(), true};
@@ -39,8 +39,7 @@ std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-        const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
+    if (dynamic_cast<const SignedIntType*>(other->getType())) {
         llvm::Value* l;
         llvm::Value* r;
         bool leftFlag;
@@ -300,4 +299,27 @@ Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
         "ifconf"
     );
     return new BoolValue(new BoolType(), result, ctx);
+}
+
+
+Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other)) {
+        const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
+        if (thisType->getBits() > otherType->getBits()) {
+            //todo Add runtime check for truncation whether or not there is data loss
+            llvm::Value* newValue = builder.CreateTrunc(this->getLLVMValue(), otherType->getLLVMType(ctx), "tronc_right");
+            return new SignedIntValue(otherType->clone(), newValue, ctx);
+        } else if (thisType->getBits() < otherType->getBits()) {
+            llvm::Value* newValue = builder.CreateSExt(this->getLLVMValue(), otherType->getLLVMType(ctx), "sext_left_casting");
+            return new SignedIntValue(otherType->clone(), newValue, ctx);
+        }
+    }
+    throw std::runtime_error(
+        "Unsupported cast Operation: " +
+        this->getType()->toString() +
+        " to " +
+        other->toString()
+    );
 }

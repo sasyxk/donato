@@ -36,6 +36,8 @@ public:
     virtual Value* gte(Value* other, llvm::IRBuilder<>& builder) = 0;  // >=
 
     virtual Value* neg(llvm::IRBuilder<>& builder) = 0;  // -x
-    virtual Value* getBoolValue(llvm::IRBuilder<>& builder) = 0; 
+    virtual Value* getBoolValue(llvm::IRBuilder<>& builder) = 0;
+    
+    virtual Value* castTo(Type* other, llvm::IRBuilder<> &builder) = 0;
 
 };

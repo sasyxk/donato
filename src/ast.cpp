@@ -230,7 +230,6 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
  
     Value* val = value->codegen(builder);
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
-    builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
     llvm::Type* typeVar;
     if(!type){
         typeVar = val->getType()->getLLVMType(ctx);
@@ -238,17 +237,24 @@ void VarDecl::codegen(llvm::IRBuilder<>& builder) {
     }
     else{
         if(!(*val->getType() == *type)){
-            throw std::runtime_error(
+            if(!val->getType()->isCastTo(type)){
+                throw std::runtime_error(
                 "Type mismatch for variable '" + 
                 nameVar + 
                 "': expected " + 
                 type->toString() + 
                 ", got " + 
                 val->getType()->toString()
-            );
+                );
+            }
+            Value* newVal = val->castTo(type, builder);
+            delete val;
+            val = newVal;
         }
         typeVar = type->getLLVMType(ctx);
     }
+    
+    builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
     llvm::AllocaInst* alloca = builder.CreateAlloca(typeVar, nullptr, nameVar);
 
     builder.SetInsertPoint(currentBlock);

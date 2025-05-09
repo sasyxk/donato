@@ -28,4 +28,6 @@ public:
     Value* neg(llvm::IRBuilder<>& builder) override;
 
     Value* getBoolValue(llvm::IRBuilder<>& builder) override;
+
+    Value* castTo(Type* other, llvm::IRBuilder<> &builder) override;
 };
