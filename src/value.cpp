@@ -20,7 +20,7 @@ void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMCon
         );
     }
 }
-
+/*
 Value* Value::createValue(Type *type, llvm::Value *llvmVal, llvm::LLVMContext &ctx)
 {
     if (dynamic_cast<DoubleType*>(type)) {
@@ -35,6 +35,7 @@ Value* Value::createValue(Type *type, llvm::Value *llvmVal, llvm::LLVMContext &c
 
     throw std::runtime_error("Unsupported type in Value::createValue: " + type->toString());
 }
+*/
 
 llvm::Value *Value::createCheckedIntegerArithmetic(
     llvm::Intrinsic::ID op,

@@ -1,11 +1,18 @@
 #include "type.h"
 #include "llvm/IR/IRBuilder.h"
+#include "double_value.h"
+#include "signed_int_value.h"
+#include "bool_value.h"
 
 //Type-----------------------------------------------
 
 // DoubleType----------------------------------------
 llvm::Type *DoubleType::getLLVMType(llvm::LLVMContext &ctx) const {
     return llvm::Type::getDoubleTy(ctx);
+}
+
+Value *DoubleType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    return new DoubleValue(this->clone(), llvmVal, ctx);
 }
 
 bool DoubleType::operator==(const Type &other) const {
@@ -34,6 +41,10 @@ llvm::Type* SignedIntType::getLLVMType(llvm::LLVMContext &ctx) const {
     }
 }
 
+Value *SignedIntType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    return new SignedIntValue(this->clone(), llvmVal, ctx);
+}
+
 bool SignedIntType::operator==(const Type &other) const {
     if (const SignedIntType* otherInt = dynamic_cast<const SignedIntType*>(&other)) {
         return otherInt->getBits() == bits;
@@ -44,6 +55,10 @@ bool SignedIntType::operator==(const Type &other) const {
 // BoolType------------------------------------------
 llvm::Type* BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
     return llvm::Type::getInt1Ty(ctx);
+}
+
+Value *BoolType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    return new BoolValue(this->clone(), llvmVal, ctx);
 }
 
 bool BoolType::operator==(const Type &other) const {

@@ -10,7 +10,6 @@ public:
     virtual ~Value() = default;
 
     static void checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx);
-    static Value* createValue(Type* type, llvm::Value* llvmVal, llvm::LLVMContext& ctx);
     static llvm::Value* createCheckedIntegerArithmetic(
         llvm::Intrinsic::ID op,
         llvm::Value* l,

@@ -299,8 +299,8 @@ Value* CallFunc::codegen(llvm::IRBuilder<>& builder) {
             break;
         }
     }
-    Value* returnValue = Value::createValue(returnType, llvmValueReturn, ctx);
-
+    Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
+    
     return returnValue;
 }
 
@@ -400,7 +400,9 @@ Value* Var::codegen(llvm::IRBuilder<>& builder) {
                 found->second.alloca, 
                 name + "_val"
             );
-            return Value::createValue(found->second.type->clone(),llvmValue,ctx);
+
+            return found->second.type->createValue(llvmValue,ctx);
+            //return Value::createValue(found->second.type->clone(),llvmValue,ctx);
         }
     }
     throw std::runtime_error("Undefined variable: " + name);
@@ -446,8 +448,8 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
     phi->addIncoming(thenVal->getLLVMValue(), thenExitBB);
     phi->addIncoming(elseVal->getLLVMValue(), elseExitBB);
 
-    Value* phiValue = Value::createValue(thenVal->getType()->clone(), phi, ctx);
-
+    Value* phiValue = thenVal->getType()->createValue(phi, ctx);
+    
     delete thenVal;
     delete elseVal;
     delete condVal;
