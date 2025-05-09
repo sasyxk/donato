@@ -1,5 +1,6 @@
 #pragma once
 #include "value.h"
+#include "type.h"
 
 class SignedIntValue : public Value {
     Type* type;

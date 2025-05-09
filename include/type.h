@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
 #include "llvm/IR/IRBuilder.h"
-#include "value.h"
+
+class Value;
 
 class Type {
 public:

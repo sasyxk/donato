@@ -1,5 +1,6 @@
 #pragma once
 #include "value.h"
+#include "type.h"
 
 class DoubleValue : public Value {
     Type* type;

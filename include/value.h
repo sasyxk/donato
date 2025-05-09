@@ -1,9 +1,11 @@
 #pragma once
-#include "type.h"
+//#include "type.h"
 //#include "double_value.h"
 //#include "bool_value.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
+
+class Type;
 
 class Value {
 public:
