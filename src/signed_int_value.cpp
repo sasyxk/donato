@@ -15,23 +15,48 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
     return value;
 }
 
+std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
+    Value* left,
+    Value* right,
+    llvm::IRBuilder<>& builder
+){
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    const SignedIntType* leftType = dynamic_cast<const SignedIntType*>(left->getType());
+    const SignedIntType* rightType = dynamic_cast<const SignedIntType*>(right->getType()); 
+
+    if (leftType->getBits() > rightType->getBits()) {
+        llvm::Value* newRight = builder.CreateSExt(right->getLLVMValue(), leftType->getLLVMType(ctx), "sext_right");
+        return {left->getLLVMValue(), newRight, true};
+    } else if (leftType->getBits() < rightType->getBits()) {
+        llvm::Value* newLeft = builder.CreateSExt(left->getLLVMValue(), rightType->getLLVMType(ctx), "sext_left");
+        return {newLeft, right->getLLVMValue(), false};
+    } else {
+        return {left->getLLVMValue(), right->getLLVMValue(), true};
+    } 
+}
+
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-        if (*this->getType() == *other->getType()) {
-            /*llvm::Value* result = builder.CreateAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
-            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
-            llvm::Value* result = createCheckedIntegerArithmetic(
-                llvm::Intrinsic::sadd_with_overflow,
-                this->getLLVMValue(),
-                other->getLLVMValue(),
-                builder,
-                "addtmp_ok",
-                "addtmp_overflow"
-            );
-            return new SignedIntValue(this->getType()->clone(), result, ctx);
-        }
+        const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
+        llvm::Value* l;
+        llvm::Value* r;
+        bool leftFlag;
+        std::tie(l, r, leftFlag) = promoteOperands(this, other, builder);
+        llvm::Value* result = createCheckedIntegerArithmetic(
+            llvm::Intrinsic::sadd_with_overflow,
+            l,
+            r,
+            builder,
+            "addtmp_ok",
+            "addtmp_overflow"
+        );
+        Type* newType = leftFlag == true ? 
+            this->getType()->clone() :
+            other->getType()->clone();
+        return new SignedIntValue(newType, result, ctx); 
     }
 
     throw std::runtime_error(
