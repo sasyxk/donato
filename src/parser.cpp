@@ -345,7 +345,16 @@ Expr* Parser::parseFactor() {
 //-----------------------------------------------------------------------------------
 Expr* Parser::parseNum(std::string val){
     Type* type;
-    if (val.find('.') != std::string::npos) {
+
+    if (val == "true" || val == "false") {
+        bool boolVal = (val == "true");
+        type = new BoolType();
+        return new BoolNum(boolVal, type);
+    }
+    
+    if (val.find('.') != std::string::npos ||
+        val.find('e') != std::string::npos ||
+        val.find('E') != std::string::npos) {
         try {
             size_t pos;
             double num = std::stod(val, &pos);
@@ -357,21 +366,22 @@ Expr* Parser::parseNum(std::string val){
         }
     }
 
-    if (val == "true" || val == "false") {
-        bool boolVal = (val == "true");
-        type = new BoolType();
-        return new BoolNum(boolVal, type);
-    }
-
-    // INTEGER (32-bit)
     try {
         std::int64_t num = std::stoll(val); 
-        if(num > 20){type = new SignedIntType(16);}
-        else{
+        SignedIntType* type = nullptr;
+        if (num >= INT8_MIN && num <= INT8_MAX) {
             type = new SignedIntType(8);
+        } else if (num >= INT16_MIN && num <= INT16_MAX) {
+            type = new SignedIntType(16);
+        } else if (num >= INT32_MIN && num <= INT32_MAX) {
+            type = new SignedIntType(32);
+        } else {
+            type = new SignedIntType(64);
         }
         return new SignedIntNum(num, type);
-    } catch (...) {}
+    } catch (...) {
+        throw std::runtime_error("Invalid integer string value: " + val);
+    }
 
     throw std::runtime_error("No valid type associated with value: '" + val + "'");
 }
