@@ -199,14 +199,28 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
     Value* val = value->codegen(builder);
-    if(!(*val->getType() == *type)){
+    /*if(!(*val->getType() == *type)){
         throw std::runtime_error(
             "Updated value of variable '"+
             nameVar+
             "' not compatible with the type of the variable itself"
         );
+    }*/
+    if(!(*val->getType() == *type)){
+            if(!val->getType()->isCastTo(type)){
+                throw std::runtime_error(
+                "Type mismatch for variable '" + 
+                nameVar + 
+                "': expected " + 
+                type->toString() + 
+                ", got " + 
+                val->getType()->toString()
+                );
+            }
+            Value* newVal = val->castTo(type, builder);
+            delete val;
+            val = newVal;
     }
-
     builder.CreateStore(val->getLLVMValue(), alloca);
     delete val;
 }
