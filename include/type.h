@@ -63,7 +63,20 @@ public:
     bool isCastTo(Type* other) const override;
 }; 
 
+class StructType : public Type{
+    //std::vector<Type*> membersType;
+    std::string nameStruct;
+    std::vector<std::pair<Type*, std::string>> members;
+public:
+    StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
+    ~StructType() override = default;
 
+    bool operator==(const Type& other) const override;
 
-
-    
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override {return nullptr;}//todo
+    std::string toString() const override;
+    Type* clone() const override { return new StructType(*this); }
+    bool isCastTo(Type* other) const override {return false;}  //todo
+    bool equalName(const StructType& other);
+};

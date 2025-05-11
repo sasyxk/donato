@@ -79,3 +79,58 @@ bool BoolType::operator==(const Type &other) const {
 bool BoolType::isCastTo(Type *other) const {
     return false;
 }
+
+
+//StructType----------------------------------------
+StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m) {
+    this->nameStruct = ns;
+    this->members = m;
+}
+
+llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const {
+    std::vector<llvm::Type*> llvmMembers;
+    for (const auto& [memberType, memberName] : members) {
+        llvmMembers.push_back(memberType->getLLVMType(ctx));
+    }
+    return llvm::StructType::get(ctx, llvmMembers);
+}
+
+bool StructType::operator==(const Type &other) const {
+    const StructType* otherType = dynamic_cast<const StructType*>(&other);
+    if (!otherType)
+        return false;
+
+    if(this->nameStruct != otherType->nameStruct){
+        return false;
+    }
+    
+    if (members.size() != otherType->members.size())
+        return false;
+
+    for (size_t i = 0; i < members.size(); ++i) {
+        const auto& [thisType, thisName] = members[i];
+        const auto& [otherTypeMember, otherName] = otherType->members[i];
+
+        if (!(*thisType == *otherTypeMember))
+            return false;
+
+        if (thisName != otherName)
+            return false;
+    }
+
+    return true;
+}
+
+std::string StructType::toString() const {
+    std::string result = "struct " + this->nameStruct + " {\n";
+    for(auto member : this->members){
+        result += "  " +  member.first->toString() + " " + member.second +";\n";
+    }
+    result += "}";
+    return result;
+}
+
+bool StructType::equalName(const StructType &other) {
+    if(this->nameStruct == other.nameStruct) return true;
+    return false;
+}
