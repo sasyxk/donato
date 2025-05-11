@@ -19,6 +19,7 @@ struct SymbolInfo {
 
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 extern std::vector<std::pair<std::string, Type*>> symbolFunctions;
+extern std::vector<StructType* > symbolStructsType;
 extern llvm::Module* module;
 
 class Expr {

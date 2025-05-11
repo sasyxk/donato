@@ -4,9 +4,11 @@
 #include "ast.h"
 #include "type.h"
 
+extern std::vector<StructType* > symbolStructsType;
+
 enum TokenType { DVAR, NUM, VAR, OP, IF, THEN, ELSE, LET, IN, COMMA,
                  LPAREN, RPAREN, EQ, END, ENDEXPR, RETURN,LBRACE ,RBRACE,
-                 CONDOP, WHILE, COMMENT, FUNCTION, TYPE, AUTO};
+                 CONDOP, WHILE, COMMENT, FUNCTION, TYPE, AUTO, STRUCT};
 
 struct Token {
     TokenType type;

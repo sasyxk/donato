@@ -8,6 +8,7 @@
 std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 
 std::vector<std::pair<std::string, Type*>> symbolFunctions; //Name, return
+std::vector<StructType* > symbolStructsType;
 
 // Statements --------------
 

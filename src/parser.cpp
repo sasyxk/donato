@@ -35,6 +35,7 @@ Token Tokenizer::nextToken() {
         if (word == "var") return Token(DVAR, word);
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
+        if (word == "struct") return Token(STRUCT, word);
         if (word == "function") return Token(FUNCTION, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||
@@ -105,7 +106,7 @@ Parser::Parser(Tokenizer& t, std::string lf) : tokenizer(t), currentToken(t.next
 
 void Parser::eat(TokenType expected) {
     if (currentToken.type != expected)
-        throw std::runtime_error("Unexpected Token: '" + currentToken.value + "'");
+        throw std::runtime_error("Unexpected Token: '" + currentToken.value + "' with type '"+ std::to_string(currentToken.type)+ "'");
     currentToken = tokenizer.nextToken();
 }
 
@@ -122,6 +123,32 @@ Statement* Parser::parseCode(){
 }
 
 Statement* Parser::parseStm(){
+    if(currentToken.type == STRUCT){
+        eat(STRUCT);
+        std::string nameStruct = currentToken.value;
+        eat(VAR);
+        eat(LBRACE);
+        std::vector<std::pair<Type*, std::string>> members;
+        do {
+            Type* type = parseType(currentToken.value);
+            eat(TYPE);
+            std::string member = currentToken.value;
+            eat(VAR);
+            members.emplace_back(type, member);
+            eat(ENDEXPR);
+        } while (currentToken.type == TYPE);
+        eat(RBRACE);
+        StructType* structType = new StructType(nameStruct, members);
+        for(auto st : symbolStructsType){
+            if(st == structType || structType->equalName(*st)){
+                delete structType;
+                throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
+            }
+        }
+        symbolStructsType.push_back(structType);
+        //std::cout << structType->toString() <<std::endl;
+        return nullptr;
+    }
     if (currentToken.type == TYPE || currentToken.type == AUTO) { 
         Type* typeVar = parseType(currentToken.value);
         typeVar == nullptr ? eat(AUTO) : eat(TYPE);
@@ -351,7 +378,7 @@ Expr* Parser::parseNum(std::string val){
         type = new BoolType();
         return new BoolNum(boolVal, type);
     }
-    
+
     if (val.find('.') != std::string::npos ||
         val.find('e') != std::string::npos ||
         val.find('E') != std::string::npos) {
