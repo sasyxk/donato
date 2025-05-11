@@ -114,5 +114,5 @@ Value* BoolValue::getBoolValue(llvm::IRBuilder<> &builder)
 }
 
 Value *BoolValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
-    throw std::runtime_error("Imposible cast BBOLVALUE");
+    throw std::runtime_error("Impossible cast BoolValue");
 }
