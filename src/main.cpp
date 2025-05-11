@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     // Generate code
     try {
         for (Statement* stm : ast) {
-            stm->codegen(builder);
+            if(stm) stm->codegen(builder);
         }
     } catch (const std::exception& e) {
         std::cerr << "Error in codegen:: " << e.what() << std::endl;
