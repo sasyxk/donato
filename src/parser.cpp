@@ -27,6 +27,7 @@ Token Tokenizer::nextToken() {
         size_t start = pos;
         while (pos < input.size() && isalnum(input[pos])) pos++;
         std::string word = input.substr(start, pos - start);
+        if (isupper(word[0])) return Token(NAMESTRUCT, word);
         if (word == "if") return Token(IF, word);
         if (word == "then") return Token(THEN, word);
         if (word == "else") return Token(ELSE, word);
@@ -126,7 +127,7 @@ Statement* Parser::parseStm(){
     if(currentToken.type == STRUCT){
         eat(STRUCT);
         std::string nameStruct = currentToken.value;
-        eat(VAR);
+        eat(NAMESTRUCT);
         eat(LBRACE);
         std::vector<std::pair<Type*, std::string>> members;
         do {
