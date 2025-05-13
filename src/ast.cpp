@@ -111,6 +111,19 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder){
     std::cout<<"AURA"<<std::endl;
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Function* func = builder.GetInsertBlock()->getParent();
+
+
+    bool checkVariable = false;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(varStructName);
+        if (found != it->end()) {
+            checkVariable = true;
+            break;
+        }
+    }
+    if(checkVariable) throw std::runtime_error("Variable already declared: " + varStructName);
+
+
     //structType = dynamic_cast<StructType*>(type->clone());
     StructType* structType;
     for (auto type : symbolStructsType) {
@@ -148,6 +161,9 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder){
         builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
         delete memberValue;
     }
+
+    // Insert struct variable in the vector of variables
+    symbolTable.back()[varStructName] = {ptrToStruct, structType->clone()};
 }
 
 Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
@@ -367,8 +383,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
 VarDecl::VarDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
-void VarDecl::codegen(llvm::IRBuilder<> &builder)
-{
+void VarDecl::codegen(llvm::IRBuilder<> &builder) {
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
@@ -424,9 +439,49 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder)
 
 // Expressions --------------
 
+StructVar::StructVar(const std::string &vsn, const std::string &mn): varStructName(vsn) , memberName(mn) {}
+
+Value* StructVar::codegen(llvm::IRBuilder<> &builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    bool checkVariable = false;
+    llvm::AllocaInst* ptrToStruct;
+    Type* type;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(varStructName);
+        if (found != it->end()) {
+            ptrToStruct = found->second.alloca;
+            type = found->second.type;
+            checkVariable = true;
+            break;
+        }
+    }
+    if(!checkVariable) 
+        throw std::runtime_error("Undeclared variable: " + varStructName);
+
+    StructType* structType = dynamic_cast<StructType*>(type);
+    if (!structType)
+        throw std::runtime_error("The variable '" + varStructName + "' is not a struct but a '" + type->toString() + "'");
+ 
+    size_t i = 0;
+    for(auto member : structType->getMembers()){
+        if(member.second == memberName){
+            llvm::Value* fieldIGEP = builder.CreateStructGEP(structType->getLLVMType(ctx), ptrToStruct, i, memberName);
+            llvm::Value* llvmValue = builder.CreateLoad(
+                member.first->getLLVMType(ctx), 
+                fieldIGEP, 
+                memberName + "_val"
+            );
+            return member.first->createValue(llvmValue, ctx);
+        }
+        i++;
+    }
+    throw std::runtime_error("The member '" + memberName + "' is not recognized in the struct.");
+}
+
 CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
 
-Value* CallFunc::codegen(llvm::IRBuilder<>& builder) {
+Value* CallFunc::codegen(llvm::IRBuilder<> &builder) {
     // Search for the function in the module
     llvm::Function* callee = module->getFunction(funcName);
     if(!callee) {
