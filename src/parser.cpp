@@ -139,14 +139,7 @@ Statement* Parser::parseStm(){
             eat(ENDEXPR);
         } while (currentToken.type == TYPE);
         eat(RBRACE);
-        StructType* structType = new StructType(nameStruct, members);
-        for(auto st : symbolStructsType){
-            if(st == structType || structType->equalName(*st)){
-                delete structType;
-                throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
-            }
-        }
-        symbolStructsType.push_back(structType);
+        return new DefineStruct(nameStruct, members);
         //std::cout << structType->toString() <<std::endl;
         return nullptr;
     }
@@ -262,6 +255,40 @@ Statement* Parser::parseStm(){
         eat(EQ);
         Expr* value = parse();
         return new VarUpdt(var, value);
+    }
+    if (currentToken.type == NAMESTRUCT) {
+        std::string nameStruct = currentToken.value;
+        eat(NAMESTRUCT);
+
+        bool check = false;
+        Type* structType;
+        for(auto st : symbolStructsType){
+            if(st->getNameStruct() == nameStruct){
+                check = true;
+                structType = st->clone();
+                break;
+            }
+        }
+        if (!check)
+            throw std::runtime_error("Undefined struct with name '"+nameStruct+"'");
+
+        std::string varStruct = currentToken.value;
+        eat(VAR);
+        eat(EQ);
+
+        eat(LBRACE);
+        std::vector<Expr*> members;
+
+        int sizeSt = symbolStructsType.size();
+        for(int i = 0; i < sizeSt; i++){
+            Expr* member = parseExpr();
+            members.push_back(member);
+            if(i + 1 != sizeSt) eat(COMMA);
+        }
+        eat(RBRACE);
+        eat(ENDEXPR);
+        return nullptr;
+        //return new StructDecl(structType, members, varStruct);
     }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }

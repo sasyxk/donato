@@ -34,6 +34,20 @@ public:
     virtual void codegen(llvm::IRBuilder<>& builder) = 0;
 };
 
+
+class DefineStruct: public Statement{
+    std::string nameStruct;
+    std::vector<std::pair<Type*, std::string>> members;
+public:
+    DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m);
+    ~DefineStruct() {
+        for(auto member : members){
+            delete member.first;
+        }
+    }   
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class Function : public Statement{
     Type* typeFunc;
     std::string nameFunc;

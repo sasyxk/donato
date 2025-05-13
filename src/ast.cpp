@@ -8,9 +8,78 @@
 std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 
 std::vector<std::pair<std::string, Type*>> symbolFunctions; //Name, return
-std::vector<StructType* > symbolStructsType;
+std::vector<StructType*> symbolStructsType;
 
 // Statements --------------
+
+DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
+    StructType* structType = new StructType(nameStruct, members);
+    for(auto st : symbolStructsType){
+        if(st == structType || structType->equalName(*st)){
+            delete structType;
+            throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
+        }
+    }
+    symbolStructsType.push_back(structType);
+}
+
+void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
+
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    StructType* structType;
+    for(auto typeValue : symbolStructsType){
+        if(typeValue->getNameStruct() == nameStruct){
+            structType = typeValue;
+            break;
+        }
+    }
+
+    llvm::StructType* pointType = llvm::StructType::create(ctx, nameStruct);
+
+    std::vector<llvm::Type*> members;
+    for(auto member : this->members){
+        members.push_back(member.first->getLLVMType(ctx));
+    }
+    pointType->setBody(members);
+
+    structType->setLLVMType(pointType);
+
+    /*
+    StructType* structType;
+    for(auto typeValue : symbolStructsType){
+        if(typeValue->getNameStruct() == "Point"){
+            structType = typeValue;
+            break;
+        }
+    }
+    llvm::Type* llvmStructType = structType->getLLVMType(ctx);
+
+    llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmStructType, nullptr, "point");
+
+    llvm::Value* field0GEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, 0, "field0");
+    llvm::Value* field0GEP222 = builder.CreateStructGEP(llvmStructType, ptrToStruct, 1, "field1");
+    builder.CreateStore(llvm::ConstantInt::get(
+        llvm::IntegerType::get(ctx, 32),
+        32,
+        true
+    ), field0GEP);
+    field0GEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, 0, "field0");
+    builder.CreateStore(llvm::ConstantInt::get(
+        llvm::IntegerType::get(ctx, 32),
+        50,
+        true
+    ), field0GEP);
+    llvm::Value* loadVal = builder.CreateLoad(
+                llvm::IntegerType::get(ctx, 32), 
+                field0GEP, 
+                "LOADTRY"
+    );
+    builder.CreateStore(loadVal, field0GEP222);
+    */
+}
+
+
 
 Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
     std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
@@ -61,7 +130,8 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
 
 Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
 
-void Return::codegen(llvm::IRBuilder<>& builder) {
+void Return::codegen(llvm::IRBuilder<> &builder)
+{
     Value* retVal = expr->codegen(builder);
     Type* returnType;
     for (const auto& func : symbolFunctions) {
@@ -78,7 +148,7 @@ void Return::codegen(llvm::IRBuilder<>& builder) {
             funcName +
             "', is supposed to return '"+returnType->toString()+"'"
         );
-    builder.CreateRet(retVal->getLLVMValue()); 
+    builder.CreateRet(retVal->getLLVMValue());
 }
 
 WhileStm::WhileStm(Expr* c, std::vector<Statement*> w) : cond(c), whileExpr(w) {}

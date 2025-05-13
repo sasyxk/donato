@@ -64,9 +64,9 @@ public:
 }; 
 
 class StructType : public Type{
-    //std::vector<Type*> membersType;
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
+    llvm::Type* typeLLVM;
 public:
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
     ~StructType() override = default;
@@ -79,4 +79,7 @@ public:
     Type* clone() const override { return new StructType(*this); }
     bool isCastTo(Type* other) const override {return false;}  //todo
     bool equalName(const StructType& other);
+    std::string getNameStruct() const {return nameStruct;}
+    std::vector<std::pair<Type*, std::string>> getMembers() {return members;}
+    void setLLVMType(llvm::Type* t) {typeLLVM = t;};
 };
