@@ -79,7 +79,76 @@ void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
     */
 }
 
+StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me){
+    
+    bool check = false;
+    for(auto st : symbolStructsType){
+        if(st->getNameStruct() == ns){
+            if(st->getMembers().size() == me.size()){
+                check = true;
+            }
+            else{
+                throw std::runtime_error(
+                    "Struct '" + ns + "' expects " + 
+                    std::to_string(st->getMembers().size()) + 
+                    " members, but " + 
+                    std::to_string(me.size()) + 
+                    " were provided."
+                );
+            }
+            break;
+        }
+    }
+    if (!check)
+        throw std::runtime_error("Undefined struct with name '"+ns+"'");
+    
+    this->nameStruct = ns;
+    this->varStructName = vrs;
+    this->membersExpr = me;
+}
 
+void StructDecl::codegen(llvm::IRBuilder<>& builder){
+    std::cout<<"AURA"<<std::endl;
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+    //structType = dynamic_cast<StructType*>(type->clone());
+    StructType* structType;
+    for (auto type : symbolStructsType) {
+        if (type->getNameStruct() == nameStruct) {
+            structType = type;
+            break;
+        }
+    }
+
+    // Allocation Struct
+    llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
+
+    builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
+    llvm::Type* llvmStructType = structType->getLLVMType(ctx);
+    llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmStructType, nullptr, varStructName);
+
+    builder.SetInsertPoint(currentBlock);
+
+    const auto& structMembers = structType->getMembers();
+    for (size_t i = 0; i < structMembers.size(); ++i) {
+        const auto& member = structMembers[i];
+        Expr* memberExpr = membersExpr[i];
+
+        llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
+        Value* memberValue = memberExpr->codegen(builder);
+        if(!(*member.first == *memberValue->getType())){
+            throw std::runtime_error(
+                "The type of struct member '" +
+                member.second + "' (expected '" +
+                member.first->toString() +
+                 "') is not compatible with the provided value of type '" + 
+                memberValue->getType()->toString() + "'"
+            );
+        }
+        builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
+        delete memberValue;
+    }
+}
 
 Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
     std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
@@ -298,8 +367,9 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
 VarDecl::VarDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
-void VarDecl::codegen(llvm::IRBuilder<>& builder) {
-    
+void VarDecl::codegen(llvm::IRBuilder<> &builder)
+{
+
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
 

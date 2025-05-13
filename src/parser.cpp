@@ -259,19 +259,7 @@ Statement* Parser::parseStm(){
     if (currentToken.type == NAMESTRUCT) {
         std::string nameStruct = currentToken.value;
         eat(NAMESTRUCT);
-        /*
-        bool check = false;
-        Type* structType;
-        for(auto st : symbolStructsType){
-            if(st->getNameStruct() == nameStruct){
-                check = true;
-                structType = st->clone();
-                break;
-            }
-        }
-        if (!check)
-            throw std::runtime_error("Undefined struct with name '"+nameStruct+"'");
-        */
+
         std::string varStructName = currentToken.value;
         eat(VAR);
         eat(EQ);
@@ -284,8 +272,7 @@ Statement* Parser::parseStm(){
         }while(currentToken.type == COMMA && (eat(COMMA), true));
         eat(RBRACE);
         eat(ENDEXPR);
-        return nullptr;
-        //return new StructDecl(nameStruct, membersExpr, varStructName);
+        return new StructDecl(nameStruct, varStructName, membersExpr);
     }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }

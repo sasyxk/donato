@@ -34,8 +34,7 @@ public:
     virtual void codegen(llvm::IRBuilder<>& builder) = 0;
 };
 
-
-class DefineStruct: public Statement{
+class DefineStruct : public Statement{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
 public:
@@ -45,6 +44,18 @@ public:
             delete member.first;
         }
     }   
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
+class StructDecl : public Statement{
+    std::string nameStruct;
+    std::string varStructName;
+    std::vector<Expr*>  membersExpr;
+public:
+    StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me);
+    ~StructDecl(){
+
+    }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
