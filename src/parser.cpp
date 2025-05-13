@@ -259,7 +259,7 @@ Statement* Parser::parseStm(){
     if (currentToken.type == NAMESTRUCT) {
         std::string nameStruct = currentToken.value;
         eat(NAMESTRUCT);
-
+        /*
         bool check = false;
         Type* structType;
         for(auto st : symbolStructsType){
@@ -271,24 +271,21 @@ Statement* Parser::parseStm(){
         }
         if (!check)
             throw std::runtime_error("Undefined struct with name '"+nameStruct+"'");
-
-        std::string varStruct = currentToken.value;
+        */
+        std::string varStructName = currentToken.value;
         eat(VAR);
         eat(EQ);
 
         eat(LBRACE);
-        std::vector<Expr*> members;
-
-        int sizeSt = symbolStructsType.size();
-        for(int i = 0; i < sizeSt; i++){
+        std::vector<Expr*> membersExpr;
+        do{
             Expr* member = parseExpr();
-            members.push_back(member);
-            if(i + 1 != sizeSt) eat(COMMA);
-        }
+            membersExpr.push_back(member);
+        }while(currentToken.type == COMMA && (eat(COMMA), true));
         eat(RBRACE);
         eat(ENDEXPR);
         return nullptr;
-        //return new StructDecl(structType, members, varStruct);
+        //return new StructDecl(nameStruct, membersExpr, varStructName);
     }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }
