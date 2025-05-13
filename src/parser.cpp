@@ -9,7 +9,7 @@ Token Tokenizer::nextToken() {
     if (pos >= input.size()) return Token(END);
 
     char c = input[pos];
-    if (isdigit(c) || c == '.' || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
+    if (isdigit(c) || (c == '.' && isdigit(input[pos + 1])) || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
         size_t start = pos;
         if(input[pos] == '-') pos++;
         while (pos < input.size() && (isdigit(input[pos]) || input[pos] == '.')) pos++;
@@ -50,6 +50,7 @@ Token Tokenizer::nextToken() {
         if (word == "auto") return Token(AUTO, word);
         return Token(VAR, word);
     }
+    if (c == '.') { pos++; return Token(POINT, std::string(1, c)); }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
     if (c == ')') { pos++; return Token(RPAREN, std::string(1, c)); }
     if (c == '{') { pos++; return Token(LBRACE, std::string(1, c)); }
@@ -375,6 +376,13 @@ Expr* Parser::parseFactor() {
             } while (currentToken.type == COMMA && (eat(COMMA), true));
             eat(RPAREN);
             return new CallFunc(name, args);
+        }
+        if(currentToken.type == POINT){
+            eat(POINT);
+            std::string memberName = currentToken.value;
+            eat(VAR);
+            return new StructVar(name, memberName);
+
         }
         return new Var(name);
     }

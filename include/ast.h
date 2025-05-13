@@ -147,6 +147,16 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
+//--------------------------------------------------------------------------------
+
+class StructVar : public Expr {
+    std::string varStructName;
+    std::string memberName;
+public:
+    StructVar(const std::string& vsn, const std::string& mn);
+    Value* codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class CallFunc : public Expr {
     std::string funcName;
     std::vector<Expr*> args;
