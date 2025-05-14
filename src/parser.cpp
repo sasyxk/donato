@@ -253,6 +253,14 @@ Statement* Parser::parseStm(){
     if (currentToken.type == VAR) {
         std::string var = currentToken.value;
         eat(VAR);
+        if(currentToken.type == POINT) {
+            eat(POINT);
+            std::string memberName = currentToken.value;
+            eat(VAR);
+            eat(EQ);
+            Expr* value = parse();
+            return new VarStructUpdt(var, memberName, value);
+        }
         eat(EQ);
         Expr* value = parse();
         return new VarUpdt(var, value);

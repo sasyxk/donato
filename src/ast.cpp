@@ -79,7 +79,7 @@ void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
     */
 }
 
-StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me){
+StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me) {
     
     bool check = false;
     for(auto st : symbolStructsType){
@@ -107,7 +107,7 @@ StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me){
     this->membersExpr = me;
 }
 
-void StructDecl::codegen(llvm::IRBuilder<>& builder){
+void StructDecl::codegen(llvm::IRBuilder<>& builder) {
     std::cout<<"AURA"<<std::endl;
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Function* func = builder.GetInsertBlock()->getParent();
@@ -164,6 +164,70 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder){
 
     // Insert struct variable in the vector of variables
     symbolTable.back()[varStructName] = {ptrToStruct, structType->clone()};
+}
+
+VarStructUpdt::VarStructUpdt(std::string nv, std::string nm, Expr *v) : nameVar(nv), NameMember(nm), value(v) {}
+
+void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    bool checkVariable = false;
+    llvm::AllocaInst* ptrToStruct;
+    StructType* type;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(nameVar);
+        if (found != it->end()) {
+            ptrToStruct = found->second.alloca;
+            type = dynamic_cast<StructType*>(found->second.type);
+            checkVariable = true;
+            break;
+        }
+    }
+
+    if(!checkVariable) 
+        throw std::runtime_error(
+            "Undeclared variable: "
+            + nameVar
+        );
+    if(!type) 
+        throw std::runtime_error(
+            "variable: " +
+             nameVar +
+            " is not a Struct variable but '" +
+            type->toString() +
+            "'"
+        );
+    size_t i = 0;
+    bool checkMember = false;
+    Type* memberType;
+    for(auto member : type->getMembers()){
+        if(member.second == NameMember){
+           checkMember = true;
+           memberType = member.first;
+           break; 
+        }
+        i++;
+    }
+    if(!checkMember) 
+        throw std::runtime_error(
+            "member: " +
+            NameMember +
+            " is not a member from the '"+
+            type->getNameStruct()+"' struct"
+        );
+
+    llvm::Value* fieldIGEP = builder.CreateStructGEP(type->getLLVMType(ctx), ptrToStruct, i, NameMember);
+    Value* memberValue = value->codegen(builder);
+    if(!(*memberType == *memberValue->getType())){
+        throw std::runtime_error(
+            "The type of struct member '" +
+            NameMember + "' (expected '" +
+            memberType->toString() +
+                "') is not compatible with the provided value of type '" + 
+            memberValue->getType()->toString() + "'"
+        );
+    }
+    builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
+    delete memberValue;
 }
 
 Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,

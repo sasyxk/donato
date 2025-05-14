@@ -61,6 +61,16 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
+class VarStructUpdt : public Statement{
+    std::string nameVar;
+    std::string NameMember;
+    Expr* value;
+public:
+    VarStructUpdt(std::string nv, std::string nm, Expr* v);
+    ~VarStructUpdt(){};
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class Function : public Statement{
     Type* typeFunc;
     std::string nameFunc;
