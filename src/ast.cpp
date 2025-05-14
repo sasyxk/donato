@@ -108,10 +108,8 @@ StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me) {
 }
 
 void StructDecl::codegen(llvm::IRBuilder<>& builder) {
-    std::cout<<"AURA"<<std::endl;
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Function* func = builder.GetInsertBlock()->getParent();
-
 
     bool checkVariable = false;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
