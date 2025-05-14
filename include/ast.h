@@ -54,7 +54,9 @@ class StructDecl : public Statement{
 public:
     StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me);
     ~StructDecl(){
-
+        for(auto memberExpr : membersExpr){
+            delete memberExpr;
+        }
     }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
