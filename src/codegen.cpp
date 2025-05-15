@@ -9,5 +9,5 @@ void generateExecutable(llvm::Module& module, const std::string& outputName) {
     out.close();
 
     // Compile and link
-    system(("llc -filetype=obj output.ll -o output.o && clang ee.c output.o -o " + outputName).c_str());
+    system(("llc -filetype=obj output.ll -o output.o && clang output_eval.c output.o -o " + outputName).c_str());
 }

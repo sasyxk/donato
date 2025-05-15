@@ -16,7 +16,7 @@ add_definitions(${LLVM_DEFINITIONS})
 # Add the "include" directory to the include paths
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-configure_file(${CMAKE_SOURCE_DIR}/src/ee.c ${CMAKE_BINARY_DIR}/ee.c COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/src/output_eval.c ${CMAKE_BINARY_DIR}/output_eval.c COPYONLY)
 
 # Add executable
 add_executable(dtc 
