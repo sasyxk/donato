@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "tokenizer.h"
-#include "ast.h"
+#include "statement.h"
 #include "type.h"
 
 extern std::vector<StructType* > symbolStructsType;

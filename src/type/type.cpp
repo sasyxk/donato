@@ -5,8 +5,6 @@
 #include "bool_value.h"
 #include "struct_value.h"
 
-//Type-----------------------------------------------
-
 // DoubleType----------------------------------------
 llvm::Type *DoubleType::getLLVMType(llvm::LLVMContext &ctx) const {
     return llvm::Type::getDoubleTy(ctx);
