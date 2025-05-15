@@ -91,6 +91,15 @@ Token Tokenizer::nextToken() {
             }
             return Token(COMMENT, commentContent);
         }
+        if (pos + 1 < input.size() && input[pos + 1] == '/') {
+            pos += 2;
+            size_t start = pos;
+            while (pos < input.size() && input[pos] != '\n') {
+                pos++;
+            }
+            std::string commentContent = input.substr(start, pos - start);
+            return Token(COMMENT, commentContent);
+        }
     }
 
     // Mathematical operator management
