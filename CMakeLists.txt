@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(mycompiler)
+project(dtc)
 
 # Find ZLIB, CURL and ZSTD
 find_package(ZLIB REQUIRED)
@@ -15,9 +15,10 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Add executable
-add_executable(mycompiler 
+add_executable(dtc 
     src/main.cpp 
     src/parser.cpp 
+    src/tokenizer.cpp 
     src/ast.cpp 
     src/codegen.cpp
     src/type.cpp
@@ -29,7 +30,7 @@ add_executable(mycompiler
 )
 
 # Link all libraries
-target_link_libraries(mycompiler 
+target_link_libraries(dtc 
     LLVMCore 
     LLVMSupport 
     LLVMIRReader 
