@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(dtc)
 
+cmake_policy(SET CMP0075 NEW)
+
 # Find ZLIB, CURL and ZSTD
 find_package(ZLIB REQUIRED)
 find_package(CURL REQUIRED)
@@ -13,6 +15,8 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # Add the "include" directory to the include paths
 include_directories(${CMAKE_SOURCE_DIR}/include)
+
+configure_file(${CMAKE_SOURCE_DIR}/src/ee.c ${CMAKE_BINARY_DIR}/ee.c COPYONLY)
 
 # Add executable
 add_executable(dtc 
