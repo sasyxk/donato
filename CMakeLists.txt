@@ -13,17 +13,32 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-configure_file(${CMAKE_SOURCE_DIR}/src/output_eval.c ${CMAKE_BINARY_DIR}/output_eval.c COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/src/codegen/output_eval.c ${CMAKE_BINARY_DIR}/output_eval.c COPYONLY)
 
 file(GLOB_RECURSE SOURCES
-    "src/*.cpp"  # File root
+    "src/*.cpp"  
+    "src/ast/*.cpp"          
+    "src/parser/*.cpp"       
+    "src/type/*.cpp"         
+    "src/codegen/*.cpp"      
+    "src/value/*.cpp"        
 )
 
 # Add executable
 add_executable(dtc ${SOURCES})
 
 # Add the "include" directory to the include paths
-target_include_directories(dtc PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(dtc PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+target_include_directories(dtc PRIVATE
+    ${CMAKE_SOURCE_DIR}/src          
+    ${CMAKE_SOURCE_DIR}/src/codegen  
+    ${CMAKE_SOURCE_DIR}/src/ast     
+    ${CMAKE_SOURCE_DIR}/src/parser   
+    ${CMAKE_SOURCE_DIR}/src/value 
+    ${CMAKE_SOURCE_DIR}/src/type      
+    ${LLVM_INCLUDE_DIRS}
+)
 
 # Link all libraries
 target_link_libraries(dtc 
