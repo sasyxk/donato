@@ -13,25 +13,17 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-# Add the "include" directory to the include paths
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
 configure_file(${CMAKE_SOURCE_DIR}/src/output_eval.c ${CMAKE_BINARY_DIR}/output_eval.c COPYONLY)
 
-# Add executable
-add_executable(dtc 
-    src/main.cpp 
-    src/parser.cpp 
-    src/tokenizer.cpp 
-    src/ast.cpp 
-    src/codegen.cpp
-    src/type.cpp
-    src/value.cpp
-    src/double_value.cpp
-    src/bool_value.cpp
-    src/signed_int_value.cpp
-    src/struct_value.cpp
+file(GLOB_RECURSE SOURCES
+    "src/*.cpp"  # File root
 )
+
+# Add executable
+add_executable(dtc ${SOURCES})
+
+# Add the "include" directory to the include paths
+target_include_directories(dtc PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 # Link all libraries
 target_link_libraries(dtc 
