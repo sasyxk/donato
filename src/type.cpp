@@ -90,7 +90,6 @@ StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>
 
 llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const {
     std::vector<llvm::Type*> llvmMembers;
-    llvm::outs() << "Members =" << "\n";
     for (const auto& [memberType, memberName] : members) {
        
         llvmMembers.push_back(memberType->getLLVMType(ctx));
