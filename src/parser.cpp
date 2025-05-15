@@ -133,7 +133,7 @@ Statement* Parser::parseStm(){
         std::vector<std::pair<Type*, std::string>> members;
         do {
             Type* type = parseType(currentToken.value);
-            eat(TYPE);
+            //eat(TYPE);
             std::string member = currentToken.value;
             eat(VAR);
             members.emplace_back(type, member);
@@ -146,7 +146,7 @@ Statement* Parser::parseStm(){
     }
     if (currentToken.type == TYPE || currentToken.type == AUTO) { 
         Type* typeVar = parseType(currentToken.value);
-        typeVar == nullptr ? eat(AUTO) : eat(TYPE);
+        //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = currentToken.value;
         eat(VAR);
         eat(EQ);
@@ -161,7 +161,7 @@ Statement* Parser::parseStm(){
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
         Type* typeFunc = parseType(currentToken.value);
-        eat(TYPE);
+        //eat(TYPE);
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
@@ -170,7 +170,7 @@ Statement* Parser::parseStm(){
         do {
             if(currentToken.type == RPAREN){break;}
             Type* type = parseType(currentToken.value);
-            eat(TYPE);
+            //eat(TYPE);
             std::string param = currentToken.value;
             eat(VAR);
             parameters.emplace_back(type, param);
@@ -178,9 +178,12 @@ Statement* Parser::parseStm(){
         eat(RPAREN);
         eat(LBRACE);
         std::vector<Statement*> functionBodyStatemets;
-        do {
+        do { //todo generalize this error with a errorFunction
             if(currentToken.type == FUNCTION){
-                throw std::runtime_error("Unexpected Statement token Function inside a Function");
+                throw std::runtime_error("Unexpected Statement token 'FUNCTION' inside a Function");
+            }
+            if(currentToken.type == STRUCT){
+                throw std::runtime_error("Unexpected Statement token 'STRUCT' inside a Function");
             }
             functionBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
@@ -443,25 +446,40 @@ Expr* Parser::parseNum(std::string val){
 
 Type* Parser::parseType(std::string stringType){
     if (stringType == "double") {
+        eat(TYPE);
         return new DoubleType();
     } 
     else if (stringType == "bool") {
+        eat(TYPE);
         return new BoolType();
     }
     else if(stringType == "auto") {
+        eat(AUTO);
         return nullptr;
     }
     else if(stringType == "int8"){
+        eat(TYPE);
         return new SignedIntType(8);
     }
     else if(stringType == "int16"){
+        eat(TYPE);
         return new SignedIntType(16);
     }
     else if(stringType == "int32" || stringType == "int"){
+        eat(TYPE);
         return new SignedIntType(32);
     }
     else if(stringType == "int64"){
+        eat(TYPE);
         return new SignedIntType(64);
+    }
+    else if(isupper(stringType[0])){
+        for(auto structType : symbolStructsType){
+            if(structType->getNameStruct() == stringType){
+                eat(NAMESTRUCT);
+                return structType->clone();
+            }
+        }
     }
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }

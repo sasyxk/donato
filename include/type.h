@@ -74,7 +74,7 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override {return nullptr;}//todo
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;//todo
     std::string toString() const override;
     Type* clone() const override { return new StructType(*this); }
     bool isCastTo(Type* other) const override {return false;}  //todo

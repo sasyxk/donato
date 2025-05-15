@@ -119,10 +119,10 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
             break;
         }
     }
+    
     if(checkVariable) throw std::runtime_error("Variable already declared: " + varStructName);
+    llvm::outs() << "VARIABILE ESISTE: " << varStructName<< "\n";
 
-
-    //structType = dynamic_cast<StructType*>(type->clone());
     StructType* structType;
     for (auto type : symbolStructsType) {
         if (type->getNameStruct() == nameStruct) {
@@ -135,9 +135,16 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
+    llvm::outs() << "structType->getLLVMType(ctx) =" << "\n";
+    if(structType != nullptr){
+        llvm::outs() << "nullptr" <<structType->getNameStruct() << "\n";
+    }
     llvm::Type* llvmStructType = structType->getLLVMType(ctx);
+     
+
     llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmStructType, nullptr, varStructName);
 
+   
     builder.SetInsertPoint(currentBlock);
 
     const auto& structMembers = structType->getMembers();
@@ -248,6 +255,8 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
     llvm::Function* function = module->getFunction(nameFunc);
 
+    llvm::outs() << "FUNZIONA" << "\n";
+
     if (function) throw std::runtime_error("Redefinition of function: " + nameFunc); //&& function->getFunctionType() == funcType
 
     function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
@@ -265,7 +274,9 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         symbolTable.back()[param.second] = {alloca, param.first};
     }
 
+    size_t i = 0;
     for (Statement* stm : body) {
+        llvm::outs() << "Statement: " << ++i << "\n";
         stm->codegen(builder);
     }
 
@@ -273,6 +284,8 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         delete info.type;
     }
     symbolTable.pop_back();
+
+    llvm::outs() << "Definita tutta: " << nameFunc << "\n";
 }
 
 Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
