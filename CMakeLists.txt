@@ -24,7 +24,8 @@ add_executable(mycompiler
     src/value.cpp
     src/double_value.cpp
     src/bool_value.cpp
-    src//signed_int_value.cpp
+    src/signed_int_value.cpp
+    src/struct_value.cpp
 )
 
 # Link all libraries

@@ -3,6 +3,7 @@
 #include "double_value.h"
 #include "signed_int_value.h"
 #include "bool_value.h"
+#include "struct_value.h"
 
 //Type-----------------------------------------------
 
@@ -133,4 +134,8 @@ std::string StructType::toString() const {
 bool StructType::equalName(const StructType &other) {
     if(this->nameStruct == other.nameStruct) return true;
     return false;
+}
+
+Value* StructType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    return new StructValue(this->clone(), llvmVal, ctx);
 }
