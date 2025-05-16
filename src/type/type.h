@@ -24,7 +24,7 @@ public:
 class DoubleType : public Type{
     bool pointer;
 public:
-    DoubleType() {};
+    DoubleType(bool isPointer = false);
     ~DoubleType() override = default;
 
     bool operator==(const Type& other) const override;
@@ -62,7 +62,7 @@ public:
 class BoolType : public Type{
     bool pointer;
 public:
-    BoolType() {};
+    BoolType(bool isPointer = false);
     ~BoolType() override = default;
 
     bool operator==(const Type& other) const override;

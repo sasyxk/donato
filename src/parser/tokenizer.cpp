@@ -33,7 +33,6 @@ Token Tokenizer::nextToken() {
         if (word == "else") return Token(ELSE, word);
         if (word == "let") return Token(LET, word);
         if (word == "in") return Token(IN, word);
-        if (word == "var") return Token(DVAR, word);
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
         if (word == "struct") return Token(STRUCT, word);

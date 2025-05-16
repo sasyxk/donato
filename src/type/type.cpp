@@ -6,15 +6,24 @@
 #include "struct_value.h"
 
 // DoubleType----------------------------------------
+DoubleType::DoubleType(bool isPointer) {
+    pointer = isPointer;
+}
+
 llvm::Type *DoubleType::getLLVMType(llvm::LLVMContext &ctx) const {
-    return llvm::Type::getDoubleTy(ctx);
+    llvm::Type* baseType = llvm::Type::getDoubleTy(ctx); 
+    if (pointer) {
+        return llvm::PointerType::getUnqual(baseType);
+    }
+    return baseType;
 }
 
 Value *DoubleType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
     return new DoubleValue(this->clone(), llvmVal, ctx);
 }
 
-bool DoubleType::operator==(const Type &other) const {
+bool DoubleType::operator==(const Type &other) const
+{
     return dynamic_cast<const DoubleType*>(&other) != nullptr;
 }
 
@@ -74,8 +83,17 @@ bool SignedIntType::isCastTo(Type *other) const {
 }
 
 // BoolType------------------------------------------
+
+BoolType::BoolType(bool isPointer) {
+    pointer = isPointer;
+}
+
 llvm::Type* BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
-    return llvm::Type::getInt1Ty(ctx);
+    llvm::Type* baseType = llvm::Type::getInt1Ty(ctx);
+    if (pointer) {
+        return llvm::PointerType::getUnqual(baseType);
+    }
+    return baseType;
 }
 
 Value *BoolType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
@@ -89,7 +107,6 @@ bool BoolType::operator==(const Type &other) const {
 bool BoolType::isCastTo(Type *other) const {
     return false;
 }
-
 
 //StructType----------------------------------------
 StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m) {

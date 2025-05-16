@@ -349,11 +349,11 @@ Expr* Parser::parseNum(std::string val){
 Type* Parser::parseType(std::string stringType, bool isReference){
     if (stringType == "double") {
         eat(TYPE);
-        return new DoubleType();
+        return new DoubleType(isReference);
     } 
     else if (stringType == "bool") {
         eat(TYPE);
-        return new BoolType();
+        return new BoolType(isReference);
     }
     else if(stringType == "auto") {
         eat(AUTO);
