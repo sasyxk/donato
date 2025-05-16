@@ -37,7 +37,13 @@ std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
 }
 
 
-llvm::Value* makeOperation(const SignedIntValue* l, const SignedIntValue* r, llvm::Intrinsic::ID op, llvm::IRBuilder<>& builder){
+llvm::Value* makeOperation(
+    const SignedIntValue* l,
+    const SignedIntValue* r,
+    llvm::Intrinsic::ID op,
+    llvm::IRBuilder<>& builder,
+    std::string name
+    ){
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* lv = l->getLLVMValue();
     llvm::Value* rv = r->getLLVMValue();
@@ -59,10 +65,10 @@ llvm::Value* makeOperation(const SignedIntValue* l, const SignedIntValue* r, llv
         lv,
         rv,
         builder,
-        "addtmp_ok",
-        "addtmp_overflow"
+        name + "_ok",
+        name + "_overflow"
     );
-    
+
     return result;
 }
 
@@ -72,7 +78,7 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
 
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
-        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::sadd_with_overflow, builder);
+        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::sadd_with_overflow, builder,"addtmp");
         Type* newType = new SignedIntType(64);
         return new SignedIntValue(newType, result, ctx); 
     }
@@ -89,19 +95,10 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-        if (*this->getType() == *other->getType()) {
-            /*llvm::Value* result = builder.CreateSub(this->getLLVMValue(), other->getLLVMValue(), "subtmp");
-            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
-            llvm::Value* result = createCheckedIntegerArithmetic(
-                llvm::Intrinsic::ssub_with_overflow,
-                this->getLLVMValue(),
-                other->getLLVMValue(),
-                builder,
-                "addtmp_ok",
-                "addtmp_overflow"
-            );
-            return new SignedIntValue(this->getType()->clone(), result, ctx);
-        }
+        auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
+        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::ssub_with_overflow, builder,"subtmp");
+        Type* newType = new SignedIntType(64);
+        return new SignedIntValue(newType, result, ctx);
     }
 
     throw std::runtime_error(
@@ -116,19 +113,10 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-        if (*this->getType() == *other->getType()) {
-            /*llvm::Value* result = builder.CreateMul(this->getLLVMValue(), other->getLLVMValue(), "multmp");
-            return new SignedIntValue(this->getType()->clone(), result, ctx);*/
-            llvm::Value* result = createCheckedIntegerArithmetic(
-                llvm::Intrinsic::smul_with_overflow,
-                this->getLLVMValue(),
-                other->getLLVMValue(),
-                builder,
-                "addtmp_ok",
-                "addtmp_overflow"
-            );
-            return new SignedIntValue(this->getType()->clone(), result, ctx);
-        }
+        auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
+        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::smul_with_overflow, builder,"multmp");
+        Type* newType = new SignedIntType(64);
+        return new SignedIntValue(newType, result, ctx);
     }
    
     throw std::runtime_error(
@@ -139,7 +127,7 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
     );
 }
 
-Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
+Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) { //todo try to fix using the 64
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
@@ -292,7 +280,7 @@ Value* SignedIntValue::gte(Value* other, llvm::IRBuilder<>& builder) {
     );
 }
 
-Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
+Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) { //todo try to fix this using makeoperation
     llvm::LLVMContext& ctx = builder.getContext();
 
     //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
