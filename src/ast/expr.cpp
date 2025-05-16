@@ -89,10 +89,12 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
         bool isVar = false;
         
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            isVar = true;
+            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                isVar = true;
         }
         else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            isVar = true;
+            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                isVar = true;
         }
         Value* value  = arg->codegen(builder, isVar);
         /*
