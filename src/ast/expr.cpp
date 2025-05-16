@@ -6,7 +6,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     bool checkVariable = false;
-    llvm::AllocaInst* ptrToStruct;
+    llvm::Value* ptrToStruct;
     Type* type;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(varStructName);
@@ -228,6 +228,7 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(name);
         if (found != it->end()) {
+            llvm::outs() << "E' Puntatore\n"; 
             if(isPointer){
                 llvm::Value* provaVal = found->second.alloca;
                 Type* provaType = found->second.type;

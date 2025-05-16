@@ -13,7 +13,7 @@
 #include "bool_value.h"
 
 struct SymbolInfo {
-    llvm::AllocaInst* alloca;  
+    llvm::Value* alloca;  
     Type* type;               
 };
 

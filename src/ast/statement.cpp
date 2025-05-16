@@ -156,7 +156,7 @@ VarStructUpdt::VarStructUpdt(std::string nv, std::string nm, Expr *v) : nameVar(
 void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     bool checkVariable = false;
-    llvm::AllocaInst* ptrToStruct;
+    llvm::Value* ptrToStruct;
     StructType* type;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(nameVar);
@@ -245,9 +245,17 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     for (const auto& param : parameters) {
         llvm::Argument* arg = &*argIt++;
         arg->setName(param.second);
-        llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
-        builder.CreateStore(arg, alloca);
-        symbolTable.back()[param.second] = {alloca, param.first};
+        if (arg->getType()->isPointerTy()) {
+            // If it's a pointer, save the argument directly --> Become not Pointer
+            Type* t = param.first->clone();
+            t->setPointer(false);
+            symbolTable.back()[param.second] = {arg, t};
+        } 
+        else {
+            llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
+            builder.CreateStore(arg, alloca);
+            symbolTable.back()[param.second] = {alloca, param.first->clone()};
+        }
     }
     
     symbolFunctions.emplace_back(
@@ -393,7 +401,7 @@ VarUpdt::VarUpdt(const std::string n, Expr* v) : nameVar(n), value(v) {}
 void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     bool checkVariable = false;
-    llvm::AllocaInst* alloca;
+    llvm::Value* alloca;
     Type* type;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(nameVar);
