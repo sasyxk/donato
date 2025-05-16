@@ -36,25 +36,44 @@ std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
     } 
 }
 
+
+llvm::Value* makeOperation(const SignedIntValue* l, const SignedIntValue* r, llvm::Intrinsic::ID op, llvm::IRBuilder<>& builder){
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Value* lv = l->getLLVMValue();
+    llvm::Value* rv = r->getLLVMValue();
+
+    // Estendi a 64 bit se necessario
+    llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
+
+    if (auto* lt = dynamic_cast<SignedIntType*>(l->getType()); lt && lt->getBits() < 64) {
+        lv = builder.CreateSExt(lv, i64Ty, "sext_lhs");
+    }
+
+    if (auto* rt = dynamic_cast<SignedIntType*>(r->getType()); rt && rt->getBits() < 64) {
+        rv = builder.CreateSExt(rv, i64Ty, "sext_rhs");
+    }
+
+    // Use intrinsic sadd_with_overflow
+    llvm::Value* result = Value::createCheckedIntegerArithmetic(
+        llvm::Intrinsic::sadd_with_overflow,
+        lv,
+        rv,
+        builder,
+        "addtmp_ok",
+        "addtmp_overflow"
+    );
+    
+    return result;
+}
+
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    if (dynamic_cast<const SignedIntType*>(other->getType())) {
-        llvm::Value* l;
-        llvm::Value* r;
-        bool leftFlag;
-        std::tie(l, r, leftFlag) = promoteOperands(this, other, builder);
-        llvm::Value* result = createCheckedIntegerArithmetic(
-            llvm::Intrinsic::sadd_with_overflow,
-            l,
-            r,
-            builder,
-            "addtmp_ok",
-            "addtmp_overflow"
-        );
-        Type* newType = leftFlag == true ? 
-            this->getType()->clone() :
-            other->getType()->clone();
+    if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
+
+        auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
+        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::sadd_with_overflow, builder);
+        Type* newType = new SignedIntType(64);
         return new SignedIntValue(newType, result, ctx); 
     }
 

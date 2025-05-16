@@ -227,8 +227,7 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(name);
-        if (found != it->end()) {
-            llvm::outs() << "E' Puntatore\n"; 
+        if (found != it->end()) { 
             if(isPointer){
                 llvm::Value* provaVal = found->second.alloca;
                 Type* provaType = found->second.type;

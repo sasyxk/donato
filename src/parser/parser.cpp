@@ -329,7 +329,8 @@ Expr* Parser::parseNum(std::string val){
     try {
         std::int64_t num = std::stoll(val); 
         SignedIntType* type = nullptr;
-        if (num >= INT8_MIN && num <= INT8_MAX) {
+        type = new SignedIntType(64);
+        /*if (num >= INT8_MIN && num <= INT8_MAX) {
             type = new SignedIntType(8);
         } else if (num >= INT16_MIN && num <= INT16_MAX) {
             type = new SignedIntType(16);
@@ -337,7 +338,7 @@ Expr* Parser::parseNum(std::string val){
             type = new SignedIntType(32);
         } else {
             type = new SignedIntType(64);
-        }
+        }*/
         return new SignedIntNum(num, type);
     } catch (...) {
         throw std::runtime_error("Invalid integer string value: " + val);
@@ -367,11 +368,11 @@ Type* Parser::parseType(std::string stringType, bool isReference){
         eat(TYPE);
         return new SignedIntType(16, isReference);
     }
-    else if(stringType == "int32" || stringType == "int"){
+    else if(stringType == "int32"){
         eat(TYPE);
         return new SignedIntType(32, isReference);
     }
-    else if(stringType == "int64"){
+    else if(stringType == "int64" || stringType == "int"){
         eat(TYPE);
         return new SignedIntType(64, isReference);
     }
