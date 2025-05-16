@@ -4,7 +4,7 @@
 class Expr {
 public:
     virtual ~Expr() = default;
-    virtual Value* codegen(llvm::IRBuilder<>& builder) = 0;
+    virtual Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) = 0;
 };
 
 class StructVar : public Expr {
@@ -12,7 +12,7 @@ class StructVar : public Expr {
     std::string memberName;
 public:
     StructVar(const std::string& vsn, const std::string& mn);
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class CallFunc : public Expr {
@@ -25,7 +25,7 @@ public:
             delete arg;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class BinaryCond : public Expr {
@@ -38,7 +38,7 @@ public:
         delete left; 
         delete right; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class BinaryOp : public Expr {
@@ -51,7 +51,7 @@ public:
         delete left; 
         delete right; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class UnaryOp : public Expr {
@@ -62,7 +62,7 @@ public:
     ~UnaryOp() {
         delete x;  
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class DoubleNum : public Expr {
@@ -73,7 +73,7 @@ public:
     ~DoubleNum() {
         delete type;  
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class SignedIntNum : public Expr {
@@ -84,7 +84,7 @@ public:
     ~SignedIntNum() {
         delete type;  
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class BoolNum : public Expr {
@@ -95,14 +95,14 @@ public:
     ~BoolNum() {
         delete type;  
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class Var : public Expr {
     std::string name;
 public:
     Var(const std::string& n);
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class IfOp : public Expr {
@@ -116,7 +116,7 @@ public:
         delete thenExpr; 
         delete elseExpr; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
 class LetOp : public Expr {
@@ -130,5 +130,5 @@ public:
             delete binding.second;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder) override;
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };

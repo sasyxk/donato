@@ -67,7 +67,12 @@ Statement* Parser::parseStm(){
         std::vector<std::pair<Type*, std::string>> parameters; // (type name),
         do {
             if(currentToken.type == RPAREN){break;}
-            Type* type = parseType(currentToken.value);
+            bool isReference = false;
+            if(currentToken.type == REF) {
+                eat(REF);
+                isReference = true;
+            }
+            Type* type = parseType(currentToken.value, isReference);
             //eat(TYPE);
             std::string param = currentToken.value;
             eat(VAR);
@@ -341,7 +346,7 @@ Expr* Parser::parseNum(std::string val){
     throw std::runtime_error("No valid type associated with value: '" + val + "'");
 }
 
-Type* Parser::parseType(std::string stringType){
+Type* Parser::parseType(std::string stringType, bool isReference){
     if (stringType == "double") {
         eat(TYPE);
         return new DoubleType();
@@ -356,25 +361,27 @@ Type* Parser::parseType(std::string stringType){
     }
     else if(stringType == "int8"){
         eat(TYPE);
-        return new SignedIntType(8);
+        return new SignedIntType(8, isReference);
     }
     else if(stringType == "int16"){
         eat(TYPE);
-        return new SignedIntType(16);
+        return new SignedIntType(16, isReference);
     }
     else if(stringType == "int32" || stringType == "int"){
         eat(TYPE);
-        return new SignedIntType(32);
+        return new SignedIntType(32, isReference);
     }
     else if(stringType == "int64"){
         eat(TYPE);
-        return new SignedIntType(64);
+        return new SignedIntType(64, isReference);
     }
     else if(isupper(stringType[0])){
         for(auto structType : symbolStructsType){
             if(structType->getNameStruct() == stringType){
                 eat(NAMESTRUCT);
-                return structType->clone();
+                auto* st = structType->clone();
+                st->setPointer(isReference);
+                return st;
             }
         }
     }

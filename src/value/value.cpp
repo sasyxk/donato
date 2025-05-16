@@ -12,7 +12,7 @@ void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMCon
         std::string actualStr;
         llvm::raw_string_ostream actualOS(actualStr);
         value->getType()->print(actualOS);
-
+        
         throw std::runtime_error(
             "Type mismatch:\nExpected: " + expectedOS.str() + 
             "\nActual: " + actualOS.str() +

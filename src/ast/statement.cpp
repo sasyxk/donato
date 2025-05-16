@@ -219,20 +219,18 @@ Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Ty
     std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
-
-    symbolFunctions.emplace_back(
-        nameFunc,
-        typeFunc->clone()
-    );
-
-    std::vector<llvm::Type*> paramTypes;
     llvm::LLVMContext& ctx = builder.getContext();
+
+    std::vector<llvm::Type*> argLLVMTypes;
+    std::vector<Type*> argTypes;
     for (const auto& param : parameters) {
-        paramTypes.push_back(param.first->getLLVMType(ctx));
+        argLLVMTypes.push_back(param.first->getLLVMType(ctx));
+        argTypes.push_back(param.first->clone());
     }
+
     llvm::Type* returnType = typeFunc->getLLVMType(ctx);
 
-    llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
+    llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, argLLVMTypes, false);
     llvm::Function* function = module->getFunction(nameFunc);
 
     if (function) throw std::runtime_error("Redefinition of function: " + nameFunc); //&& function->getFunctionType() == funcType
@@ -251,6 +249,11 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         builder.CreateStore(arg, alloca);
         symbolTable.back()[param.second] = {alloca, param.first};
     }
+    
+    symbolFunctions.emplace_back(
+        nameFunc,
+        SymbolFunction{typeFunc->clone(), argTypes, function}
+    );
 
     size_t i = 0;
     for (Statement* stm : body) {
@@ -271,7 +274,7 @@ void Return::codegen(llvm::IRBuilder<> &builder)
     Type* returnType;
     for (const auto& func : symbolFunctions) {
         if (func.first == funcName) {  
-            returnType = func.second->clone();
+            returnType = func.second.returnType->clone();
             break;
         }
     }

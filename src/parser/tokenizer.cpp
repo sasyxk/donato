@@ -38,6 +38,7 @@ Token Tokenizer::nextToken() {
         if (word == "return") return Token(RETURN, word);
         if (word == "struct") return Token(STRUCT, word);
         if (word == "function") return Token(FUNCTION, word);
+        if (word == "ref") return Token(REF, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||
             word == "bool"   ||
@@ -50,6 +51,7 @@ Token Tokenizer::nextToken() {
         if (word == "auto") return Token(AUTO, word);
         return Token(VAR, word);
     }
+    //if (c == '&') { pos++; return Token(REF, std::string(1, c)); }
     if (c == '.') { pos++; return Token(POINT, std::string(1, c)); }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
     if (c == ')') { pos++; return Token(RPAREN, std::string(1, c)); }

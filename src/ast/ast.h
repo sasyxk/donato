@@ -17,7 +17,15 @@ struct SymbolInfo {
     Type* type;               
 };
 
+struct SymbolFunction {
+    Type* returnType;
+    std::vector<Type* > argType;
+    llvm::Function* func;
+
+};
+
+
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
-extern std::vector<std::pair<std::string, Type*>> symbolFunctions;
+extern std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
 extern std::vector<StructType* > symbolStructsType;
 extern llvm::Module* module;

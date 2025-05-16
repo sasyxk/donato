@@ -20,7 +20,7 @@ public:
     Expr* parseTerm();
     Expr* parseFactor();
     Expr* parseNum(std::string val);
-    Type* parseType(std::string stringType);
+    Type* parseType(std::string stringType, bool isReference = false);
     void eat(TokenType expected);
     bool hasMoreTokens();
 };

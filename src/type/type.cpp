@@ -23,25 +23,36 @@ bool DoubleType::isCastTo(Type *other) const {
 }
 
 //SignedIntType-------------------------------------
-SignedIntType::SignedIntType(unsigned bits) {
+SignedIntType::SignedIntType(unsigned bits, bool isPointer) {
     if(bits != 8 && bits != 16 && bits != 32 && bits != 64)
         throw std::invalid_argument("Unsupported bit width for SignedIntType: " + std::to_string(bits));
     this->bits = bits;
+    this->pointer = isPointer;
 }
 
 llvm::Type* SignedIntType::getLLVMType(llvm::LLVMContext &ctx) const {
+    llvm::Type* baseType;
+
     switch (bits) {
         case 8:
-            return llvm::Type::getInt8Ty(ctx);
+            baseType = llvm::Type::getInt8Ty(ctx);
+            break;
         case 16:
-            return llvm::Type::getInt16Ty(ctx);
+            baseType = llvm::Type::getInt16Ty(ctx);
+            break;
         case 32:
-            return llvm::Type::getInt32Ty(ctx);
+            baseType = llvm::Type::getInt32Ty(ctx);
+            break;
         case 64:
-            return llvm::Type::getInt64Ty(ctx);
+            baseType = llvm::Type::getInt64Ty(ctx);
+            break;
         default:
             throw std::invalid_argument("Unsupported bit width for SignedIntType: " + std::to_string(bits));
     }
+    if (pointer) {
+        return llvm::PointerType::getUnqual(baseType);
+    }
+    return baseType;
 }
 
 Value *SignedIntType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
@@ -92,7 +103,12 @@ llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const {
        
         llvmMembers.push_back(memberType->getLLVMType(ctx));
     }
-    return llvm::StructType::get(ctx, llvmMembers);
+    llvm::StructType* structType = llvm::StructType::get(ctx, llvmMembers);
+
+    if(pointer)
+        return llvm::PointerType::getUnqual(structType);
+
+    return structType;
 }
 
 bool StructType::operator==(const Type &other) const {

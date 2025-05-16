@@ -69,10 +69,10 @@ int main(int argc, char** argv) {
     generateExecutable(*module, "output");
 
     // Cleanup - deallocation Functions
-    for (auto& pair : symbolFunctions) {
+    /*for (auto& pair : symbolFunctions) {
         delete pair.second; 
     }
-    symbolFunctions.clear();
+    symbolFunctions.clear();*/
 
     // Cleanup - deallocating Variables
     for (auto& scope : symbolTable) {
