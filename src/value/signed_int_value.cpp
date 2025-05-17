@@ -326,9 +326,31 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
         const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
         if (thisType->getBits() > otherType->getBits()) {
             //todo Add runtime check for truncation whether or not there is data loss
-            llvm::Value* newValue = builder.CreateTrunc(this->getLLVMValue(), otherType->getLLVMType(ctx), "tronc_right");
+            /*llvm::Value* newValue = builder.CreateTrunc(this->getLLVMValue(), otherType->getLLVMType(ctx), "tronc_right");
             return new SignedIntValue(otherType->clone(), newValue, ctx);
-        } else if (thisType->getBits() < otherType->getBits()) {
+            */
+            llvm::Value* val = this->getLLVMValue();
+            llvm::Type* srcTy = val->getType();
+            llvm::Type* dstTy = otherType->getLLVMType(ctx);
+
+            llvm::Value* truncated = builder.CreateTrunc(val, dstTy, "trunc_val");
+            llvm::Value* reextended = builder.CreateSExt(truncated, srcTy, "reext_val");
+            llvm::Value* isSame = builder.CreateICmpEQ(reextended, val, "check_lossless");
+
+            llvm::Function* func = builder.GetInsertBlock()->getParent();
+            llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "trunc_ok", func);
+            llvm::BasicBlock* trapBlock = llvm::BasicBlock::Create(ctx, "trunc_trap", func);
+
+            builder.CreateCondBr(isSame, okBlock, trapBlock);
+
+            builder.SetInsertPoint(trapBlock);
+            builder.CreateCall(llvm::Intrinsic::getDeclaration(func->getParent(), llvm::Intrinsic::trap));
+            builder.CreateUnreachable();
+
+            builder.SetInsertPoint(okBlock);
+            return new SignedIntValue(otherType->clone(), truncated, ctx);
+        } 
+        else if (thisType->getBits() < otherType->getBits()) {
             llvm::Value* newValue = builder.CreateSExt(this->getLLVMValue(), otherType->getLLVMType(ctx), "sext_left_casting");
             return new SignedIntValue(otherType->clone(), newValue, ctx);
         }

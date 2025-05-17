@@ -484,10 +484,14 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
         }
         typeVar = type->getLLVMType(ctx);
     }
+    // If Cast is performed, the block may be different from the saved one, so continue on the current one
+    if (builder.GetInsertBlock() != currentBlock) { 
+        currentBlock = builder.GetInsertBlock();
+    }
     
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
     llvm::AllocaInst* alloca = builder.CreateAlloca(typeVar, nullptr, nameVar);
-
+    
     builder.SetInsertPoint(currentBlock);
     builder.CreateStore(val->getLLVMValue(), alloca);
 
