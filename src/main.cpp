@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "codegen.h"
 #include "llvm/IR/Verifier.h"
+#include "setup_default_functions.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -53,6 +54,9 @@ int main(int argc, char** argv) {
     module = new llvm::Module("my_module", context);
     llvm::IRBuilder<> builder(context);
     symbolTable.push_back({});
+
+    // Generate code for default functions
+    setupFunctions(builder, module);
 
     // Generate code
     try {
