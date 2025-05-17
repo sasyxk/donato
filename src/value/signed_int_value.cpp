@@ -126,23 +126,41 @@ Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
         llvm::Module* module = builder.GetInsertBlock()->getModule();
         llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
 
-        // Constants: INT_MIN and -1
+        // Constants: INT_MIN , -1 AND 0
         llvm::Value* intMin = llvm::ConstantInt::get(i64Ty, llvm::APInt::getSignedMinValue(i64Ty->getIntegerBitWidth()));
         llvm::Value* minusOne = llvm::ConstantInt::getSigned(i64Ty, -1);
+        llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
 
-        // Comparisons
+        // Division by zero check
+        llvm::Value* isZero = builder.CreateICmpEQ(rhs, zero, "iszero");
+
+        // Overflow control division INT_MIN / -1
         llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
         llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
         llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
 
+        llvm::BasicBlock* divZeroBlock = llvm::BasicBlock::Create(ctx, "div_zero", currentFunc);
+        llvm::BasicBlock* overflowBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
         llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
-        llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
+        llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow_error", currentFunc);
 
+        builder.CreateCondBr(isZero, divZeroBlock, overflowBlock);
+
+        // Div Zero Error Block
+        builder.SetInsertPoint(divZeroBlock);
+        llvm::FunctionCallee errorFn = module->getFunction("llvm_error");
+        llvm::Value* errorCodeZero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_DIVISION_BY_ZERO);
+        builder.CreateCall(errorFn, { errorCodeZero });
+        builder.CreateUnreachable();
+
+        // Overflow Block
+        builder.SetInsertPoint(overflowBlock);
         builder.CreateCondBr(willOverflow, errBlock, okBlock);
 
-        // Error Block
+        // Error overflow Block
         builder.SetInsertPoint(errBlock);
-        builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
+        llvm::Value* errorCodeOverflow = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_SIGNED_OVERFLOW);
+        builder.CreateCall(errorFn, { errorCodeOverflow });
         builder.CreateUnreachable();
 
         // Continue Block
