@@ -6,6 +6,6 @@ int64_t eval();
 
 int main(int argc, char** argv){
 
-    int8_t result = eval();
+    int64_t result = eval();
     printf("%" PRId64 "\n", result);
 }
