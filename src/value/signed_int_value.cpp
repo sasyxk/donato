@@ -16,28 +16,6 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
     return value;
 }
 
-std::tuple<llvm::Value*, llvm::Value*, bool> SignedIntValue::promoteOperands(
-    Value* left,
-    Value* right,
-    llvm::IRBuilder<>& builder
-){
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    const SignedIntType* leftType = dynamic_cast<const SignedIntType*>(left->getType());
-    const SignedIntType* rightType = dynamic_cast<const SignedIntType*>(right->getType()); 
-
-    if (leftType->getBits() > rightType->getBits()) {
-        llvm::Value* newRight = builder.CreateSExt(right->getLLVMValue(), leftType->getLLVMType(ctx), "sext_right");
-        return {left->getLLVMValue(), newRight, true};
-    } else if (leftType->getBits() < rightType->getBits()) {
-        llvm::Value* newLeft = builder.CreateSExt(left->getLLVMValue(), rightType->getLLVMType(ctx), "sext_left_aura");
-        return {newLeft, right->getLLVMValue(), false};
-    } else {
-        return {left->getLLVMValue(), right->getLLVMValue(), true};
-    } 
-}
-
-
 llvm::Value* makeOperation(
     const SignedIntValue* l,
     const SignedIntValue* r,
