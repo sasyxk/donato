@@ -135,13 +135,19 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
         llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
         Value* memberValue = memberExpr->codegen(builder);
         if(!(*member.first == *memberValue->getType())){
-            throw std::runtime_error(
-                "The type of struct member '" +
-                member.second + "' (expected '" +
-                member.first->toString() +
-                 "') is not compatible with the provided value of type '" + 
-                memberValue->getType()->toString() + "'"
-            );
+            if(!memberValue->getType()->isCastTo(member.first)){
+                throw std::runtime_error(
+                    "The type of struct member '" +
+                    member.second + "' (expected '" +
+                    member.first->toString() +
+                    "') is not compatible with the provided value of type '" + 
+                    memberValue->getType()->toString() + "'"
+                );
+            }
+        
+            Value* newVal = memberValue->castTo(member.first, builder);
+            delete memberValue;
+            memberValue = newVal;
         }
         builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
         delete memberValue;
