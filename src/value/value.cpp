@@ -58,7 +58,6 @@ llvm::Value *Value::createCheckedIntegerArithmetic(
 
     builder.CreateCall(errorFn, { errorCode });
 
-    builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
     builder.CreateUnreachable();
 
     // Continue Block
