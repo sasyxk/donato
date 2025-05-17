@@ -40,7 +40,7 @@ llvm::Value* makeOperation(
 
     // Use intrinsic sadd_with_overflow
     llvm::Value* result = Value::createCheckedIntegerArithmetic(
-        llvm::Intrinsic::sadd_with_overflow,
+        op,
         lv,
         rv,
         builder,
