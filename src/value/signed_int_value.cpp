@@ -287,15 +287,20 @@ Value* SignedIntValue::gte(Value* other, llvm::IRBuilder<>& builder) {
     );
 }
 
-Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) { //todo try to fix this using makeoperation
+Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
+    llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
+    llvm::Value* value = this->getLLVMValue();
+    if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
+        value = builder.CreateSExt(value, i64Ty, "sext_lhs");
+    }
     //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
-    llvm::Value* zero = llvm::ConstantInt::get(this->getType()->getLLVMType(ctx), 0);
+    llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
     llvm::Value* result = createCheckedIntegerArithmetic(
         llvm::Intrinsic::ssub_with_overflow,
         zero,  // 0 - x
-        this->getLLVMValue(),
+        value,
         builder,
         "negtmp_ok",
         "negtmp_overflow"
