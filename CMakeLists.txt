@@ -36,7 +36,8 @@ target_include_directories(dtc PRIVATE
     ${CMAKE_SOURCE_DIR}/src/ast     
     ${CMAKE_SOURCE_DIR}/src/parser   
     ${CMAKE_SOURCE_DIR}/src/value 
-    ${CMAKE_SOURCE_DIR}/src/type      
+    ${CMAKE_SOURCE_DIR}/src/type  
+    ${CMAKE_SOURCE_DIR}/src/error_handling    
     ${LLVM_INCLUDE_DIRS}
 )
 
