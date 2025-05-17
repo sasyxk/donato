@@ -344,7 +344,11 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
             builder.CreateCondBr(isSame, okBlock, trapBlock);
 
             builder.SetInsertPoint(trapBlock);
-            builder.CreateCall(llvm::Intrinsic::getDeclaration(func->getParent(), llvm::Intrinsic::trap));
+            
+            llvm::FunctionCallee errorFn = builder.GetInsertBlock()->getModule()->getFunction("llvm_error");
+            llvm::Value* errorCode = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 3); // 3 = ERROR_TRUNCATION_LOSS
+
+            builder.CreateCall(errorFn, { errorCode });
             builder.CreateUnreachable();
 
             builder.SetInsertPoint(okBlock);
