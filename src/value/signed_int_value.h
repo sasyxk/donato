@@ -30,10 +30,4 @@ public:
     Value* getBoolValue(llvm::IRBuilder<>& builder) override;
 
     Value* castTo(Type* other, llvm::IRBuilder<> &builder) override;
-
-    std::tuple<llvm::Value*, llvm::Value*, bool> promoteOperands(
-        Value* left,
-        Value* right,
-        llvm::IRBuilder<>& builder
-    );
 };
