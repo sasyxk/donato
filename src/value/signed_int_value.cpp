@@ -127,41 +127,51 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
     );
 }
 
-Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) { //todo try to fix using the 64
+Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) { 
     llvm::LLVMContext& ctx = builder.getContext();
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-        if (*this->getType() == *other->getType()) {
-            llvm::Value* lhs = this->getLLVMValue();
-            llvm::Value* rhs = other->getLLVMValue();
-            llvm::Type* intTy = lhs->getType();
-            llvm::Module* module = builder.GetInsertBlock()->getModule();
-            llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
+        
+        llvm::Value* lhs = this->getLLVMValue();
+        llvm::Value* rhs = other->getLLVMValue();
+         llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
 
-            // Constants: INT_MIN and -1
-            llvm::Value* intMin = llvm::ConstantInt::get(intTy, llvm::APInt::getSignedMinValue(intTy->getIntegerBitWidth()));
-            llvm::Value* minusOne = llvm::ConstantInt::getSigned(intTy, -1);
-
-            // Comparisons
-            llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
-            llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
-            llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
-
-            llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
-            llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
-
-            builder.CreateCondBr(willOverflow, errBlock, okBlock);
-
-            // Error Block
-            builder.SetInsertPoint(errBlock);
-            builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
-            builder.CreateUnreachable();
-
-            // Continue Block
-            builder.SetInsertPoint(okBlock);
-            llvm::Value* result = builder.CreateSDiv(this->getLLVMValue(), other->getLLVMValue(), "divtmp");
-            return new SignedIntValue(this->getType()->clone(), result, ctx);
+        if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
+            lhs = builder.CreateSExt(lhs, i64Ty, "sext_lhs");
         }
+
+        if (auto* rt = dynamic_cast<SignedIntType*>(other->getType()); rt && rt->getBits() < 64) {
+            rhs = builder.CreateSExt(rhs, i64Ty, "sext_rhs");
+        }
+
+        llvm::Module* module = builder.GetInsertBlock()->getModule();
+        llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
+
+        // Constants: INT_MIN and -1
+        llvm::Value* intMin = llvm::ConstantInt::get(i64Ty, llvm::APInt::getSignedMinValue(i64Ty->getIntegerBitWidth()));
+        llvm::Value* minusOne = llvm::ConstantInt::getSigned(i64Ty, -1);
+
+        // Comparisons
+        llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
+        llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
+        llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
+
+        llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
+        llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
+
+        builder.CreateCondBr(willOverflow, errBlock, okBlock);
+
+        // Error Block
+        builder.SetInsertPoint(errBlock);
+        builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
+        builder.CreateUnreachable();
+
+        // Continue Block
+        builder.SetInsertPoint(okBlock);
+        llvm::Value* result = builder.CreateSDiv(lhs, rhs, "divtmp");
+        Type* newType = new SignedIntType(64);
+        return new SignedIntValue(newType, result, ctx);
+        
     }
 
     throw std::runtime_error(
