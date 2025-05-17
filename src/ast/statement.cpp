@@ -202,6 +202,22 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
 
     llvm::Value* fieldIGEP = builder.CreateStructGEP(type->getLLVMType(ctx), ptrToStruct, i, NameMember);
     Value* memberValue = value->codegen(builder);
+
+    if(!(*memberType == *memberValue->getType())){
+        if(!memberValue->getType()->isCastTo(memberType)){
+            throw std::runtime_error(
+                "The type of struct member '" +
+                NameMember + "' (expected '" +
+                memberType->toString() +
+                    "') is not compatible with the provided value of type '" + 
+                memberValue->getType()->toString() + "'"
+            );
+        }
+        Value* newVal = memberValue->castTo(memberType, builder);
+        delete memberValue;
+        memberValue = newVal;
+    }
+    /*
     if(!(*memberType == *memberValue->getType())){
         throw std::runtime_error(
             "The type of struct member '" +
@@ -210,7 +226,7 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
                 "') is not compatible with the provided value of type '" + 
             memberValue->getType()->toString() + "'"
         );
-    }
+    }*/
     builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
     delete memberValue;
 }
