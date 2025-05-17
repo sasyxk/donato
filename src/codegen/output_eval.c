@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 
-int eval();
+int64_t eval();
 
 int main(int argc, char** argv){
 
-    int8_t result = (int8_t)eval();
-    printf("%d\n", result); 
-
+    int8_t result = eval();
+    printf("%" PRId64 "\n", result);
 }
