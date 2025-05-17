@@ -2,6 +2,7 @@
 #include "double_value.h"
 #include "bool_value.h"
 #include "signed_int_value.h"
+#include "runtime_errors.h"
 
 void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx) {
     if(type->getLLVMType(ctx) != value->getType()) {
@@ -20,22 +21,6 @@ void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMCon
         );
     }
 }
-/*
-Value* Value::createValue(Type *type, llvm::Value *llvmVal, llvm::LLVMContext &ctx)
-{
-    if (dynamic_cast<DoubleType*>(type)) {
-        return new DoubleValue(type, llvmVal, ctx);
-    } 
-    else if (dynamic_cast<BoolType*>(type)) {
-        return new BoolValue(type, llvmVal, ctx);
-    } 
-    else if (const SignedIntType* intType = dynamic_cast<const SignedIntType*>(type)) {
-        return new SignedIntValue(type, llvmVal, ctx);
-    } 
-
-    throw std::runtime_error("Unsupported type in Value::createValue: " + type->toString());
-}
-*/
 
 llvm::Value *Value::createCheckedIntegerArithmetic(
     llvm::Intrinsic::ID op,
@@ -64,6 +49,15 @@ llvm::Value *Value::createCheckedIntegerArithmetic(
 
     // Error Block
     builder.SetInsertPoint(errorBlock);
+
+
+    llvm::FunctionCallee errorFn = builder.GetInsertBlock()->getModule()->getFunction("llvm_error");
+    llvm::Value* errorCode = llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(ctx),
+        ERROR_SIGNED_OVERFLOW);
+
+    builder.CreateCall(errorFn, { errorCode });
+
     builder.CreateCall(llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::trap));
     builder.CreateUnreachable();
 
