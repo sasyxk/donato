@@ -1,5 +1,6 @@
 #include "signed_int_value.h"
 #include "bool_value.h"
+#include "runtime_errors.h"
 
 SignedIntValue::SignedIntValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
     Value::checkTypeCompatibility(type, value, ctx);
@@ -346,7 +347,9 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
             builder.SetInsertPoint(trapBlock);
             
             llvm::FunctionCallee errorFn = builder.GetInsertBlock()->getModule()->getFunction("llvm_error");
-            llvm::Value* errorCode = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 3); // 3 = ERROR_TRUNCATION_LOSS
+            llvm::Value* errorCode = llvm::ConstantInt::get(
+                llvm::Type::getInt32Ty(ctx),
+                ERROR_TRUNCATION_LOSS);
 
             builder.CreateCall(errorFn, { errorCode });
             builder.CreateUnreachable();
