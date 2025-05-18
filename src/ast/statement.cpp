@@ -1,14 +1,62 @@
 #include "statement.h"
 
+DefineClass::DefineClass(
+    std::string nameClass,
+    std::vector<std::pair<Type *, std::string>> privateMembers,
+    std::vector<std::pair<Type *, std::string>> constructorArgs,
+    std::vector<Statement *> ConstructorBodyStatemets,
+    std::vector<Function *> publicFunctions
+){
+    for(auto st : symbolClassType){  
+        if(st->getNameClass() == nameClass) {
+            throw std::runtime_error(
+                "The Class has already been defined: \n" 
+                + nameClass
+            );
+        }
+    }
+    for(auto st : symbolStructsType){
+        if(st->getNameStruct() == nameClass){
+            throw std::runtime_error(
+                "You cannot declare a class with the same name as a struct: " +
+                nameClass
+            );
+        }
+    }
+    StructType* structType = new StructType(nameClass, privateMembers);
+    structType->setPointer(true);
+    constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
+    Function* constructor = new Function(
+        new BoolType(), //todo create A Void Type to change it
+        nameClass,      // WARNING maybe i have to manage if the name should be with the first in lowarcase
+        constructorArgs,
+        ConstructorBodyStatemets
+    );
+    std::vector<std::string> nameFunctions;
+    for(auto function : publicFunctions){
+        function->setClassArg(static_cast<StructType*>(structType->clone()));
+        nameFunctions.push_back(function->getName());
+    }
+
+    publicFunctions.push_back(constructor); // In theory even if the constructor is generated later, it shouldn't be a problem
+
+    this->classType = new ClassType(structType, nameFunctions);
+    this->functions = publicFunctions;
+}
+
+void DefineClass::codegen(llvm::IRBuilder<> &builder) {
+    llvm::outs() << "YOLO\n";
+}
+
 DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
-    StructType* structType = new StructType(nameStruct, members);
+    StructType* structType = new StructType(nameStruct, members); //todo channge the logi of private member of DefineStruct, complete useless now, just remove and use this object like private for the codegen
     for(auto st : symbolStructsType){
         if(st == structType || structType->equalName(*st)){
             delete structType;
             throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
         }
-    }
-    symbolStructsType.push_back(structType);
+    } 
+    symbolStructsType.push_back(static_cast<StructType*>(structType->clone()));
 }
 
 void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
@@ -32,39 +80,6 @@ void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
     pointType->setBody(members);
 
     structType->setLLVMType(pointType);
-
-    /*
-    StructType* structType;
-    for(auto typeValue : symbolStructsType){
-        if(typeValue->getNameStruct() == "Point"){
-            structType = typeValue;
-            break;
-        }
-    }
-    llvm::Type* llvmStructType = structType->getLLVMType(ctx);
-
-    llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmStructType, nullptr, "point");
-
-    llvm::Value* field0GEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, 0, "field0");
-    llvm::Value* field0GEP222 = builder.CreateStructGEP(llvmStructType, ptrToStruct, 1, "field1");
-    builder.CreateStore(llvm::ConstantInt::get(
-        llvm::IntegerType::get(ctx, 32),
-        32,
-        true
-    ), field0GEP);
-    field0GEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, 0, "field0");
-    builder.CreateStore(llvm::ConstantInt::get(
-        llvm::IntegerType::get(ctx, 32),
-        50,
-        true
-    ), field0GEP);
-    llvm::Value* loadVal = builder.CreateLoad(
-                llvm::IntegerType::get(ctx, 32), 
-                field0GEP, 
-                "LOADTRY"
-    );
-    builder.CreateStore(loadVal, field0GEP222);
-    */
 }
 
 StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me) {
@@ -296,10 +311,13 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     symbolTable.pop_back();
 }
 
+void Function::setClassArg(StructType* argType) {
+    parameters.insert(parameters.begin(), {argType, "this"});
+}
+
 Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
 
-void Return::codegen(llvm::IRBuilder<> &builder)
-{
+void Return::codegen(llvm::IRBuilder<> &builder) {
     Value* retVal = expr->codegen(builder);
     Type* returnType;
     for (const auto& func : symbolFunctions) {
