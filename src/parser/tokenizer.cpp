@@ -27,7 +27,7 @@ Token Tokenizer::nextToken() {
         size_t start = pos;
         while (pos < input.size() && isalnum(input[pos])) pos++;
         std::string word = input.substr(start, pos - start);
-        if (isupper(word[0])) return Token(NAMESTRUCT, word);
+        if (isupper(word[0])) return Token(UPPERNAME, word);
         if (word == "if") return Token(IF, word);
         if (word == "then") return Token(THEN, word);
         if (word == "else") return Token(ELSE, word);
@@ -36,6 +36,9 @@ Token Tokenizer::nextToken() {
         if (word == "while") return Token(WHILE, word);
         if (word == "return") return Token(RETURN, word);
         if (word == "struct") return Token(STRUCT, word);
+        if (word == "class") return Token(CLASS, word); 
+        if (word == "private") return Token(PRIVATE, word);
+        if (word == "public") return Token(PUBLIC, word);
         if (word == "function") return Token(FUNCTION, word);
         if (word == "ref") return Token(REF, word);
         if (word == "true" || word == "false") return Token(NUM, word);
@@ -52,6 +55,7 @@ Token Tokenizer::nextToken() {
     }
     //if (c == '&') { pos++; return Token(REF, std::string(1, c)); }
     if (c == '.') { pos++; return Token(POINT, std::string(1, c)); }
+    if (c == ':') { pos++; return Token(COLON, std::string(1, c)); }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
     if (c == ')') { pos++; return Token(RPAREN, std::string(1, c)); }
     if (c == '{') { pos++; return Token(LBRACE, std::string(1, c)); }
