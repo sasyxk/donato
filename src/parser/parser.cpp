@@ -85,7 +85,7 @@ Statement* Parser::parseStm(){
             ConstructorBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
         eat(RBRACE);
-        std::vector<Statement*> publicFunctions;
+        std::vector<Function*> publicFunctions;
         do{
             if(currentToken.type == RBRACE){break;} // End of the class
             Function* function = dynamic_cast<Function*>(parseStm());
@@ -96,7 +96,7 @@ Statement* Parser::parseStm(){
         } while(currentToken.type == FUNCTION);
 
         eat(RBRACE);
-        return new ClassDecl(nameClass,
+        return new DefineClass(nameClass,
             privateMembers,
             constructorArgs,
             ConstructorBodyStatemets,
