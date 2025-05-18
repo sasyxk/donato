@@ -23,10 +23,89 @@ Statement* Parser::parseCode(){
 }
 
 Statement* Parser::parseStm(){
+    if(currentToken.type == CLASS){
+        eat(CLASS);
+        std::string nameClass = currentToken.value;
+        eat(UPPERNAME);
+        eat(LBRACE);
+        bool havePrivateMembers = false;
+        if (currentToken.type == PRIVATE ){
+            eat(PRIVATE);
+            havePrivateMembers = true;
+            eat(COLON);
+        }
+        std::vector<std::pair<Type*, std::string>> privateMembers;
+        if(currentToken.type != PUBLIC || havePrivateMembers){
+            havePrivateMembers = true;
+            do {
+                Type* type = parseType(currentToken.value);
+                std::string privateMember = currentToken.value;
+                eat(VAR);
+                privateMembers.emplace_back(type, privateMember);
+                eat(ENDEXPR);
+            } while (currentToken.type == TYPE);
+        }
+        eat(PUBLIC);
+        eat(COLON);
+        if(currentToken.value != nameClass){
+            throw std::runtime_error(
+                "Define the Constructor of class '"+
+                nameClass +
+                "' with the same name not '"+
+                currentToken.value +
+                "'."
+            );
+        }
+        eat(UPPERNAME);
+        eat(LPAREN);
+        std::vector<std::pair<Type*, std::string>> constructorArgs; // (type name),
+        do {
+            if(currentToken.type == RPAREN){break;}
+            bool isReference = false;
+            if(currentToken.type == REF) {
+                eat(REF);
+                isReference = true;
+            }
+            Type* type = parseType(currentToken.value, isReference);
+            //eat(TYPE);
+            std::string arg = currentToken.value;
+            eat(VAR);
+            constructorArgs.emplace_back(type, arg);
+        } while (currentToken.type == COMMA && (eat(COMMA), true));
+        eat(RPAREN);
+        eat(LBRACE);
+        std::vector<Statement*> ConstructorBodyStatemets;
+        do { //todo generalize this error with a errorFunction
+            if(currentToken.type == FUNCTION){
+                throw std::runtime_error("Unexpected Statement token 'FUNCTION' inside a Function");
+            }
+            if(currentToken.type == STRUCT){
+                throw std::runtime_error("Unexpected Statement token 'STRUCT' inside a Function");
+            }
+            ConstructorBodyStatemets.push_back(parseStm());
+        } while (currentToken.type != RBRACE); 
+        eat(RBRACE);
+        std::vector<Statement*> publicFunctions;
+        do{
+            if(currentToken.type == RBRACE){break;} // End of the class
+            Function* function = dynamic_cast<Function*>(parseStm());
+            if (!function) {
+                throw std::runtime_error("Expected a function declaration inside the class body.");
+            }
+            publicFunctions.push_back(function);
+        } while(currentToken.type == FUNCTION);
+
+        eat(RBRACE);
+        return new ClassDecl(nameClass,
+            privateMembers,
+            constructorArgs,
+            ConstructorBodyStatemets,
+            publicFunctions);
+    }
     if(currentToken.type == STRUCT){
         eat(STRUCT);
         std::string nameStruct = currentToken.value;
-        eat(NAMESTRUCT);
+        eat(UPPERNAME);
         eat(LBRACE);
         std::vector<std::pair<Type*, std::string>> members;
         do {
@@ -156,7 +235,7 @@ Statement* Parser::parseStm(){
         Statement* next = parseStm();
         return next;
     }
-    if (currentToken.type == VAR) {
+    if (currentToken.type == VAR) { //Ok not change for class
         std::string var = currentToken.value;
         eat(VAR);
         if(currentToken.type == POINT) {
@@ -171,9 +250,9 @@ Statement* Parser::parseStm(){
         Expr* value = parse();
         return new VarUpdt(var, value);
     }
-    if (currentToken.type == NAMESTRUCT) {
+    if (currentToken.type == UPPERNAME) {
         std::string nameStruct = currentToken.value;
-        eat(NAMESTRUCT);
+        eat(UPPERNAME);
 
         std::string varStructName = currentToken.value;
         eat(VAR);
@@ -300,7 +379,7 @@ Expr* Parser::parseFactor() {
         }
         return new Var(name);
     }
-    throw std::runtime_error("Unexpected factor");
+    throw std::runtime_error("Unexpected factor: " + currentToken.value);
 }
 //-----------------------------------------------------------------------------------
 Expr* Parser::parseNum(std::string val){
@@ -379,7 +458,7 @@ Type* Parser::parseType(std::string stringType, bool isReference){
     else if(isupper(stringType[0])){
         for(auto structType : symbolStructsType){
             if(structType->getNameStruct() == stringType){
-                eat(NAMESTRUCT);
+                eat(UPPERNAME);
                 auto* st = structType->clone();
                 st->setPointer(isReference);
                 return st;
