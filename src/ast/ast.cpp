@@ -9,3 +9,4 @@ std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 
 std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
 std::vector<StructType*> symbolStructsType;
+std::vector<ClassType* > symbolClassType;

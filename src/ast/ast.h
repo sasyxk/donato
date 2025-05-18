@@ -28,4 +28,5 @@ struct SymbolFunction {
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 extern std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
 extern std::vector<StructType* > symbolStructsType;
+extern std::vector<ClassType* > symbolClassType;
 extern llvm::Module* module;
