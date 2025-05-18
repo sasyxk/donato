@@ -8,6 +8,48 @@ public:
     virtual void codegen(llvm::IRBuilder<>& builder) = 0;
 };
 
+
+class Function : public Statement{
+    Type* typeFunc;
+    std::string nameFunc;
+    std::vector<std::pair<Type*, std::string>> parameters;
+    std::vector<Statement*> body;
+public:
+    Function(Type* tf,const std::string nf,const std::vector<std::pair<Type*, std::string>> p,
+        std::vector<Statement*> b);
+    ~Function() {
+        for (Statement* stmt : body) {
+            delete stmt;
+        }
+    }
+
+    void codegen(llvm::IRBuilder<>& builder) override;
+    void setClassArg(StructType* arg);
+    std::string getName() const {return nameFunc;}
+};
+
+
+
+class DefineClass : public Statement{
+    ClassType* classType;
+    std::vector<Function*> functions;
+public:
+    DefineClass(
+        std::string nc,
+        std::vector<std::pair<Type *, std::string>> pm,
+        std::vector<std::pair<Type *, std::string>> ca,
+        std::vector<Statement *> cbs,
+        std::vector<Function*> pf 
+    );
+    ~DefineClass() {
+        delete classType;
+        for (auto function : functions){
+            delete function;
+        }
+    }
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class DefineStruct : public Statement{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
@@ -42,23 +84,6 @@ class VarStructUpdt : public Statement{
 public:
     VarStructUpdt(std::string nv, std::string nm, Expr* v);
     ~VarStructUpdt(){};
-    void codegen(llvm::IRBuilder<>& builder) override;
-};
-
-class Function : public Statement{
-    Type* typeFunc;
-    std::string nameFunc;
-    std::vector<std::pair<Type*, std::string>> parameters;
-    std::vector<Statement*> body;
-public:
-    Function(Type* tf,const std::string nf,const std::vector<std::pair<Type*, std::string>> p,
-        std::vector<Statement*> b);
-    ~Function() {
-        for (Statement* stmt : body) {
-            delete stmt;
-        }
-    }
-
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
