@@ -106,7 +106,6 @@ public:
    
 };
 
-
 class ClassType : public Type {
     //std::string nameClass;
     StructType* structType;
