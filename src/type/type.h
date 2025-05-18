@@ -83,14 +83,18 @@ class StructType : public Type{
     bool pointer;
 public:
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
-    ~StructType() override = default;
+    ~StructType() override {
+        for(auto memeber : members){
+            delete memeber.first;
+        }
+    }
 
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
     Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;//todo
     std::string toString() const override;
-    Type* clone() const override { return new StructType(*this); }
+    Type* clone() const override;
     bool isCastTo(Type* other) const override {return false;}  //todo
     bool isPointer() const override {return pointer;}
     void setPointer(bool ptr) override {pointer = ptr;}
@@ -101,3 +105,29 @@ public:
     void setLLVMType(llvm::Type* t) {typeLLVM = t;};
    
 };
+
+
+class ClassType : public Type {
+    //std::string nameClass;
+    StructType* structType;
+    std::vector<std::string> nameFunctions; 
+    bool pointer;
+public:
+    ClassType(StructType* structType, std::vector<std::string> nameFunctions);
+    ~ClassType() override {
+        delete structType;
+    }
+    bool operator==(const Type& other) const override {return false;} //to fix
+
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override {return nullptr;} //to fix
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override {return nullptr;} //to fix
+    std::string toString() const override {return "class" + structType->getNameStruct();}
+    Type* clone() const override;
+    bool isCastTo(Type* other) const override {return false;} //to fix
+    bool isPointer() const override {return pointer;}
+    void setPointer(bool ptr) override {pointer = ptr;}
+
+    std::string getNameClass() const {return structType->getNameStruct();}
+    //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
+};
+

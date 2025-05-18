@@ -114,7 +114,15 @@ StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>
     this->members = m;
 }
 
-llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const {
+Type* StructType::clone() const {
+    std::vector<std::pair<Type*, std::string>> clonedMembers;
+    for (const auto& [typePtr, name] : this->members) {
+        clonedMembers.push_back({typePtr->clone(), name});
+    }
+    return new StructType(this->nameStruct, clonedMembers);
+}
+
+llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { //todo In theory I am the type before anyone calls this function, so it makes no sense to calculate it this way every time.
     std::vector<llvm::Type*> llvmMembers;
     for (const auto& [memberType, memberName] : members) {
        
@@ -170,4 +178,16 @@ bool StructType::equalName(const StructType &other) {
 
 Value* StructType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
     return new StructValue(this->clone(), llvmVal, ctx);
+}
+
+//ClassType----------------------------------------
+
+ClassType::ClassType(StructType* structType, std::vector<std::string> nameFunctions) {
+    this->structType = structType;
+    this->nameFunctions = nameFunctions;
+}
+
+
+Type* ClassType::clone() const {
+    return new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
 }
