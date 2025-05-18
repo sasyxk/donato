@@ -39,8 +39,13 @@ DefineClass::DefineClass(
     }
 
     publicFunctions.push_back(constructor); // In theory even if the constructor is generated later, it shouldn't be a problem
+    //nameFunctions.push_back(nameClass);  Even the constructor name function????
 
-    this->classType = new ClassType(structType, nameFunctions);
+    ClassType* classType = new ClassType(structType, nameFunctions);
+
+    symbolClassType.push_back(static_cast<ClassType*>(classType->clone()));
+    
+    this->classType = classType;
     this->functions = publicFunctions;
 }
 
