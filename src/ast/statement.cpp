@@ -44,7 +44,7 @@ DefineClass::DefineClass(
     ClassType* classType = new ClassType(structType, nameFunctions);
 
     symbolClassType.push_back(static_cast<ClassType*>(classType->clone()));
-    
+
     this->classType = classType;
     this->functions = publicFunctions;
 }
@@ -130,10 +130,10 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
     
     if(checkVariable) throw std::runtime_error("Variable already declared: " + varStructName);
 
-    StructType* structType;
+    StructType* structType;      
     for (auto type : symbolStructsType) {
         if (type->getNameStruct() == nameStruct) {
-            structType = type;
+            structType = type; // Just use to reading
             break;
         }
     }
