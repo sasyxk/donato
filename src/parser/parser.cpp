@@ -372,11 +372,16 @@ Expr* Parser::parseFactor() {
             return new CallFunc(name, args);
         }
         if(currentToken.type == POINT){
-            eat(POINT);
-            std::string memberName = currentToken.value;
-            eat(VAR);
-            return new StructVar(name, memberName);
+            std::vector<std::string> memberChain;
+            do {
+                eat(POINT);
+                std::string memberName = currentToken.value;
+                eat(VAR);
+                memberChain.push_back(memberName);
 
+            } while(currentToken.type == POINT);
+            
+            return new StructVar(name, memberChain);
         }
         return new Var(name);
     }
