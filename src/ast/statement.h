@@ -21,6 +21,10 @@ public:
         for (Statement* stmt : body) {
             delete stmt;
         }
+        for(auto param : parameters){
+            delete param.first;
+        }
+        delete typeFunc;
     }
 
     void codegen(llvm::IRBuilder<>& builder) override;
