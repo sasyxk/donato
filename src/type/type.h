@@ -79,7 +79,6 @@ public:
 class StructType : public Type{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
-    llvm::Type* typeLLVM;
     bool pointer;
 public:
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
@@ -102,8 +101,6 @@ public:
     bool equalName(const StructType& other);
     std::string getNameStruct() const {return nameStruct;}
     std::vector<std::pair<Type*, std::string>> getMembers() {return members;}
-    void setLLVMType(llvm::Type* t) {typeLLVM = t;};
-   
 };
 
 class ClassType : public Type {
@@ -116,17 +113,18 @@ public:
     ~ClassType() override {
         delete structType;
     }
-    bool operator==(const Type& other) const override {return false;} //to fix
+    bool operator==(const Type& other) const override;
 
-    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override {return nullptr;} //to fix
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override {return nullptr;} //to fix
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
     std::string toString() const override {return "class" + structType->getNameStruct();}
     Type* clone() const override;
-    bool isCastTo(Type* other) const override {return false;} //to fix
+    bool isCastTo(Type* other) const override;
     bool isPointer() const override {return pointer;}
     void setPointer(bool ptr) override {pointer = ptr;}
 
     std::string getNameClass() const {return structType->getNameStruct();}
+    StructType* getStructType() {return structType;}
     //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
 };
 
