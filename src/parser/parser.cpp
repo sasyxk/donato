@@ -75,6 +75,7 @@ Statement* Parser::parseStm(){
         eat(RPAREN);
         eat(LBRACE);
         std::vector<Statement*> ConstructorBodyStatemets;
+        lastFuncion = nameClass;
         do { //todo generalize this error with a errorFunction
             if(currentToken.type == FUNCTION){
                 throw std::runtime_error("Unexpected Statement token 'FUNCTION' inside a Function");
