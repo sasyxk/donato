@@ -128,12 +128,8 @@ Type* StructType::clone() const {
 llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { 
     llvm::StructType* structType = llvm::StructType::getTypeByName(ctx, this->nameStruct);
     if(pointer){
-        if(this->nameStruct == "Tre")
-            llvm::outs() <<"Aura: Pointer \n";
         return llvm::PointerType::getUnqual(structType);
     }
-    if(this->nameStruct == "Tre")
-            llvm::outs() <<"Aura: NOT Pointer \n";
     return structType;
 }
 

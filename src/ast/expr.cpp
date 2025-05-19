@@ -63,7 +63,6 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
             Type* finalType = members[index].first;
 
             if (isPointer) {
-                llvm::outs() << "E' un puntatore \n\n\n";
                 finalType->setPointer(true);  // It's not a problem, this memberchain will not be used anymore, it will just be deleted at the end of the program
                 return finalType->createValue(currentPtr, ctx);
             }
