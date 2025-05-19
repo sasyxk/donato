@@ -24,7 +24,7 @@ DefineClass::DefineClass(
         }
     }
     StructType* structType = new StructType(nameClass, privateMembers);
-    structType->setPointer(true);
+    structType->setPointer(true); 
     constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
     Function* constructor = new Function(
         new BoolType(), //todo create A Void Type to change it
@@ -37,12 +37,15 @@ DefineClass::DefineClass(
         function->setClassArg(static_cast<StructType*>(structType->clone()));
         nameFunctions.push_back(function->getName());
     }
+    // Must be pointer only in the first argument of the function, not in general
+    structType->setPointer(false); 
 
     publicFunctions.push_back(constructor); // In theory even if the constructor is generated later, it shouldn't be a problem
     //nameFunctions.push_back(nameClass);  Even the constructor name function????
 
     ClassType* classType = new ClassType(structType, nameFunctions);
 
+    // 
     symbolClassType.push_back(static_cast<ClassType*>(classType->clone()));
 
     this->classType = classType;
@@ -51,6 +54,23 @@ DefineClass::DefineClass(
 
 void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     llvm::outs() << "YOLO\n";
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    StructType* structType = classType->getStructType();
+    //todo --------------------------------------------------->
+    llvm::StructType* pointType = llvm::StructType::create(ctx, classType->getNameClass());
+    std::vector<llvm::Type*> members;
+    for(auto member : structType->getMembers()){
+        members.push_back(member.first->getLLVMType(ctx));
+    }
+    pointType->setBody(members);
+    //structType->setLLVMType(pointType);    //todo generalize this part end the codegene parte of the DefineStruct: same code
+    //todo ---------------------------------------------------<
+
+    for(auto function : functions){
+        function->codegen(builder);
+    }
+
 }
 
 DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
@@ -61,7 +81,7 @@ DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::str
             throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
         }
     } 
-    symbolStructsType.push_back(static_cast<StructType*>(structType->clone()));
+    symbolStructsType.push_back(structType);
 }
 
 void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
@@ -84,7 +104,7 @@ void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
     }
     pointType->setBody(members);
 
-    structType->setLLVMType(pointType);
+    //structType->setLLVMType(pointType);
 }
 
 StructDecl::StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me) {
