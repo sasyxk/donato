@@ -128,8 +128,12 @@ Type* StructType::clone() const {
 llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { 
     llvm::StructType* structType = llvm::StructType::getTypeByName(ctx, this->nameStruct);
     if(pointer){
+        if(this->nameStruct == "Tre")
+            llvm::outs() <<"Aura: Pointer \n";
         return llvm::PointerType::getUnqual(structType);
     }
+    if(this->nameStruct == "Tre")
+            llvm::outs() <<"Aura: NOT Pointer \n";
     return structType;
 }
 
@@ -186,7 +190,9 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
 
 
 Type* ClassType::clone() const {
-    return new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
+    ClassType* newClassType = new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
+    newClassType->setPointer(this->pointer);
+    return newClassType;
 }
 
 llvm::Type* ClassType::getLLVMType(llvm::LLVMContext &ctx) const {

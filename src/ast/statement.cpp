@@ -351,6 +351,8 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
             break;
         }
     }
+    
+
     if(!(*retVal->getType() == *returnType))
         throw std::runtime_error(
             "The returned type '" +

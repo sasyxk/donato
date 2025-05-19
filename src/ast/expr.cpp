@@ -1,5 +1,89 @@
 #include "expr.h"
 
+StructVar::StructVar(const std::string &vsn, const std::vector<std::string> &mc) : varStructName(vsn) , memberChain(mc) {}
+
+
+Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Value* ptrToStruct = nullptr;
+    Type* type = nullptr;
+
+    // Retrieve the variable from the symbolTable
+    bool foundVar = false;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(varStructName);
+        if (found != it->end()) {
+            ptrToStruct = found->second.alloca;
+            type = found->second.type;
+            foundVar = true;
+            break;
+        }
+    }
+    if (!foundVar)
+        throw std::runtime_error("Undeclared variable: " + varStructName);
+
+    // Let's check if the variable found is actually a Struct
+    StructType* currentStruct = dynamic_cast<StructType*>(type);
+    if (!currentStruct)
+        throw std::runtime_error("Variable '" + varStructName + "' is not a struct.");
+
+    // This is the value returned by the last GEP performed in the cycle
+    llvm::Value* currentPtr = ptrToStruct;
+
+    // We loop over the length of all members passed by the parser
+    for (size_t depth = 0; depth < memberChain.size(); ++depth) {
+        const std::string& memberName = memberChain[depth];
+
+        auto members = currentStruct->getMembers();
+        bool found = false;
+        size_t index = 0;
+
+        /*
+        Let's check if the member in which we need to read
+        the value is present among the Struct members.
+        */ 
+        for (size_t i = 0; i < members.size(); ++i) {
+            if (members[i].second == memberName) {
+                index = i;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+            throw std::runtime_error("Member '" + memberName + "' not found in struct.");
+
+        // GEP for the current field
+        currentPtr = builder.CreateStructGEP(currentStruct->getLLVMType(ctx), currentPtr, index, memberName);
+
+        // Only if we have reached the last level of depth then
+        if (depth == memberChain.size() - 1) {
+            Type* finalType = members[index].first;
+
+            if (isPointer) {
+                llvm::outs() << "E' un puntatore \n\n\n";
+                finalType->setPointer(true);
+                return finalType->createValue(currentPtr, ctx);
+            }
+
+            llvm::Value* loadedVal = builder.CreateLoad(
+                finalType->getLLVMType(ctx),
+                currentPtr,
+                memberName + "_val");
+            return finalType->createValue(loadedVal, ctx);
+        }
+
+        // Otherwise, we continue inside the struct
+        Type* nextType = members[index].first;
+        currentStruct = dynamic_cast<StructType*>(nextType);
+        if (!currentStruct)
+            throw std::runtime_error("Member '" + memberName + "' is not a struct.");
+    }
+
+    throw std::runtime_error("Invalid member chain access.");
+}
+/*
 StructVar::StructVar(const std::string &vsn, const std::string &mn): varStructName(vsn) , memberName(mn) {}
 
 Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
@@ -47,7 +131,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     }
     throw std::runtime_error("The member '" + memberName + "' is not recognized in the struct.");
 }
-
+*/
 CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
 
 Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {

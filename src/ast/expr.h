@@ -9,9 +9,9 @@ public:
 
 class StructVar : public Expr {
     std::string varStructName;
-    std::string memberName;
+    std::vector<std::string> memberChain;
 public:
-    StructVar(const std::string& vsn, const std::string& mn);
+    StructVar(const std::string& vsn, const std::vector<std::string> &mn);
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
