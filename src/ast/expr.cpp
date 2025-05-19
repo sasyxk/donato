@@ -55,6 +55,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
             throw std::runtime_error("Member '" + memberName + "' not found in struct.");
 
         // GEP for the current field
+        
         currentPtr = builder.CreateStructGEP(currentStruct->getLLVMType(ctx), currentPtr, index, memberName);
 
         // Only if we have reached the last level of depth then
@@ -63,7 +64,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
             if (isPointer) {
                 llvm::outs() << "E' un puntatore \n\n\n";
-                finalType->setPointer(true);
+                finalType->setPointer(true);  // It's not a problem, this memberchain will not be used anymore, it will just be deleted at the end of the program
                 return finalType->createValue(currentPtr, ctx);
             }
 
@@ -314,9 +315,11 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
         if (found != it->end()) { 
             if(isPointer){
                 llvm::Value* provaVal = found->second.alloca;
-                Type* provaType = found->second.type;
+                Type* provaType = found->second.type->clone();
                 provaType->setPointer(true);
-                return provaType->createValue(provaVal , ctx);
+                Value* value = provaType->createValue(provaVal , ctx);
+                delete provaType;
+                return value;
             }
             llvm::Value* llvmValue = builder.CreateLoad(
                 found->second.type->getLLVMType(ctx), 
