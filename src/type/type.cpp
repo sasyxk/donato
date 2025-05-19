@@ -119,20 +119,17 @@ Type* StructType::clone() const {
     for (const auto& [typePtr, name] : this->members) {
         clonedMembers.push_back({typePtr->clone(), name});
     }
-    return new StructType(this->nameStruct, clonedMembers);
+    StructType* newStructType = new StructType(this->nameStruct, clonedMembers);
+    newStructType->setPointer(this->pointer);
+    
+    return newStructType;
 }
 
-llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { //todo In theory I am the type before anyone calls this function, so it makes no sense to calculate it this way every time.
-    std::vector<llvm::Type*> llvmMembers;
-    for (const auto& [memberType, memberName] : members) {
-       
-        llvmMembers.push_back(memberType->getLLVMType(ctx));
-    }
-    llvm::StructType* structType = llvm::StructType::get(ctx, llvmMembers);
-
-    if(pointer)
+llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { 
+    llvm::StructType* structType = llvm::StructType::getTypeByName(ctx, this->nameStruct);
+    if(pointer){
         return llvm::PointerType::getUnqual(structType);
-
+    }
     return structType;
 }
 
@@ -190,4 +187,20 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
 
 Type* ClassType::clone() const {
     return new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
+}
+
+llvm::Type* ClassType::getLLVMType(llvm::LLVMContext &ctx) const {
+    return this->structType->getLLVMType(ctx);
+}
+
+Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    return new BoolValue(new BoolType, llvmVal, ctx);  //todo fix
+}
+
+bool ClassType::operator==(const Type &other) const {
+    return dynamic_cast<const ClassType*>(&other) != nullptr; //todo fix
+}
+
+bool ClassType::isCastTo(Type *other) const {
+    return false;
 }
