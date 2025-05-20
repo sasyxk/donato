@@ -238,7 +238,7 @@ Statement* Parser::parseStm(){
     }
     if (currentToken.type == VAR || currentToken.type == THIS) { //Ok not change for class
         std::string var = parseVar(currentToken.value);
-        if(currentToken.type == POINT) {
+        if(currentToken.type == POINT) { //todo generalise the number of point
             eat(POINT);
             std::string memberName = currentToken.value;
             eat(VAR);
