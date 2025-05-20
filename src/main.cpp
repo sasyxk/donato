@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
             ast.push_back(parser.parseCode());
         } while (parser.hasMoreTokens());
     } catch (const std::exception& e) {
-        std::cerr << "Error in parsing:: " << e.what() << std::endl;
+        std::cerr << "Error in parsing:: " << e.what() << " " << tokenizer.getPos() << "\n"; 
         return 1;
     } 
     
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
             if(stm) stm->codegen(builder);
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error in codegen:: " << e.what() << std::endl;
+        std::cerr << "Error in codegen:: " << e.what() << "\n"; 
         return 1;
     } 
     

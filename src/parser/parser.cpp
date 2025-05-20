@@ -121,7 +121,6 @@ Statement* Parser::parseStm(){
         } while (currentToken.type == TYPE);
         eat(RBRACE);
         return new DefineStruct(nameStruct, members);
-        //std::cout << structType->toString() <<std::endl;
         return nullptr;
     }
     if (currentToken.type == TYPE || currentToken.type == AUTO) { 
@@ -238,10 +237,7 @@ Statement* Parser::parseStm(){
         return next;
     }
     if (currentToken.type == VAR || currentToken.type == THIS) { //Ok not change for class
-        //std::string var = currentToken.value;
-        std:: cout << "QUI\n";
         std::string var = parseVar(currentToken.value);
-        std:: cout << "LI\n";
         if(currentToken.type == POINT) {
             eat(POINT);
             std::string memberName = currentToken.value;
@@ -307,7 +303,8 @@ Expr* Parser::parseTerm() {
 }
 
 Expr* Parser::parseFactor() {
-    if (currentToken.type == OP && currentToken.value == "-") {
+    if (currentToken.type == OP &&
+        currentToken.value == "-") {
         eat(OP);
         Expr* x = parseFactor();
         return new UnaryOp("-", x);
@@ -360,8 +357,8 @@ Expr* Parser::parseFactor() {
         eat(NUM);
         return parseNum(val);
     }
-    if (currentToken.type == VAR || currentToken.type == THIS) {
-        //std::string name = currentToken.value;
+    if (currentToken.type == VAR ||
+        currentToken.type == THIS) {
         std::string name = parseVar(currentToken.value);
         if(currentToken.type == LPAREN){
             eat(LPAREN);
@@ -479,7 +476,6 @@ Type* Parser::parseType(std::string stringType, bool isReference){
 
 
 std::string Parser::parseVar(std::string valueVar){
-    std::cout << "Dentro paseVar(): " << valueVar << "\n";
     if(valueVar == "this" &&  !isInsideClass)
         throw std::runtime_error("Cannot use 'this' outside class");
     valueVar == "this" ? eat(THIS) : eat(VAR);

@@ -20,4 +20,5 @@ class Tokenizer {
 public:
     Tokenizer(const std::string& s);
     Token nextToken();
+    std::string getPos();
 };

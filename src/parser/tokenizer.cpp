@@ -118,3 +118,22 @@ Token Tokenizer::nextToken() {
 
     throw std::runtime_error("Unknown token: " + std::string(1, c));
 }
+
+std::string Tokenizer::getPos() {
+    size_t row = 1;
+    size_t col = 1;
+    size_t posStart = 0;
+    std::string position = "";
+    for (const auto& c : input) {
+        if(++posStart == pos){
+            position += "[" + std::to_string(row) + ", " + std::to_string(col) +  "]" ;
+            return position;
+        }
+        col++;
+        if(c == '\n'){
+            col = 1;
+            row++;
+        }
+    }
+    return "[Precise location in file not identified]";
+}
