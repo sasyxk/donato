@@ -14,9 +14,17 @@ class Function : public Statement{
     std::string nameFunc;
     std::vector<std::pair<Type*, std::string>> parameters;
     std::vector<Statement*> body;
+    bool classFunction;
+    std::string className;
 public:
-    Function(Type* tf,const std::string nf,const std::vector<std::pair<Type*, std::string>> p,
-        std::vector<Statement*> b);
+    Function(
+        Type* tf, 
+        const std::string nf, 
+        const std::vector<std::pair<Type*, std::string>> p,
+        std::vector<Statement*> b,
+        bool classFunction = false,
+        std::string className = ""
+    );
     ~Function() {
         for (Statement* stmt : body) {
             delete stmt;
@@ -29,10 +37,11 @@ public:
 
     void codegen(llvm::IRBuilder<>& builder) override;
     void setClassArg(StructType* arg);
+    void setClassFunction(bool value);
+    void setClassName(std::string name);
     std::string getName() const {return nameFunc;}
+
 };
-
-
 
 class DefineClass : public Statement{
     ClassType* classType;

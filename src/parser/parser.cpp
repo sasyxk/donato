@@ -27,6 +27,7 @@ Statement* Parser::parseStm(){
         eat(CLASS);
         isInsideClass = true;
         std::string nameClass = currentToken.value;
+        nameOfClass = nameClass;
         eat(UPPERNAME);
         eat(LBRACE);
         bool havePrivateMembers = false;
@@ -99,6 +100,7 @@ Statement* Parser::parseStm(){
 
         eat(RBRACE);
         isInsideClass = false;
+        nameOfClass = "";
         return new DefineClass(nameClass,
             privateMembers,
             constructorArgs,
@@ -369,7 +371,7 @@ Expr* Parser::parseFactor() {
                 args.push_back(arg);
             } while (currentToken.type == COMMA && (eat(COMMA), true));
             eat(RPAREN);
-            return new CallFunc(name, args);
+            return new CallFunc(name, nameOfClass, args);
         }
         if(currentToken.type == POINT){
             std::vector<std::string> memberChain;

@@ -11,6 +11,7 @@ class Parser {
     Token currentToken;
     std::string lastFuncion;
     bool isInsideClass = false;
+    std::string nameOfClass = "";
     Tokenizer& tokenizer;
 public:
     Parser(Tokenizer& t, std::string lastFuncion = "");

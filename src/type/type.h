@@ -22,7 +22,7 @@ public:
 };
 
 class DoubleType : public Type{
-    bool pointer;
+    bool pointer = false;
 public:
     DoubleType(bool isPointer = false);
     ~DoubleType() override = default;
@@ -41,7 +41,7 @@ public:
 
 class SignedIntType  : public Type{
     unsigned bits;
-    bool pointer;
+    bool pointer = false;
 public:
     SignedIntType (unsigned bits, bool isPointer = false);
     ~SignedIntType () override = default;
@@ -60,7 +60,7 @@ public:
 }; 
 
 class BoolType : public Type{
-    bool pointer;
+    bool pointer = false;
 public:
     BoolType(bool isPointer = false);
     ~BoolType() override = default;
@@ -79,7 +79,7 @@ public:
 class StructType : public Type{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
-    bool pointer;
+    bool pointer = false;
 public:
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
     ~StructType() override {
@@ -107,7 +107,7 @@ class ClassType : public Type {
     //std::string nameClass;
     StructType* structType;
     std::vector<std::string> nameFunctions; 
-    bool pointer;
+    bool pointer = false;
 public:
     ClassType(StructType* structType, std::vector<std::string> nameFunctions);
     ~ClassType() override {

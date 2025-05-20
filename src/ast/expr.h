@@ -18,8 +18,9 @@ public:
 class CallFunc : public Expr {
     std::string funcName;
     std::vector<Expr*> args;
+    std::string nameOfClass;
 public:
-    CallFunc(const std::string& fn, std::vector<Expr*> a);  
+    CallFunc(const std::string& fn, const std::string nameOfClass, std::vector<Expr*> a);  
     ~CallFunc() {
         for (Expr* arg : args) {
             delete arg;

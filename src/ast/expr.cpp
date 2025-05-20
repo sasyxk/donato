@@ -132,7 +132,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     throw std::runtime_error("The member '" + memberName + "' is not recognized in the struct.");
 }
 */
-CallFunc::CallFunc(const std::string &fn, std::vector<Expr *> a) : funcName(fn), args(a) {}
+CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
 
 Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     // Search for the function in the module
@@ -141,14 +141,23 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     bool checkFunc = false;
     for (auto& function : symbolFunctions) {
         if (function.first == funcName) {
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
+            if(function.second.className == nameOfClass ){
+                functionStruct = &function.second;
+                checkFunc = true;
+                break;
+            }
         }
     }
+
     if(!checkFunc)
         throw std::runtime_error("Function not found: " + funcName);
-    
+        
+    // Check if the called function is a function of a class
+    //todo we don't need this, but we have to search the struct value, but we have....
+    if(functionStruct->classFunction) {
+        throw std::runtime_error("Function " + funcName + " belongs to the class " + functionStruct->className);
+    }
+        
     /*llvm::Function* callee = module->getFunction(funcName);
     if(!callee) {
         throw std::runtime_error("Function not found: " + funcName);

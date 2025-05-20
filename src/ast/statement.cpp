@@ -28,13 +28,18 @@ DefineClass::DefineClass(
     constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
     Function* constructor = new Function(
         new BoolType(), //todo create A Void Type to change it
-        nameClass,      // WARNING maybe i have to manage if the name should be with the first in lowarcase
+        nameClass, //+ "_Create_Default",  
         constructorArgs,
         ConstructorBodyStatemets
     );
+    constructor->setClassFunction(true);
+    constructor->setClassName(nameClass);
+
     std::vector<std::string> nameFunctions;
     for(auto function : publicFunctions){
         function->setClassArg(static_cast<StructType*>(structType->clone()));
+        function->setClassFunction(true);
+        function->setClassName(nameClass);
         nameFunctions.push_back(function->getName());
     }
     // Must be pointer only in the first argument of the function, not in general
@@ -57,6 +62,7 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     StructType* structType = classType->getStructType();
+
     //todo --------------------------------------------------->
     llvm::StructType* pointType = llvm::StructType::create(ctx, classType->getNameClass());
     std::vector<llvm::Type*> members;
@@ -277,8 +283,18 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
     delete memberValue;
 }
 
-Function::Function(Type* tf,const std::string nf, const std::vector<std::pair<Type*, std::string>> p,
-    std::vector<Statement*> b) : typeFunc(tf), nameFunc(nf), parameters(p) ,body(b) {}
+Function::Function(
+    Type* tf, 
+    const std::string nf,
+    const std::vector<std::pair<Type*, std::string>> p,
+    std::vector<Statement*> b,
+    bool classFunction,
+    std::string className
+) 
+: typeFunc(tf),
+  nameFunc(nf),
+  parameters(p),
+  body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
@@ -293,6 +309,17 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::Type* returnType = typeFunc->getLLVMType(ctx);
 
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, argLLVMTypes, false);
+
+    std::string realName = nameFunc;
+    if(classFunction){
+        if(className == nameFunc){
+            nameFunc = nameFunc + "_Create_Default";
+        }
+        else{
+            nameFunc = className + "_" + nameFunc;
+        }
+    }
+
     llvm::Function* function = module->getFunction(nameFunc);
 
     if (function) throw std::runtime_error("Redefinition of function: " + nameFunc); //&& function->getFunctionType() == funcType
@@ -319,10 +346,15 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
             symbolTable.back()[param.second] = {alloca, param.first->clone()};
         }
     }
-    
     symbolFunctions.emplace_back(
-        nameFunc,
-        SymbolFunction{typeFunc->clone(), argTypes, function}
+        realName,
+        SymbolFunction{
+            typeFunc->clone(),
+            argTypes,
+            function,
+            classFunction,
+            className,
+        }
     );
 
     size_t i = 0;
@@ -340,17 +372,30 @@ void Function::setClassArg(StructType* argType) {
     parameters.insert(parameters.begin(), {argType, "this"});
 }
 
+void Function::setClassFunction(bool value) {
+
+    this->classFunction = value;
+}
+
+void Function::setClassName(std::string name){
+    this->className = name;
+}
+
 Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
 
 void Return::codegen(llvm::IRBuilder<> &builder) {
     Value* retVal = expr->codegen(builder);
-    Type* returnType;
+    Type* returnType = nullptr;
     for (const auto& func : symbolFunctions) {
         if (func.first == funcName) {  
             returnType = func.second.returnType->clone();
             break;
         }
     }
+    if(returnType == nullptr)
+        throw std::runtime_error(
+            "Return error No function '" + funcName + "' found in symbolFunctions"
+        );
     
 
     if(!(*retVal->getType() == *returnType))
