@@ -25,6 +25,7 @@ Statement* Parser::parseCode(){
 Statement* Parser::parseStm(){
     if(currentToken.type == CLASS){
         eat(CLASS);
+        isInsideClass = true;
         std::string nameClass = currentToken.value;
         eat(UPPERNAME);
         eat(LBRACE);
@@ -97,6 +98,7 @@ Statement* Parser::parseStm(){
         } while(currentToken.type == FUNCTION);
 
         eat(RBRACE);
+        isInsideClass = false;
         return new DefineClass(nameClass,
             privateMembers,
             constructorArgs,
@@ -125,8 +127,7 @@ Statement* Parser::parseStm(){
     if (currentToken.type == TYPE || currentToken.type == AUTO) { 
         Type* typeVar = parseType(currentToken.value);
         //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
-        std::string var = currentToken.value;
-        eat(VAR);
+        std::string var = parseVar(currentToken.value);
         eat(EQ);
         Expr* value = parse();
         return new VarDecl(var, typeVar, value);
@@ -236,9 +237,11 @@ Statement* Parser::parseStm(){
         Statement* next = parseStm();
         return next;
     }
-    if (currentToken.type == VAR) { //Ok not change for class
-        std::string var = currentToken.value;
-        eat(VAR);
+    if (currentToken.type == VAR || currentToken.type == THIS) { //Ok not change for class
+        //std::string var = currentToken.value;
+        std:: cout << "QUI\n";
+        std::string var = parseVar(currentToken.value);
+        std:: cout << "LI\n";
         if(currentToken.type == POINT) {
             eat(POINT);
             std::string memberName = currentToken.value;
@@ -357,9 +360,9 @@ Expr* Parser::parseFactor() {
         eat(NUM);
         return parseNum(val);
     }
-    if (currentToken.type == VAR) {
-        std::string name = currentToken.value;
-        eat(VAR);
+    if (currentToken.type == VAR || currentToken.type == THIS) {
+        //std::string name = currentToken.value;
+        std::string name = parseVar(currentToken.value);
         if(currentToken.type == LPAREN){
             eat(LPAREN);
             std::vector<Expr*> args;
@@ -472,4 +475,13 @@ Type* Parser::parseType(std::string stringType, bool isReference){
         }
     }
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
+}
+
+
+std::string Parser::parseVar(std::string valueVar){
+    std::cout << "Dentro paseVar(): " << valueVar << "\n";
+    if(valueVar == "this" &&  !isInsideClass)
+        throw std::runtime_error("Cannot use 'this' outside class");
+    valueVar == "this" ? eat(THIS) : eat(VAR);
+    return valueVar;
 }

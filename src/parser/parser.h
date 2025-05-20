@@ -8,19 +8,23 @@
 extern std::vector<StructType* > symbolStructsType;
 
 class Parser {
-    Tokenizer& tokenizer;
-    Token currentToken;
-    std::string lastFuncion;
 public:
     Parser(Tokenizer& t, std::string lastFuncion = "");
     Statement* parseCode();
+    bool hasMoreTokens();
+private:
+    Token currentToken;
+    std::string lastFuncion;
+    bool isInsideClass = false;
+    Tokenizer& tokenizer;
+
     Statement* parseStm();
     Expr* parse();
     Expr* parseExpr();
     Expr* parseTerm();
     Expr* parseFactor();
     Expr* parseNum(std::string val);
-    Type* parseType(std::string stringType, bool isReference = false);
     void eat(TokenType expected);
-    bool hasMoreTokens();
+    std::string parseVar(std::string valueVar);
+    Type* parseType(std::string stringType, bool isReference = false);
 };
