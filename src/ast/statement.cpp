@@ -27,8 +27,8 @@ DefineClass::DefineClass(
     structType->setPointer(true); 
     constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
     Function* constructor = new Function(
-        new VoidType(), //todo create A Void Type to change it
-        nameClass, //+ "_Create_Default",  
+        new VoidType(),
+        nameClass,  
         constructorArgs,
         ConstructorBodyStatemets
     );
@@ -46,11 +46,9 @@ DefineClass::DefineClass(
     structType->setPointer(false); 
 
     publicFunctions.push_back(constructor); // In theory even if the constructor is generated later, it shouldn't be a problem
-    //nameFunctions.push_back(nameClass);  Even the constructor name function????
 
     ClassType* classType = new ClassType(structType, nameFunctions);
 
-    // 
     symbolClassType.push_back(static_cast<ClassType*>(classType->clone()));
 
     this->classType = classType;
@@ -70,7 +68,7 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
         members.push_back(member.first->getLLVMType(ctx));
     }
     pointType->setBody(members);
-    //structType->setLLVMType(pointType);    //todo generalize this part end the codegene parte of the DefineStruct: same code
+    //todo generalize this part end the codegene parte of the DefineStruct: same code
     //todo ---------------------------------------------------<
 
     for(auto function : functions){
@@ -83,16 +81,8 @@ ClassDecl::ClassDecl(std::string nc, std::string vcn, std::vector<Expr *> a) {
     bool check = false;
     for(auto st : symbolClassType){
         if(st->getNameClass() == nc){
-            /*if(st->getStructType()->getMembersSize() != a.size()){
-                throw std::runtime_error(
-                    "Class constuctor '" + nc + "' expects " + 
-                    std::to_string(st->getStructType()->getMembersSize()) + 
-                    " args, but " + 
-                    std::to_string(a.size()) + 
-                    " were provided."
-                );
-            }*/
             check = true;
+            break;
         }
     }
     if (!check)
@@ -155,7 +145,7 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     if(!checkFunc)
         throw std::runtime_error("Constructor '" + nameClass + "' not found");
 
-    if(functionStruct->argType.size() != args.size() + 1){  //already done in the ClassDecl::ClassDecl
+    if(functionStruct->argType.size() != args.size() + 1){ 
         throw std::runtime_error("Argument count mismatch for Constructor" + nameClass);
     }
 
@@ -198,16 +188,12 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
         delete value;
     }
 
-    //I Have to made the return type Void
+    //It's Void type
     builder.CreateCall(callee, argValues);
-    /*llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-    Type* returnType = functionStruct->returnType;
-    Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
-    llvm::outs() << "The class constructor returns: "<< *returnValue->getLLVMValue() << "\n";*/
 }
 
 DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
-    StructType* structType = new StructType(nameStruct, members); //todo channge the logi of private member of DefineStruct, complete useless now, just remove and use this object like private for the codegen
+    StructType* structType = new StructType(nameStruct, members); //todo channge the logic of private member of DefineStruct, complete useless now, just remove and use this object like private for the codegen
     for(auto st : symbolStructsType){
         if(st == structType || structType->equalName(*st)){
             delete structType;
@@ -397,16 +383,7 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
         delete memberValue;
         memberValue = newVal;
     }
-    /*
-    if(!(*memberType == *memberValue->getType())){
-        throw std::runtime_error(
-            "The type of struct member '" +
-            NameMember + "' (expected '" +
-            memberType->toString() +
-                "') is not compatible with the provided value of type '" + 
-            memberValue->getType()->toString() + "'"
-        );
-    }*/
+    
     builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
     delete memberValue;
 }
@@ -450,7 +427,7 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
 
     llvm::Function* function = module->getFunction(nameFunc);
 
-    if (function) throw std::runtime_error("Redefinition of function: " + nameFunc); //&& function->getFunctionType() == funcType
+    if (function) throw std::runtime_error("Redefinition of function: " + nameFunc);
 
     function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
 
@@ -556,7 +533,7 @@ void CallFuncStatement::codegen(llvm::IRBuilder<> &builder){
         }
         Value* value  = arg->codegen(builder, isVar);
         llvm::Value* llvmVal = nullptr; 
-        //functionStruct->argType.at(argValues.size())->isPointer()  // not usefull here
+        
         if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
             
             throw std::runtime_error(
@@ -569,7 +546,7 @@ void CallFuncStatement::codegen(llvm::IRBuilder<> &builder){
             );
         }
         
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){//callee->getFunctionType()->getParamType(argValues.size()))) {
+        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
             throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
         }
         argValues.push_back(!llvmVal ?
@@ -755,13 +732,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
     Value* val = value->codegen(builder);
-    /*if(!(*val->getType() == *type)){
-        throw std::runtime_error(
-            "Updated value of variable '"+
-            nameVar+
-            "' not compatible with the type of the variable itself"
-        );
-    }*/
+    
     if(!(*val->getType() == *type)){
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
@@ -823,7 +794,12 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
         }
         typeVar = type->getLLVMType(ctx);
     }
-    // If Cast is performed, the block may be different from the saved one, so continue on the current one
+    
+    /*
+    If Cast is performed, the block may be
+    different from the saved one,
+    so continue on the current one
+      */
     if (builder.GetInsertBlock() != currentBlock) { 
         currentBlock = builder.GetInsertBlock();
     }

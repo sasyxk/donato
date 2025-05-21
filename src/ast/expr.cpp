@@ -2,7 +2,6 @@
 
 StructVar::StructVar(const std::string &vsn, const std::vector<std::string> &mc) : varStructName(vsn) , memberChain(mc) {}
 
-
 Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
 
@@ -84,55 +83,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
     throw std::runtime_error("Invalid member chain access.");
 }
-/*
-StructVar::StructVar(const std::string &vsn, const std::string &mn): varStructName(vsn) , memberName(mn) {}
 
-Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    bool checkVariable = false;
-    llvm::Value* ptrToStruct;
-    Type* type;
-    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
-        auto found = it->find(varStructName);
-        if (found != it->end()) {
-            ptrToStruct = found->second.alloca;
-            type = found->second.type;
-            checkVariable = true;
-            break;
-        }
-    }
-    if(!checkVariable) 
-        throw std::runtime_error("Undeclared variable: " + varStructName);
-
-    StructType* structType = dynamic_cast<StructType*>(type);
-    if (!structType)
-        throw std::runtime_error("The variable '" + varStructName + "' is not a struct but a '" + type->toString() + "'");
- 
-    size_t i = 0;
-    for(auto member : structType->getMembers()){
-        if(member.second == memberName){
-
-            llvm::Value* fieldIGEP = builder.CreateStructGEP(structType->getLLVMType(ctx), ptrToStruct, i, memberName);
-
-            if(isPointer){
-                Type* provaType = member.first;
-                provaType->setPointer(true);
-                return provaType->createValue(fieldIGEP , ctx);
-            }
-
-            llvm::Value* llvmValue = builder.CreateLoad(
-                member.first->getLLVMType(ctx), 
-                fieldIGEP, 
-                memberName + "_val"
-            );
-            return member.first->createValue(llvmValue, ctx);
-        }
-        i++;
-    }
-    throw std::runtime_error("The member '" + memberName + "' is not recognized in the struct.");
-}
-*/
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
 //todo nameOfClass here is useless
 Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
@@ -150,19 +101,9 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     if(!checkFunc)
         throw std::runtime_error("Function not found: " + funcName);
         
-    /*llvm::Function* callee = module->getFunction(funcName);
-    if(!callee) {
-        throw std::runtime_error("Function not found: " + funcName);
-    }
-    */
     if(functionStruct->argType.size() != args.size()){
         throw std::runtime_error("Argument count mismatch for " + funcName);
     }
-
-    // Check the correctness of the arguments
-    /*if(callee->arg_size() != args.size()) {
-        throw std::runtime_error("Argument count mismatch for " + funcName);
-    }*/
 
     llvm::LLVMContext& ctx = builder.getContext();
 
@@ -183,7 +124,7 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
         }
         Value* value  = arg->codegen(builder, isVar);
         llvm::Value* llvmVal = nullptr; 
-        //functionStruct->argType.at(argValues.size())->isPointer()  // not usefull here
+        
         if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
             
             throw std::runtime_error(
@@ -196,7 +137,7 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
             );
         }
         
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){//callee->getFunctionType()->getParamType(argValues.size()))) {
+        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
             throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
         }
         argValues.push_back(!llvmVal ?
@@ -206,13 +147,7 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
     llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
     Type* returnType = functionStruct->returnType;
-    /*for (const auto& func : symbolFunctions) {
-        if (func.first == funcName) {  
-            returnType = func.second.returnType->clone();
-            break;
-        }
-    }*/
-
+    
     Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
 
     return returnValue;
@@ -287,7 +222,6 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
                 if (function.first == memberName && 
                     function.second.classFunction &&
                     classType->isFuctionOfClass(memberName)
-                    //function.second.className == classType->getNameClass() &&
                 ){
                     functionStruct = &function.second;
                     checkFunc = true;
@@ -344,12 +278,7 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
 
             llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
             Type* returnType = functionStruct->returnType;
-            /*for (const auto& func : symbolFunctions) {
-                if (func.first == funcName) {  
-                    returnType = func.second.returnType->clone();
-                    break;
-                }
-            }*/
+            
             Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
             return returnValue;
         }
