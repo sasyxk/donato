@@ -238,7 +238,8 @@ Statement* Parser::parseStm(){
         Statement* next = parseStm();
         return next;
     }
-    if (currentToken.type == VAR || currentToken.type == THIS) { //Ok not change for class
+    if (currentToken.type == VAR ||
+        currentToken.type == THIS) { // To the left of the class called with this it behaves exactly like a struct, we can leave it like that
         std::string var = parseVar(currentToken.value);
         if(currentToken.type == POINT) { //todo generalise the number of point
             eat(POINT);
@@ -248,6 +249,7 @@ Statement* Parser::parseStm(){
             Expr* value = parse();
             return new VarStructUpdt(var, memberName, value);
         }
+        //todo Add the fucntion call for the void Function or function that we don't need to store the result of return;
         eat(EQ);
         Expr* value = parse();
         return new VarUpdt(var, value);
@@ -362,7 +364,7 @@ Expr* Parser::parseFactor() {
     if (currentToken.type == VAR ||
         currentToken.type == THIS) {
         std::string name = parseVar(currentToken.value);
-        if(currentToken.type == LPAREN){
+        if(currentToken.type == LPAREN){ //VAR is function name CallFunc
             eat(LPAREN);
             std::vector<Expr*> args;
             do {
@@ -373,7 +375,7 @@ Expr* Parser::parseFactor() {
             eat(RPAREN);
             return new CallFunc(name, nameOfClass, args);
         }
-        if(currentToken.type == POINT){
+        if(currentToken.type == POINT){ //Var is struct
             std::vector<std::string> memberChain;
             do {
                 eat(POINT);
@@ -385,7 +387,7 @@ Expr* Parser::parseFactor() {
             
             return new StructVar(name, memberChain);
         }
-        return new Var(name);
+        return new Var(name); // Just Var
     }
     throw std::runtime_error("Unexpected factor: " + currentToken.value);
 }
