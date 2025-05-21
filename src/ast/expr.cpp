@@ -140,23 +140,14 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
     bool checkFunc = false;
     for (auto& function : symbolFunctions) {
-        if (function.first == funcName) {
-            if(function.second.className == nameOfClass ){
-                functionStruct = &function.second;
-                checkFunc = true;
-                break;
-            }
+        if (function.first == funcName && !function.second.classFunction) {
+            functionStruct = &function.second;
+            checkFunc = true;
+            break;
         }
     }
-
     if(!checkFunc)
         throw std::runtime_error("Function not found: " + funcName);
-        
-    // Check if the called function is a function of a class
-    //todo we don't need this, but we have to search the struct value, but we have....
-    if(functionStruct->classFunction) {
-        throw std::runtime_error("Function " + funcName + " belongs to the class " + functionStruct->className);
-    }
         
     /*llvm::Function* callee = module->getFunction(funcName);
     if(!callee) {
