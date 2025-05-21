@@ -509,13 +509,39 @@ void Function::setClassName(std::string name){
     this->className = name;
 }
 
-Return::Return(Expr* e, std::string fn) : expr(e), funcName(fn) {}
+ReturnVoid::ReturnVoid(std::string fn, std::string noc) : funcName(fn), nameOfClass(noc) {}
+
+void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
+    Type* returnType = nullptr;
+    for (const auto& func : symbolFunctions) {
+        if (func.first == funcName &&
+            func.second.className == nameOfClass    
+        ){    
+            returnType = func.second.returnType->clone();
+            break;
+        }
+    }
+    if(returnType == nullptr)
+        throw std::runtime_error(
+            "Return error No function '" + funcName + "' found in symbolFunctions"
+        );
+    
+    if (dynamic_cast<VoidType*>(returnType) == nullptr) {
+        throw std::runtime_error(
+            "The function '"+funcName+"' is Void expected  'return;'"
+        );
+    }
+}
+
+Return::Return(Expr* e, std::string fn, std::string noc) : expr(e), funcName(fn), nameOfClass(noc) {}
 
 void Return::codegen(llvm::IRBuilder<> &builder) {
     Value* retVal = expr->codegen(builder);
     Type* returnType = nullptr;
     for (const auto& func : symbolFunctions) {
-        if (func.first == funcName) {  
+        if (func.first == funcName &&
+            func.second.className == nameOfClass    
+        ){  
             returnType = func.second.returnType->clone();
             break;
         }

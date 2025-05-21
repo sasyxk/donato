@@ -173,11 +173,22 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
+
+class ReturnVoid : public Statement {
+    std::string funcName;
+    std::string nameOfClass;
+public:
+    ReturnVoid(std::string fn, std::string noc);
+    ~ReturnVoid() = default;
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class Return : public Statement {
     Expr* expr;
     std::string funcName;
+    std::string nameOfClass;
 public:
-    Return(Expr* e, std::string fn);
+    Return(Expr* e, std::string fn, std::string noc);
     ~Return() {
         delete expr;
     }
