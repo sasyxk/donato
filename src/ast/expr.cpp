@@ -299,7 +299,7 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
                 }
             }
             if(!checkFunc)
-                throw std::runtime_error("Function '" + memberName + "' of class  '"+ nameCurrVar + "'not found");
+                throw std::runtime_error("Function '" + memberName + "' of class '"+ nameCurrVar + "' not found");
 
             if(functionStruct->argType.size() != args.size() + 1){
                 throw std::runtime_error("Argument count mismatch for " + memberName);

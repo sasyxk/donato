@@ -262,15 +262,31 @@ Statement* Parser::parseStm(){
         eat(VAR);
         eat(EQ);
 
-        eat(LBRACE);
-        std::vector<Expr*> membersExpr;
-        do{
-            Expr* member = parseExpr();
-            membersExpr.push_back(member);
-        }while(currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RBRACE);
+        if(currentToken.type == LBRACE){
+            eat(LBRACE);
+            std::vector<Expr*> membersExpr;
+            do{
+                Expr* member = parseExpr();
+                membersExpr.push_back(member);
+            }while(currentToken.type == COMMA && (eat(COMMA), true));
+            eat(RBRACE);
+            eat(ENDEXPR);
+            return new StructDecl(nameStruct, varStructName, membersExpr);
+        }
+        //Class declaration
+        std::string className = currentToken.value;
+        eat(UPPERNAME);
+        eat(LPAREN);
+        std::vector<Expr*> args;
+        do {
+            if(currentToken.type == RPAREN){break;}
+            Expr* arg = parseExpr();
+            args.push_back(arg);
+        } while (currentToken.type == COMMA && (eat(COMMA), true));
+        eat(RPAREN);
         eat(ENDEXPR);
-        return new StructDecl(nameStruct, varStructName, membersExpr);
+        return new ClassDecl(nameStruct, varStructName, args); //class Name, VarClassName, args
+
     }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }

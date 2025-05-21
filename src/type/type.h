@@ -101,6 +101,7 @@ public:
     bool equalName(const StructType& other);
     std::string getNameStruct() const {return nameStruct;}
     std::vector<std::pair<Type*, std::string>> getMembers() {return members;}
+    size_t getMembersSize() {return members.size();}
 };
 
 class ClassType : public Type {

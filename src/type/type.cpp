@@ -196,7 +196,9 @@ llvm::Type* ClassType::getLLVMType(llvm::LLVMContext &ctx) const {
 }
 
 Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new BoolValue(new BoolType, llvmVal, ctx);  //todo fix
+    
+    //return new BoolValue(new BoolType, llvmVal, ctx);  //todo fix
+    throw std::invalid_argument("Unsupported ClassType::createValue");
 }
 
 bool ClassType::operator==(const Type &other) const {
