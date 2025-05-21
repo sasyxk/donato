@@ -76,6 +76,23 @@ public:
     void setPointer(bool ptr) override {pointer = ptr;}
 }; 
 
+class VoidType : public Type{
+public:
+    VoidType();
+    ~VoidType() override = default;
+
+    bool operator==(const Type& other) const override;
+
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    std::string toString() const override {return "void";}
+    Type* clone() const override { return new VoidType(*this); }
+    bool isCastTo(Type* other) const override;
+    bool isPointer() const override;
+    void setPointer(bool ptr) override;
+
+};
+
 class StructType : public Type{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
@@ -129,4 +146,7 @@ public:
     bool isFuctionOfClass(std::string nameFunc);
     //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
 };
+
+
+
 

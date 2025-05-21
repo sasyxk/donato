@@ -108,6 +108,35 @@ bool BoolType::isCastTo(Type *other) const {
     return false;
 }
 
+
+//VoidType------------------------------------------
+VoidType::VoidType() {}
+
+bool VoidType::operator==(const Type& other) const {
+    return dynamic_cast<const VoidType*>(&other) != nullptr;
+}
+
+llvm::Type* VoidType::getLLVMType(llvm::LLVMContext& ctx) const {
+    return llvm::Type::getVoidTy(ctx);
+}
+
+// Creazione di un valore VoidValue
+Value* VoidType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) {
+    throw std::runtime_error("VoidType does not support createValue.");
+}
+
+bool VoidType::isCastTo(Type* other) const {
+    return false;
+}
+
+bool VoidType::isPointer() const {
+    throw std::runtime_error("VoidType does not support 'isPointer()'");
+}
+
+void VoidType::setPointer(bool ptr) {
+    throw std::runtime_error("VoidType does not support 'setPointer()'");
+}
+
 //StructType----------------------------------------
 StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m) {
     this->nameStruct = ns;

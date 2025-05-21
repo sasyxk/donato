@@ -41,6 +41,7 @@ Token Tokenizer::nextToken() {
         if (word == "private") return Token(PRIVATE, word);
         if (word == "public") return Token(PUBLIC, word);
         if (word == "function") return Token(FUNCTION, word);
+        if (word == "void") return Token(VOID, word);
         if (word == "ref") return Token(REF, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||

@@ -135,8 +135,12 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == RETURN) {
         eat(RETURN);
+        if(currentToken.type == ENDEXPR){
+            eat(ENDEXPR);
+            return new ReturnVoid(lastFuncion, nameOfClass);
+        }
         Expr* value = parse();
-        return new Return(value, lastFuncion);
+        return new Return(value, lastFuncion, nameOfClass);
     }
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
@@ -490,6 +494,10 @@ Type* Parser::parseType(std::string stringType, bool isReference){
     else if(stringType == "int64" || stringType == "int"){
         eat(TYPE);
         return new SignedIntType(64, isReference);
+    }
+    if(stringType == "void"){
+        eat(VOID);
+        return new VoidType();
     }
     else if(isupper(stringType[0])){
         for(auto structType : symbolStructsType){
