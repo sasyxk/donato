@@ -125,6 +125,7 @@ public:
 
     std::string getNameClass() const {return structType->getNameStruct();}
     StructType* getStructType() {return structType;}
+    bool isFuctionOfClass(std::string nameFunc);
     //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
 };
 

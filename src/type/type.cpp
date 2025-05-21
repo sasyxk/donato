@@ -206,3 +206,10 @@ bool ClassType::operator==(const Type &other) const {
 bool ClassType::isCastTo(Type *other) const {
     return false;
 }
+
+bool ClassType::isFuctionOfClass(std::string nameFunc) {
+    for(auto& name : nameFunctions){
+        if(name == nameFunc) return true;
+    }
+    return false;
+}

@@ -384,7 +384,17 @@ Expr* Parser::parseFactor() {
                 memberChain.push_back(memberName);
 
             } while(currentToken.type == POINT);
-            
+            std::vector<Expr*> args;
+            if(currentToken.type == LPAREN){ //Function Class call
+                eat(LPAREN);
+                do{
+                    if(currentToken.type == RPAREN){break;}
+                    Expr* arg = parseExpr();
+                    args.push_back(arg);
+                } while (currentToken.type == COMMA && (eat(COMMA), true));
+                eat(RPAREN);
+                return new ClassCallFunc(name, memberChain, name == "this" ? nameOfClass : "", args);
+            }
             return new StructVar(name, memberChain);
         }
         return new Var(name); // Just Var

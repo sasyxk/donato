@@ -29,6 +29,25 @@ public:
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
+ class  ClassCallFunc : public Expr {
+    std::string firstVariableName;
+    std::vector<std::string> memberChain;
+    std::string nameOfClass;
+    std::vector<Expr*> args;
+public:
+    ClassCallFunc(
+        const std::string fvn,
+        const std::vector<std::string> mn,
+        std::string noc,
+        std::vector<Expr*> a);
+    ~ClassCallFunc() {
+        for (Expr* arg : args) {
+            delete arg;
+        }
+    }
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+ };
+
 class BinaryCond : public Expr {
     std::string op;
     Expr* left;

@@ -63,8 +63,9 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
             Type* finalType = members[index].first;
 
             if (isPointer) {
-                finalType->setPointer(true);  // It's not a problem, this memberchain will not be used anymore, it will just be deleted at the end of the program
-                return finalType->createValue(currentPtr, ctx);
+                Value * value = finalType->createValue(currentPtr, ctx);
+                value->getType()->setPointer(true);
+                return value;
             }
 
             llvm::Value* loadedVal = builder.CreateLoad(
@@ -134,7 +135,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 */
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
 
-Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
+Value *CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     // Search for the function in the module
     SymbolFunction* functionStruct = nullptr;
 
@@ -219,6 +220,177 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
 
     return returnValue;
+}
+
+ClassCallFunc::ClassCallFunc(
+    const std::string fvn,
+    const std::vector<std::string> mn,
+    std::string noc,
+    std::vector<Expr *> a
+):
+    firstVariableName(fvn),
+    memberChain(mn),
+    nameOfClass(noc),
+    args(a)
+{}
+
+Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Value* ptrToStruct = nullptr;
+    Type* type = nullptr;
+
+    // Retrieve the variable from the symbolTable
+    bool foundVar = false;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(firstVariableName);
+        if (found != it->end()) {
+            ptrToStruct = found->second.alloca;
+            type = found->second.type;
+            foundVar = true;
+            break;
+        }
+    }
+    if (!foundVar)
+        throw std::runtime_error("Undeclared variable: " + firstVariableName);
+
+    // This is the value returned by the last GEP performed in the cycle
+    llvm::Value* currentPtr = ptrToStruct;
+
+    std::string nameCurrVar = firstVariableName;
+    // We loop over the length of all members passed by the parser
+    for (size_t depth = 0; depth < memberChain.size(); ++depth) {
+        const std::string& memberName = memberChain[depth];
+
+        if (auto classType = dynamic_cast<ClassType*>(type); classType || nameOfClass != "") {  // id is this, is a structType
+
+            if(depth + 1 < memberChain.size())
+                throw std::runtime_error(
+                    "The class variable '" +
+                    nameCurrVar +
+                    "' cannot have multiple internal calls"
+                );
+
+            if(nameOfClass != "" && classType == nullptr) {
+                for(auto& classType1 : symbolClassType){
+                    if(nameOfClass == classType1->getNameClass()){
+                        classType = classType1;
+                        break;
+                    }
+                }
+            }
+            if(classType == nullptr){ //debug error
+                throw std::runtime_error("ClassType is nullpt in ClassCallFunc::codegen");
+            }
+
+            // memberName is a fuction
+            SymbolFunction* functionStruct = nullptr;
+
+            bool checkFunc = false;
+            for (auto& function : symbolFunctions) {
+                if (function.first == memberName && 
+                    function.second.classFunction &&
+                    classType->isFuctionOfClass(memberName)
+                    //function.second.className == classType->getNameClass() &&
+                ){
+                    functionStruct = &function.second;
+                    checkFunc = true;
+                    break;
+                }
+            }
+            if(!checkFunc)
+                throw std::runtime_error("Function '" + memberName + "' of class  '"+ nameCurrVar + "'not found");
+
+            if(functionStruct->argType.size() != args.size() + 1){
+                throw std::runtime_error("Argument count mismatch for " + memberName);
+            }
+
+            llvm::LLVMContext& ctx = builder.getContext();
+
+            llvm::Function* callee = functionStruct->func;
+
+            // Generate argument values
+            std::vector<llvm::Value*> argValues;
+            if(!currentPtr->getType()->isPointerTy()){
+                llvm::outs() << "IS NOT A POINTER\n";
+                
+            }
+            else{
+                llvm::outs() << "IS A POINTER\n";
+            }
+            argValues.push_back(currentPtr);
+
+            for(auto* arg : args) {
+                bool isVar = false;
+                
+                if (Var* varPtr = dynamic_cast<Var*>(arg)) {
+                    if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                        isVar = true;
+                }
+                else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
+                    if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                        isVar = true;
+                }
+                Value* value  = arg->codegen(builder, isVar);
+        
+                llvm::Value* llvmVal = nullptr; 
+                if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
+                    // The variable passed is not a pointer -> it is created
+                    llvm::outs() << "DENTRO\n";
+                    // Temporary space allocation
+                    llvm::AllocaInst* temp = builder.CreateAlloca(value->getLLVMValue()->getType(), nullptr, "argtmp");
+                    builder.CreateStore(value->getLLVMValue(), temp);
+                    llvmVal = temp;
+                }
+                
+                if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
+                    throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
+                }
+                argValues.push_back(!llvmVal ?
+                    value->getLLVMValue() : llvmVal);
+                delete value;
+            }
+
+            llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
+            Type* returnType = functionStruct->returnType;
+            /*for (const auto& func : symbolFunctions) {
+                if (func.first == funcName) {  
+                    returnType = func.second.returnType->clone();
+                    break;
+                }
+            }*/
+            Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
+            return returnValue;
+        }
+        if (auto structType = dynamic_cast<StructType*>(type)) {
+            auto members = structType->getMembers();
+            size_t index = 0;
+            bool found = false;
+
+            for (size_t i = 0; i < members.size(); ++i) {
+                if (members[i].second == memberName) {
+                    index = i;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                throw std::runtime_error("Member '" + memberName + "' not found in struct '"+ nameCurrVar +"' ");
+
+            currentPtr = builder.CreateStructGEP(structType->getLLVMType(ctx), currentPtr, index, memberName);
+            nameCurrVar = memberName;
+
+            type = members[index].first;
+        }
+        else{
+            throw std::runtime_error("Invalid variable member of chain: '"+ nameCurrVar+"' with type '"+type->toString()+"'");
+        }
+        
+    }
+
+    throw std::runtime_error("Invalid member chain access.");
+    
 }
 
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
