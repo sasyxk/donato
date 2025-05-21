@@ -134,8 +134,8 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 }
 */
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
-
-Value *CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
+//todo nameOfClass here is useless
+Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     // Search for the function in the module
     SymbolFunction* functionStruct = nullptr;
 

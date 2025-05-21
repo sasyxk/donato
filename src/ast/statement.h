@@ -174,6 +174,19 @@ public:
 };
 
 
+class CallFuncStatement : public Statement {
+    std::string funcName;
+    std::vector<Expr*> args;
+public:
+    CallFuncStatement(std::string fn, std::vector<Expr*> a);
+    ~CallFuncStatement(){
+        for(auto arg : args) {
+            delete arg;
+        }
+    }
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class ReturnVoid : public Statement {
     std::string funcName;
     std::string nameOfClass;

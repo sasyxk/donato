@@ -245,6 +245,18 @@ Statement* Parser::parseStm(){
     if (currentToken.type == VAR ||
         currentToken.type == THIS) { // To the left of the class called with this it behaves exactly like a struct, we can leave it like that
         std::string var = parseVar(currentToken.value);
+        if(currentToken.type == LPAREN){ //VAR is function name CallFuncStatement
+            eat(LPAREN);
+            std::vector<Expr*> args;
+            do {
+                if(currentToken.type == RPAREN){break;}
+                Expr* arg = parseExpr();
+                args.push_back(arg);
+            } while (currentToken.type == COMMA && (eat(COMMA), true));
+            eat(RPAREN);
+            eat(ENDEXPR);
+            return new CallFuncStatement(var, args);
+        }
         if(currentToken.type == POINT) { //todo generalise the number of point
             eat(POINT);
             std::string memberName = currentToken.value;

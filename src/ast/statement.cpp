@@ -27,7 +27,7 @@ DefineClass::DefineClass(
     structType->setPointer(true); 
     constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
     Function* constructor = new Function(
-        new BoolType(), //todo create A Void Type to change it
+        new VoidType(), //todo create A Void Type to change it
         nameClass, //+ "_Create_Default",  
         constructorArgs,
         ConstructorBodyStatemets
@@ -199,7 +199,7 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     }
 
     //I Have to made the return type Void
-    builder.CreateCall(callee, argValues, "createClassCall");
+    builder.CreateCall(callee, argValues);
     /*llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
     Type* returnType = functionStruct->returnType;
     Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
@@ -509,6 +509,78 @@ void Function::setClassName(std::string name){
     this->className = name;
 }
 
+
+CallFuncStatement::CallFuncStatement(std::string nf, std::vector<Expr *> a) : funcName(nf), args(a) {}
+
+void CallFuncStatement::codegen(llvm::IRBuilder<> &builder){
+    SymbolFunction* functionStruct = nullptr;
+
+    bool checkFunc = false;
+    for (auto& function : symbolFunctions) {
+        if (function.first == funcName && !function.second.classFunction) {
+            functionStruct = &function.second;
+            checkFunc = true;
+            break;
+        }
+    }
+    if(!checkFunc)
+        throw std::runtime_error("Function not found: " + funcName);
+
+    if(functionStruct->argType.size() != args.size()){
+        throw std::runtime_error("Argument count mismatch for " + funcName);
+    }
+    if(dynamic_cast<VoidType*>(functionStruct->returnType)  == nullptr){
+        throw std::runtime_error(
+            "The function '"
+            + funcName +
+            "'is not a Void, Can't call without store the return value "
+        );
+    }
+
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Function* callee = functionStruct->func;
+
+    // Generate argument values
+    std::vector<llvm::Value*> argValues;
+    for(auto* arg : args) {
+        bool isVar = false;
+        
+        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
+            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                isVar = true;
+        }
+        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
+            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+                isVar = true;
+        }
+        Value* value  = arg->codegen(builder, isVar);
+        llvm::Value* llvmVal = nullptr; 
+        //functionStruct->argType.at(argValues.size())->isPointer()  // not usefull here
+        if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
+            
+            throw std::runtime_error(
+                "Function " +
+                funcName +
+                " argument " +
+                std::to_string(argValues.size() + 1) +
+                " wants a reference pass, insert a"  +
+                " variable as an argument"
+            );
+        }
+        
+        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){//callee->getFunctionType()->getParamType(argValues.size()))) {
+            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
+        }
+        argValues.push_back(!llvmVal ?
+            value->getLLVMValue() : llvmVal);
+        delete value;
+    }
+
+    builder.CreateCall(callee, argValues);
+    return;
+}
+
 ReturnVoid::ReturnVoid(std::string fn, std::string noc) : funcName(fn), nameOfClass(noc) {}
 
 void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
@@ -531,6 +603,7 @@ void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
             "The function '"+funcName+"' is Void expected  'return;'"
         );
     }
+    builder.CreateRetVoid();
 }
 
 Return::Return(Expr* e, std::string fn, std::string noc) : expr(e), funcName(fn), nameOfClass(noc) {}
