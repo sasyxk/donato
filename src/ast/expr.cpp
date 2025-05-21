@@ -182,22 +182,18 @@ Value *CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
                 isVar = true;
         }
         Value* value  = arg->codegen(builder, isVar);
-        /*
-        if(isVar){
-           value->getType()->setPointer(true);
-            llvm::outs() << "AURAAAAA\n";
-
-        }
-        */
         llvm::Value* llvmVal = nullptr; 
         //functionStruct->argType.at(argValues.size())->isPointer()  // not usefull here
         if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
-            // The variable passed is not a pointer -> it is created
-            llvm::outs() << "DENTRO\n";
-            // Temporary space allocation
-            llvm::AllocaInst* temp = builder.CreateAlloca(value->getLLVMValue()->getType(), nullptr, "argtmp");
-            builder.CreateStore(value->getLLVMValue(), temp);
-            llvmVal = temp;
+            
+            throw std::runtime_error(
+                "Function " +
+                funcName +
+                " argument " +
+                std::to_string(argValues.size() + 1) +
+                " wants a reference pass, insert a"  +
+                " variable as an argument"
+            );
         }
         
         if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){//callee->getFunctionType()->getParamType(argValues.size()))) {
@@ -311,14 +307,7 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
 
             // Generate argument values
             std::vector<llvm::Value*> argValues;
-            if(!currentPtr->getType()->isPointerTy()){
-                llvm::outs() << "IS NOT A POINTER\n";
-                
-            }
-            else{
-                llvm::outs() << "IS A POINTER\n";
-            }
-            argValues.push_back(currentPtr);
+            argValues.push_back(currentPtr); // is a pointer
 
             for(auto* arg : args) {
                 bool isVar = false;
@@ -335,12 +324,14 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
         
                 llvm::Value* llvmVal = nullptr; 
                 if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
-                    // The variable passed is not a pointer -> it is created
-                    llvm::outs() << "DENTRO\n";
-                    // Temporary space allocation
-                    llvm::AllocaInst* temp = builder.CreateAlloca(value->getLLVMValue()->getType(), nullptr, "argtmp");
-                    builder.CreateStore(value->getLLVMValue(), temp);
-                    llvmVal = temp;
+                    throw std::runtime_error(
+                        "Function " +
+                        memberName +
+                        " argument " +
+                        std::to_string(argValues.size() + 1) +
+                        " wants a reference pass, insert a"  +
+                        " variable as an argument"
+                    );
                 }
                 
                 if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){

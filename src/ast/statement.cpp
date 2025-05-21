@@ -163,14 +163,7 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
 
     // Generate argument values
     std::vector<llvm::Value*> argValues;
-    if(!ptrToStruct->getType()->isPointerTy()){
-        llvm::outs() << "IS NOT A POINTER\n";
-        
-    }
-    else{
-        llvm::outs() << "IS A POINTER\n";
-    }
-    argValues.push_back(ptrToStruct);
+    argValues.push_back(ptrToStruct); //is a pointer
 
     for(auto* arg : args) {
         bool isVar = false;
@@ -187,12 +180,14 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
 
         llvm::Value* llvmVal = nullptr; 
         if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
-            // The variable passed is not a pointer -> it is created
-            llvm::outs() << "DENTRO\n";
-            // Temporary space allocation
-            llvm::AllocaInst* temp = builder.CreateAlloca(value->getLLVMValue()->getType(), nullptr, "argtmp");
-            builder.CreateStore(value->getLLVMValue(), temp);
-            llvmVal = temp;
+            throw std::runtime_error(
+                "Constructor " +
+                nameClass +
+                " argument " +
+                std::to_string(argValues.size() + 1) +
+                " wants a reference pass, insert a"  +
+                " variable as an argument"
+            );
         }
         
         if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
@@ -204,11 +199,11 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     }
 
     //I Have to made the return type Void
-    //builder.CreateCall(callee, argValues, "createClassCall");
-    llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
+    builder.CreateCall(callee, argValues, "createClassCall");
+    /*llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
     Type* returnType = functionStruct->returnType;
     Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
-    llvm::outs() << "Il costruttore della classe ritorna: "<< *returnValue->getLLVMValue() << "\n";
+    llvm::outs() << "The class constructor returns: "<< *returnValue->getLLVMValue() << "\n";*/
 }
 
 DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
