@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     
     // LLVM configuration
     llvm::LLVMContext context;
-    module = new llvm::Module("my_module", context);
+    module = new llvm::Module("donato_program", context);
     llvm::IRBuilder<> builder(context);
     symbolTable.push_back({});
 
