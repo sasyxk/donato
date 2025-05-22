@@ -45,7 +45,7 @@ Statement* Parser::parseStm(){
                 eat(VAR);
                 privateMembers.emplace_back(type, privateMember);
                 eat(ENDEXPR);
-            } while (currentToken.type == TYPE);
+            } while (currentToken.type == TYPE || currentToken.type == UPPERNAME);
         }
         eat(PUBLIC);
         eat(COLON);
@@ -521,7 +521,6 @@ Type* Parser::parseType(std::string stringType, bool isReference){
         }
     }
     if(isupper(stringType[0])){
-        std::cout << "Aura1111\n";
        for(auto classType : symbolClassType){
             if(classType->getNameClass() == stringType){
                 eat(UPPERNAME);

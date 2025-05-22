@@ -45,7 +45,8 @@ DefineClass::DefineClass(
     // Must be pointer only in the first argument of the function, not in general
     structType->setPointer(false); 
 
-    publicFunctions.push_back(constructor); // In theory even if the constructor is generated later, it shouldn't be a problem
+    publicFunctions.insert(publicFunctions.begin(), constructor); //not good for performance
+
 
     ClassType* classType = new ClassType(structType, nameFunctions);
 

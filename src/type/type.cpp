@@ -214,6 +214,7 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
 }
 
 
+
 Type* ClassType::clone() const {
     ClassType* newClassType = new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
     newClassType->setPointer(this->pointer);
@@ -225,7 +226,7 @@ llvm::Type* ClassType::getLLVMType(llvm::LLVMContext &ctx) const {
 }
 
 Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    
+    return new StructValue(this->clone(), llvmVal, ctx);
     //return new BoolValue(new BoolType, llvmVal, ctx);  //todo fix
     throw std::invalid_argument("Unsupported ClassType::createValue");
 }
