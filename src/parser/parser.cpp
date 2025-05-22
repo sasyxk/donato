@@ -115,12 +115,11 @@ Statement* Parser::parseStm(){
         std::vector<std::pair<Type*, std::string>> members;
         do {
             Type* type = parseType(currentToken.value);
-            //eat(TYPE);
             std::string member = currentToken.value;
             eat(VAR);
             members.emplace_back(type, member);
             eat(ENDEXPR);
-        } while (currentToken.type == TYPE);
+        } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
         eat(RBRACE);
         return new DefineStruct(nameStruct, members);
         return nullptr;
@@ -520,6 +519,17 @@ Type* Parser::parseType(std::string stringType, bool isReference){
                 return st;
             }
         }
+    }
+    if(isupper(stringType[0])){
+        std::cout << "Aura1111\n";
+       for(auto classType : symbolClassType){
+            if(classType->getNameClass() == stringType){
+                eat(UPPERNAME);
+                auto* st = classType->clone();
+                st->setPointer(isReference);
+                return st;
+            }
+        } 
     }
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }
