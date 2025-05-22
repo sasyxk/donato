@@ -274,8 +274,9 @@ Statement* Parser::parseStm(){
                     args.push_back(arg);
                 } while (currentToken.type == COMMA && (eat(COMMA), true));
                 eat(RPAREN);
-                 throw std::runtime_error("Not yet implemented");
-                //return new ClassCallVoidFunc(var, memberChain, var == "this" ? nameOfClass : "", args);
+                eat(ENDEXPR);
+                //throw std::runtime_error("Not yet implemented");
+                return new ClassCallVoidFunc(var, memberChain, var == "this" ? nameOfClass : "", args);
             }
             eat(EQ);
             Expr* value = parse();

@@ -174,6 +174,26 @@ public:
 };
 
 
+
+ class ClassCallVoidFunc : public Statement {
+    std::string firstVariableName;
+    std::vector<std::string> memberChain;
+    std::string nameOfClass;
+    std::vector<Expr*> args;
+public:
+    ClassCallVoidFunc(
+        const std::string fvn,
+        const std::vector<std::string> mn,
+        std::string noc,
+        std::vector<Expr*> a);
+    ~ClassCallVoidFunc() {
+        for (Expr* arg : args) {
+            delete arg;
+        }
+    }
+    void codegen(llvm::IRBuilder<>& builder) override;
+ };
+
 class CallFuncStatement : public Statement {
     std::string funcName;
     std::vector<Expr*> args;

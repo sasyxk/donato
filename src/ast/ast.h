@@ -12,6 +12,7 @@
 #include "signed_int_value.h"
 #include "bool_value.h"
 
+
 struct SymbolInfo {
     llvm::Value* alloca;  
     Type* type;               

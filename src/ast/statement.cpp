@@ -204,8 +204,7 @@ DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::str
     symbolStructsType.push_back(structType);
 }
 
-void DefineStruct::codegen(llvm::IRBuilder<> &builder)
-{
+void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
 
     llvm::LLVMContext& ctx = builder.getContext();
 
@@ -468,6 +467,28 @@ void Function::setClassName(std::string name){
     this->className = name;
 }
 
+ClassCallVoidFunc::ClassCallVoidFunc(
+    const std::string fvn,
+    const std::vector<std::string> mn,
+    std::string noc,
+    std::vector<Expr *> a
+):
+    firstVariableName(fvn),
+    memberChain(mn),
+    nameOfClass(noc),
+    args(a)
+{}
+
+void ClassCallVoidFunc::codegen(llvm::IRBuilder<>& builder) {
+    generateClassFunctionCall(
+        builder,
+        firstVariableName,
+        memberChain,
+        nameOfClass,
+        args,
+        false);
+    return;
+}
 
 CallFuncStatement::CallFuncStatement(std::string nf, std::vector<Expr *> a) : funcName(nf), args(a) {}
 

@@ -124,6 +124,7 @@ Value* invokeMemberFunction(
     std::string nameCurrVar,
     std::vector<Expr*> args,
     llvm::Value* currentPtr,
+    bool wantReturn,
     llvm::IRBuilder<>& builder
 ){
     if(nameOfClass != "" && classType == nullptr) {
@@ -200,31 +201,27 @@ Value* invokeMemberFunction(
         delete value;
     }
 
-    llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-    Type* returnType = functionStruct->returnType;
-    
-    Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
-    return returnValue;
+   if (wantReturn) {
+        Type* returnType = functionStruct->returnType;
+        llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
+        return returnType->createValue(llvmValueReturn, ctx);
+    } else {
+        if (!dynamic_cast<VoidType*>(functionStruct->returnType)) {
+            throw std::runtime_error("Expected void return type in " + memberName);
+        }
+        builder.CreateCall(callee, argValues);
+        return nullptr;
+    }
 }
 
-ClassCallFunc::ClassCallFunc(
-    const std::string fvn,
-    const std::vector<std::string> mn,
-    std::string noc,
-    std::vector<Expr *> a
-):
-    firstVariableName(fvn),
-    memberChain(mn),
-    nameOfClass(noc),
-    args(a)
-{}
-
-/*
-    It manages how the retrieval of elements of the various
-    structs should be handled, which can be chained up to
-    the last element which must be a function call.
-*/
-Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
+Value* generateClassFunctionCall(
+    llvm::IRBuilder<>& builder,
+    const std::string& firstVariableName,
+    const std::vector<std::string>& memberChain,
+    const std::string& nameOfClass,
+    const std::vector<Expr*>& args,
+    bool returnsValue
+){
     llvm::LLVMContext& ctx = builder.getContext();
 
     /*
@@ -253,6 +250,7 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
     llvm::Value* currentPtr = ptrToStruct;
 
     std::string nameCurrVar = firstVariableName;
+
     // We loop over the length of all members passed by the parser
     for (size_t depth = 0; depth < memberChain.size(); ++depth) {
         const std::string& memberName = memberChain[depth];
@@ -272,23 +270,24 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
                 );
             }
 
-            //Get the return value of the called function
+            // Get the return value of the called function
             /*
                 If the current member of the chain is not the
                 variable with the name 'this', then you need
                 to pass what type of class that member has.
             */
-            Value* value = invokeMemberFunction(
-                    nameOfClass,
-                    classType,  //ClassType
-                    memberName,
-                    nameCurrVar,
-                    args,
-                    currentPtr,
-                    builder
-                );
-            return value;
+            return invokeMemberFunction(
+                nameOfClass,
+                classType,  // ClassType
+                memberName,
+                nameCurrVar,
+                args,
+                currentPtr,
+                returnsValue,
+                builder
+            );
         }
+
         if (auto structType = dynamic_cast<StructType*>(type)) {
             auto members = structType->getMembers();
             size_t index = 0;
@@ -311,39 +310,62 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer){
                 but the struct it's 'this' with just one argument
                 we need to discover if is a function
             */
-            if(!found && nameOfClass != "" && (depth + 1 == memberChain.size())) { 
-                Value* value = invokeMemberFunction(
+            if(!found && nameOfClass != "" && (depth + 1 == memberChain.size())) {
+                return invokeMemberFunction(
                     nameOfClass,
-                    nullptr,
+                    nullptr,  // ClassType
                     memberName,
                     nameCurrVar,
                     args,
                     currentPtr,
+                    returnsValue,
                     builder
                 );
-                return value;
-            
             }
+
             if (!found)
                 throw std::runtime_error("Member '" + memberName + "' not found in struct '"+ nameCurrVar +"'");
 
             /*
-                et a pointer to the specified member
-                (by index)  within the struct instance
+                Get a pointer to the specified member
+                (by index) within the struct instance
             */
             currentPtr = builder.CreateStructGEP(structType->getLLVMType(ctx), currentPtr, index, memberName);
             nameCurrVar = memberName;
 
             type = members[index].first;
-        }
-        else{
+        } else {
             throw std::runtime_error("Invalid variable member of chain: '"+ nameCurrVar+"' with type '"+type->toString()+"'");
         }
-        
     }
 
     throw std::runtime_error("Invalid member chain access.");
-    
+}
+
+ClassCallFunc::ClassCallFunc(
+    const std::string fvn,
+    const std::vector<std::string> mn,
+    std::string noc,
+    std::vector<Expr *> a
+):
+    firstVariableName(fvn),
+    memberChain(mn),
+    nameOfClass(noc),
+    args(a)
+{}
+
+// It manages how the retrieval of elements of the various
+// structs should be handled, which can be chained up to
+// the last element which must be a function call.
+Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+    return generateClassFunctionCall(
+        builder,
+        firstVariableName,
+        memberChain,
+        nameOfClass,
+        args,
+        true
+    );
 }
 
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
