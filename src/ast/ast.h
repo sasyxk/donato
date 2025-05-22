@@ -30,3 +30,11 @@ extern std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
 extern std::vector<StructType* > symbolStructsType;
 extern std::vector<ClassType* > symbolClassType;
 extern llvm::Module* module;
+
+
+std::pair<llvm::Value*, Type*> getStructMemberGEP(
+    llvm::IRBuilder<>& builder,
+    llvm::Value* ptrToStruct,
+    StructType* rootType,
+    const std::vector<std::string>& memberChain
+);

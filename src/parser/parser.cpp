@@ -257,14 +257,30 @@ Statement* Parser::parseStm(){
             return new CallFuncStatement(var, args);
         }
         if(currentToken.type == POINT) { //todo generalise the number of point
-            eat(POINT);
-            std::string memberName = currentToken.value;
-            eat(VAR);
+            std::vector<std::string> memberChain;
+            do {
+                eat(POINT);
+                std::string memberName = currentToken.value;
+                eat(VAR);
+                memberChain.push_back(memberName);
+
+            } while(currentToken.type == POINT);
+            std::vector<Expr*> args;
+            if(currentToken.type == LPAREN){ //Function Class call VOID
+                eat(LPAREN);
+                do{
+                    if(currentToken.type == RPAREN){break;}
+                    Expr* arg = parseExpr();
+                    args.push_back(arg);
+                } while (currentToken.type == COMMA && (eat(COMMA), true));
+                eat(RPAREN);
+                 throw std::runtime_error("Not yet implemented");
+                //return new ClassCallVoidFunc(var, memberChain, var == "this" ? nameOfClass : "", args);
+            }
             eat(EQ);
             Expr* value = parse();
-            return new VarStructUpdt(var, memberName, value);
+            return new VarStructUpdt(var, memberChain, value);
         }
-        //todo Add the fucntion call for the void Function or function that we don't need to store the result of return;
         eat(EQ);
         Expr* value = parse();
         return new VarUpdt(var, value);

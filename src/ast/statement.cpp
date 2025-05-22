@@ -318,7 +318,7 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.back()[varStructName] = {ptrToStruct, structType->clone()};
 }
 
-VarStructUpdt::VarStructUpdt(std::string nv, std::string nm, Expr *v) : nameVar(nv), NameMember(nm), value(v) {}
+VarStructUpdt::VarStructUpdt(std::string nv, std::vector<std::string>  mc, Expr *v) : nameVar(nv), memberChain(mc), value(v) {}
 
 void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
@@ -348,33 +348,14 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
             type->toString() +
             "'"
         );
-    size_t i = 0;
-    bool checkMember = false;
-    Type* memberType;
-    for(auto member : type->getMembers()){
-        if(member.second == NameMember){
-           checkMember = true;
-           memberType = member.first;
-           break; 
-        }
-        i++;
-    }
-    if(!checkMember) 
-        throw std::runtime_error(
-            "member: " +
-            NameMember +
-            " is not a member from the '"+
-            type->getNameStruct()+"' struct"
-        );
-
-    llvm::Value* fieldIGEP = builder.CreateStructGEP(type->getLLVMType(ctx), ptrToStruct, i, NameMember);
+    auto [fieldPtr, memberType] = getStructMemberGEP(builder, ptrToStruct, type, memberChain);
     Value* memberValue = value->codegen(builder);
 
     if(!(*memberType == *memberValue->getType())){
         if(!memberValue->getType()->isCastTo(memberType)){
             throw std::runtime_error(
                 "The type of struct member '" +
-                NameMember + "' (expected '" +
+                memberChain.back() + "' (expected '" +
                 memberType->toString() +
                     "') is not compatible with the provided value of type '" + 
                 memberValue->getType()->toString() + "'"
@@ -385,7 +366,7 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
         memberValue = newVal;
     }
     
-    builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
+    builder.CreateStore(memberValue->getLLVMValue(), fieldPtr);
     delete memberValue;
 }
 
