@@ -589,7 +589,6 @@ void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
 Return::Return(Expr* e, std::string fn, std::string noc) : expr(e), funcName(fn), nameOfClass(noc) {}
 
 void Return::codegen(llvm::IRBuilder<> &builder) {
-    Value* retVal = expr->codegen(builder);
     Type* returnType = nullptr;
     for (const auto& func : symbolFunctions) {
         if (func.first == funcName &&
@@ -603,6 +602,10 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
         throw std::runtime_error(
             "Return error No function '" + funcName + "' found in symbolFunctions"
         );
+
+    // Handled the fact that it could be a pointer
+    bool pointer = returnType->isPointer() ? true : false;
+    Value* retVal = expr->codegen(builder, pointer);
     
 
     if(!(*retVal->getType() == *returnType))
