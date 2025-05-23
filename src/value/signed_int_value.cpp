@@ -54,6 +54,12 @@ llvm::Value* makeOperation(
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
+    if(this->getType()->isPointer() == true || other->getType()->isPointer() == true){ //todo all operation
+        throw std::runtime_error(
+            "Unsupported addition for pointer"
+        );
+    }
+
     if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
 
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
