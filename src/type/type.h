@@ -124,8 +124,7 @@ public:
 class ClassType : public Type {
     //std::string nameClass;
     StructType* structType;
-    std::vector<std::string> nameFunctions; 
-    bool pointer = false;
+    std::vector<std::string> nameFunctions;
 public:
     ClassType(StructType* structType, std::vector<std::string> nameFunctions);
     ~ClassType() override {
@@ -138,8 +137,8 @@ public:
     std::string toString() const override {return "class" + structType->getNameStruct();}
     Type* clone() const override;
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    bool isPointer() const override {return structType->isPointer();}
+    void setPointer(bool ptr) override {structType->setPointer(ptr);}
 
     std::string getNameClass() const {return structType->getNameStruct();}
     StructType* getStructType() {return structType;}

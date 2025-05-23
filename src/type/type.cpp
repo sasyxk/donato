@@ -217,7 +217,6 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
 
 Type* ClassType::clone() const {
     ClassType* newClassType = new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
-    newClassType->setPointer(this->pointer);
     return newClassType;
 }
 
