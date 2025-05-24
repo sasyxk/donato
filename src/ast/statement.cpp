@@ -605,8 +605,38 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
 
     // Handled the fact that it could be a pointer
     bool pointer = returnType->isPointer() ? true : false;
-    Value* retVal = expr->codegen(builder, pointer);
-    
+    Value* retVal;
+    if(pointer){
+        if (auto* varExpr = dynamic_cast<Var*>(expr)) {
+            retVal = expr->codegen(builder, true);
+        }
+
+        else if (auto* structVarExpr = dynamic_cast<StructVar*>(expr)) {
+            retVal = expr->codegen(builder, true);
+        }
+
+        else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(expr)) {
+            retVal = expr->codegen(builder, false);
+        }
+
+        else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(expr)) {
+            retVal = expr->codegen(builder, false);
+        }
+        else {
+            throw std::runtime_error(
+                "Return error: the return value is not a pointer"
+            );
+        }
+    }
+    if(!pointer){
+        retVal = expr->codegen(builder);
+    }
+
+    if(retVal == nullptr){
+            throw std::runtime_error(
+                "THE RUNNING CODE MUST NOT ENTER HERE"
+            );
+        }
 
     if(!(*retVal->getType() == *returnType))
         throw std::runtime_error(

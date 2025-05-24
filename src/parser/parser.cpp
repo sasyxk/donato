@@ -143,7 +143,12 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
-        Type* typeFunc = parseType(currentToken.value);
+        bool isReference = false;
+        if(currentToken.type == REF) {
+            eat(REF);
+            isReference = true;
+        }
+        Type* typeFunc = parseType(currentToken.value, isReference);
         //eat(TYPE);
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
