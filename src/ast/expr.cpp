@@ -30,8 +30,10 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     auto [finalPtr, finalType] = getStructMemberGEP(builder, ptrToStruct, rootStruct, memberChain);
 
     if (isPointer) {
+        //Im not really sure if i have to delete finalType, problably not
+        finalType->setPointer(true);
         Value* value = finalType->createValue(finalPtr, ctx);
-        value->getType()->setPointer(true);
+        finalType->setPointer(false);
         return value;
     }
 
@@ -216,10 +218,10 @@ Value* invokeMemberFunction(
 
 Value* generateClassFunctionCall(
     llvm::IRBuilder<>& builder,
-    const std::string& firstVariableName,
-    const std::vector<std::string>& memberChain,
-    const std::string& nameOfClass,
-    const std::vector<Expr*>& args,
+    const std::string firstVariableName,
+    const std::vector<std::string> memberChain,
+    const std::string nameOfClass,
+    const std::vector<Expr*> args,
     bool returnsValue
 ){
     llvm::LLVMContext& ctx = builder.getContext();

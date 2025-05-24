@@ -5,6 +5,8 @@
 #include "runtime_errors.h"
 
 void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx) {
+    
+
     if(type->getLLVMType(ctx) != value->getType()) {
         std::string expectedStr;
         llvm::raw_string_ostream expectedOS(expectedStr);
@@ -14,8 +16,11 @@ void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMCon
         llvm::raw_string_ostream actualOS(actualStr);
         value->getType()->print(actualOS);
         
+        Type* segmentationfault;
+        segmentationfault->getLLVMType(ctx);
+
         throw std::runtime_error(
-            "Type mismatch:\nExpected: " + expectedOS.str() + 
+            "Value::checkTypeCompatibility Type mismatch:\nExpected: " + expectedOS.str() + 
             "\nActual: " + actualOS.str() +
             "\nType*: '" + type->toString() + "'"
         );

@@ -325,6 +325,15 @@ Statement* Parser::parseStm(){
         return new ClassDecl(nameStruct, varStructName, args); //class Name, VarClassName, args
 
     }
+    if(currentToken.type == REF){
+        eat(REF);
+        Type* typeVar = parseType(currentToken.value);
+        //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
+        std::string var = parseVar(currentToken.value);
+        eat(EQ);
+        Expr* value = parse();
+        return new RefDecl(var, typeVar, value);
+    }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }
 

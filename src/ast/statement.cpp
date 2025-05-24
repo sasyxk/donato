@@ -383,6 +383,7 @@ Function::Function(
   body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
+    llvm::outs() <<"llvm::namefunction-> " + nameFunc + "   is classFunction: " << classFunction <<"\n\n\n";
     llvm::LLVMContext& ctx = builder.getContext();
 
     std::vector<llvm::Type*> argLLVMTypes;
@@ -400,15 +401,19 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     if(classFunction){
         if(className == nameFunc){
             nameFunc = nameFunc + "_Create_Default";
+            //llvm::outs() <<"llvm::namefunction8888-> " + nameFunc + "\n\n\n";
         }
         else{
             nameFunc = className + "_" + nameFunc;
+            //llvm::outs() <<"llvm::namefunction999-> " + nameFunc + "\n\n\n";
         }
     }
 
     llvm::Function* function = module->getFunction(nameFunc);
 
     if (function) throw std::runtime_error("Redefinition of function: " + nameFunc);
+
+    //llvm::outs() <<"llvm::namefunction-> " + nameFunc + "\n\n\n";
 
     function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
 
@@ -459,7 +464,7 @@ void Function::setClassArg(StructType* argType) {
 }
 
 void Function::setClassFunction(bool value) {
-
+    
     this->classFunction = value;
 }
 
@@ -586,6 +591,8 @@ void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
     builder.CreateRetVoid();
 }
 
+
+
 Return::Return(Expr* e, std::string fn, std::string noc) : expr(e), funcName(fn), nameOfClass(noc) {}
 
 void Return::codegen(llvm::IRBuilder<> &builder) {
@@ -607,6 +614,7 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
     bool pointer = returnType->isPointer() ? true : false;
     Value* retVal;
     if(pointer){
+        //DEVO VERIFICARE SE I RISULTATI SONO DEI PUNTATORI
         if (auto* varExpr = dynamic_cast<Var*>(expr)) {
             retVal = expr->codegen(builder, true);
         }
@@ -617,10 +625,24 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
 
         else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(expr)) {
             retVal = expr->codegen(builder, false);
+            if(!retVal->getLLVMValue()->getType()->isPointerTy()){
+                throw std::runtime_error(
+                    "Retun of '"+
+                    funcName +
+                    "' You cannot assign a value to a reference that is not a pointer."
+                );   
+            }
         }
 
         else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(expr)) {
             retVal = expr->codegen(builder, false);
+            if(!retVal->getLLVMValue()->getType()->isPointerTy()){
+                throw std::runtime_error(
+                    "The Retun of '"+
+                    funcName +
+                    "' You cannot assign a value to a reference that is not a pointer."
+                );    
+            }
         }
         else {
             throw std::runtime_error(
@@ -630,13 +652,20 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
     }
     if(!pointer){
         retVal = expr->codegen(builder);
+        if(retVal->getLLVMValue()->getType()->isPointerTy()){
+            throw std::runtime_error(
+                "Retun of '"+
+                funcName +
+                "' You cannot assign a value to a reference that is not a pointer."
+            );   
+        }
     }
 
     if(retVal == nullptr){
-            throw std::runtime_error(
-                "THE RUNNING CODE MUST NOT ENTER HERE"
-            );
-        }
+        throw std::runtime_error(
+            "THE RUNNING CODE MUST NOT ENTER HERE"
+        );
+    }
 
     if(!(*retVal->getType() == *returnType))
         throw std::runtime_error(
@@ -772,7 +801,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!(*val->getType() == *type)){
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
-                "Type mismatch for variable '" + 
+                "VarUpdt::Type mismatch for variable '" + 
                 nameVar + 
                 "': expected " + 
                 type->toString() + 
@@ -816,7 +845,7 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
         if(!(*val->getType() == *type)){
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
-                "Type mismatch for variable '" + 
+                "VarDecl::Type mismatch for variable '" + 
                 nameVar + 
                 "': expected " + 
                 type->toString() + 
@@ -851,4 +880,90 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
     symbolTable.back()[nameVar] = {alloca, val->getType()->clone()};
 
     delete val;
+}
+
+
+RefDecl::RefDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
+
+void RefDecl::codegen(llvm::IRBuilder<> &builder) {
+
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    bool checkVariable = false;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(nameVar);
+        if (found != it->end()) {
+            checkVariable = true;
+            break;
+        }
+    }
+    if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
+
+    llvm::Value* alloca;
+    llvm::Type* typellvm;
+    Value* resultCodegen;
+ 
+    bool isCallFunc = false;
+    bool isClassCallFunc = false;
+    bool isVar = false;
+    bool isStructVar = false;
+    //DEVO VERIFICARE SE I TIPI SONO UGUALI
+    if (auto* varExpr = dynamic_cast<Var*>(value)) {
+        isVar = true;
+    }
+    else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(value)) {
+        isCallFunc = true;
+    }
+    else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(value)) {
+        isClassCallFunc = true;
+    }
+    else if (auto* structVarExpr = dynamic_cast<StructVar*>(value)) {
+        isStructVar = true;
+    }
+    else {
+        throw std::runtime_error(
+            "You cannot assign a value to a reference that is not a pointer."
+        );
+    }
+
+    if(isCallFunc || isClassCallFunc){
+        resultCodegen = value->codegen(builder, false);
+        if(!resultCodegen->getLLVMValue()->getType()->isPointerTy()){
+            throw std::runtime_error(
+                "You cannot assign a value to a reference that is not a pointer."
+            );   
+        }
+        alloca = resultCodegen->getLLVMValue();
+        resultCodegen->getType()->setPointer(false);
+
+        if(!(*resultCodegen->getType() == *type)){
+            throw std::runtime_error(
+                "You cannot assign a value to a reference with difference type: '" +
+                resultCodegen->getType()->toString() + 
+                "' into '"+ type->toString() +
+                "'"
+            );
+        }
+        symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
+        return;
+    }    
+
+    if(isVar || isStructVar){
+        resultCodegen = value->codegen(builder, true);
+        alloca = resultCodegen->getLLVMValue();
+        typellvm = resultCodegen->getType()->getLLVMType(ctx);
+        resultCodegen->getType()->setPointer(false);
+        if(!(*resultCodegen->getType() == *type)){
+            throw std::runtime_error(
+                "You cannot assign a value to a reference with difference type: '" +
+                resultCodegen->getType()->toString() + 
+                "' into '"+ type->toString() +
+                "'"
+            );
+        }
+        symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
+        delete resultCodegen;
+        return;
+    }
 }

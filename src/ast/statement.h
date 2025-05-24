@@ -114,6 +114,19 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
+class RefDecl : public Statement {
+    std::string nameVar;
+    Expr* value;
+    Type* type;
+public:
+    RefDecl(const std::string n, Type* t, Expr* v);
+    ~RefDecl() {
+        delete value;
+    }
+
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
+
 class VarDecl : public Statement {
     std::string nameVar;
     Expr* value;

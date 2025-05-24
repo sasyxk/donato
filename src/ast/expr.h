@@ -21,10 +21,10 @@ Value* invokeMemberFunction(
 
 Value* generateClassFunctionCall(
     llvm::IRBuilder<>& builder,
-    const std::string& firstVariableName,
-    const std::vector<std::string>& memberChain,
-    const std::string& nameOfClass,
-    const std::vector<Expr*>& args,
+    const std::string firstVariableName,
+    const std::vector<std::string> memberChain,
+    const std::string nameOfClass,
+    const std::vector<Expr*> args,
     bool returnsValue
 );
 
