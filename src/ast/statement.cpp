@@ -625,7 +625,7 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
 
         else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(expr)) {
             retVal = expr->codegen(builder, false);
-            if(!retVal->getLLVMValue()->getType()->isPointerTy()){
+            if(!retVal->getType()->isPointer()){
                 throw std::runtime_error(
                     "Retun of '"+
                     funcName +
@@ -636,7 +636,7 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
 
         else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(expr)) {
             retVal = expr->codegen(builder, false);
-            if(!retVal->getLLVMValue()->getType()->isPointerTy()){
+            if(!retVal->getType()->isPointer()){
                 throw std::runtime_error(
                     "The Retun of '"+
                     funcName +
@@ -652,11 +652,11 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
     }
     if(!pointer){
         retVal = expr->codegen(builder);
-        if(retVal->getLLVMValue()->getType()->isPointerTy()){
+        if(retVal->getType()->isPointer()){
             throw std::runtime_error(
                 "Retun of '"+
                 funcName +
-                "' You cannot assign a value to a reference that is not a pointer."
+                "' You cannot assign a value to a reference is a pointer."
             );   
         }
     }
