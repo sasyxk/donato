@@ -797,6 +797,11 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
     Value* val = value->codegen(builder);
+    if (val->getType()->isPointer()){
+        throw std::runtime_error(
+            "You can't update a variable with a ptr without using ref"
+        );
+    }
     
     if(!(*val->getType() == *type)){
             if(!val->getType()->isCastTo(type)){
@@ -835,6 +840,12 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
  
     Value* val = value->codegen(builder);
+    if (val->getType()->isPointer()){
+        throw std::runtime_error(
+            "You can't assign a variable a ptr without using ref"
+        );
+    }
+
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
     llvm::Type* typeVar;
     if(!type){
