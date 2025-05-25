@@ -294,6 +294,11 @@ void StructDecl::codegen(llvm::IRBuilder<>& builder) {
 
         llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
         Value* memberValue = memberExpr->codegen(builder);
+        if (memberValue->getType()->isPointer()){
+            throw std::runtime_error(
+                "You can't assign a ptr to one member of the struct without using ref"
+            );
+        }
         if(!(*member.first == *memberValue->getType())){
             if(!memberValue->getType()->isCastTo(member.first)){
                 throw std::runtime_error(
@@ -349,6 +354,11 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
         );
     auto [fieldPtr, memberType] = getStructMemberGEP(builder, ptrToStruct, type, memberChain);
     Value* memberValue = value->codegen(builder);
+    if (memberValue->getType()->isPointer()){
+        throw std::runtime_error(
+            "You can't Update a member to of the struct to a ptr"
+        );
+    }
 
     if(!(*memberType == *memberValue->getType())){
         if(!memberValue->getType()->isCastTo(memberType)){
@@ -799,7 +809,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     Value* val = value->codegen(builder);
     if (val->getType()->isPointer()){
         throw std::runtime_error(
-            "You can't update a variable with a ptr without using ref"
+            "You can't update a variable into a ptr"
         );
     }
     
