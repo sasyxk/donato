@@ -299,6 +299,7 @@ Statement* Parser::parseStm(){
         eat(VAR);
         eat(EQ);
 
+        // Struct declaretion
         if(currentToken.type == LBRACE){
             eat(LBRACE);
             std::vector<Expr*> membersExpr;
@@ -311,6 +312,7 @@ Statement* Parser::parseStm(){
             return new StructDecl(nameStruct, varStructName, membersExpr);
         }
         //Class declaration
+        eat(NEW);
         std::string className = currentToken.value;
         eat(UPPERNAME);
         eat(LPAREN);
