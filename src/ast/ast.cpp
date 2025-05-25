@@ -129,3 +129,59 @@ void generateAllocFunction(
     // 6. ret %ClassName* %pointer
     builder.CreateRet(value);
 }
+
+/*
+    void @ClassName_free(%ClassName* %pointer) {
+    entry:
+        %mem = bitcast %ClassName* %pointer to i8*
+        call void @d_free(i8* %mem)
+        ret void
+    }
+*/
+void generateFreeFunction(
+    llvm::IRBuilder<> &builder,
+    std::string className,
+    llvm::StructType* classType
+){
+    // Create the pointer type to the class
+    llvm::PointerType* classPtrType = llvm::PointerType::get(classType, 0);
+    
+    // Defines the type of the function: void (%ClassName*)
+    llvm::FunctionType* funcType = llvm::FunctionType::get(
+        llvm::Type::getVoidTy(builder.getContext()),
+        {classPtrType}, false);
+    
+    // Create function name: ClassName_free
+    std::string funcName = className + "_free";
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Function* freeFunc = llvm::Function::Create(
+        funcType, 
+        llvm::Function::ExternalLinkage,
+        funcName,
+        module);
+    
+    // Get the function parameter (the pointer to free)
+    llvm::Argument* pointArg = freeFunc->arg_begin();
+    std::string varName = className;
+    std::transform(varName.begin(), varName.end(), varName.begin(), ::tolower);
+    pointArg->setName(varName);
+    
+    llvm::BasicBlock* entryBB = llvm::BasicBlock::Create(ctx, "entry", freeFunc);
+    builder.SetInsertPoint(entryBB);
+    
+    // 1. %mem = bitcast %ClassName* %point to i8*
+    llvm::Value* mem = builder.CreateBitCast(pointArg, llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 0), "mem");
+    
+    // Get the d_free function
+    llvm::Function* d_freeFunc = module->getFunction("d_free");
+    if (!d_freeFunc) {
+        throw std::runtime_error("Function d_free not found");
+    }
+    
+    // 2. call void @d_free(i8* %mem)
+    builder.CreateCall(d_freeFunc, {mem});
+    
+    // 3. ret void
+    builder.CreateRetVoid();
+}

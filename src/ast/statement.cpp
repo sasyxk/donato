@@ -77,7 +77,8 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
         function->codegen(builder);
     }
 
-    generateAllocFunction(builder,  classType->getNameClass(), pointType);
+    generateAllocFunction(builder, classType->getNameClass(), pointType);
+    generateFreeFunction(builder, classType->getNameClass(), pointType);
 }
 
 ClassDecl::ClassDecl(std::string nc, std::string vcn, std::vector<Expr *> a) {
