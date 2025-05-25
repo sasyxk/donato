@@ -856,12 +856,12 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
         if(!(*val->getType() == *type)){
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
-                "VarDecl::Type mismatch for variable '" + 
-                nameVar + 
-                "': expected " + 
-                type->toString() + 
-                ", got " + 
-                val->getType()->toString()
+                    "VarDecl::Type mismatch for variable '" + 
+                    nameVar + 
+                    "': expected " + 
+                    type->toString() + 
+                    ", got " + 
+                    val->getType()->toString()
                 );
             }
             Value* newVal = val->castTo(type, builder);
