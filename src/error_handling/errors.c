@@ -1,6 +1,4 @@
 #include "runtime_errors.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 void llvm_error(int code) {
     switch(code) {
@@ -13,8 +11,23 @@ void llvm_error(int code) {
         case ERROR_TRUNCATION_LOSS:
             fprintf(stderr, "Runtime Error: Truncation caused data loss\n");
             break;
+        case ERROR_MALLOC_SIZE:
+            fprintf(stderr, "Runtime Error: Invalid malloc size or allocation failed\n");
+            break;
         default:
             fprintf(stderr, "Runtime Error: Unknown error (%d)\n", code);
     }
     exit(1);
+}
+
+void* d_malloc(int64_t size) {
+    void* ptr = malloc((size_t)size);
+    if (!ptr) {
+        llvm_error(ERROR_MALLOC_SIZE);
+    }
+    return ptr;
+}
+
+void d_free(void* ptr) {
+    free(ptr);
 }
