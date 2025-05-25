@@ -238,6 +238,15 @@ public:
     ~Return() {
         delete expr;
     }
+    void codegen(llvm::IRBuilder<>& builder) override;
+};
 
+
+
+class DeleteVar : public Statement {
+    std::string var;
+public:
+    DeleteVar(std::string v);
+    ~DeleteVar() = default;
     void codegen(llvm::IRBuilder<>& builder) override;
 };

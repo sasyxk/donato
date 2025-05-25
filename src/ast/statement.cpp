@@ -846,7 +846,8 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
 VarDecl::VarDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
-void VarDecl::codegen(llvm::IRBuilder<> &builder) {
+void VarDecl::codegen(llvm::IRBuilder<> &builder)
+{
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
@@ -914,7 +915,6 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
 
     delete val;
 }
-
 
 RefDecl::RefDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
@@ -999,4 +999,40 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
         delete resultCodegen;
         return;
     }
+}
+
+DeleteVar::DeleteVar(std::string v) : var(v) {}
+
+void DeleteVar::codegen(llvm::IRBuilder<> &builder){
+    llvm::LLVMContext& ctx = builder.getContext();
+    bool checkVariable = false;
+    llvm::Value* alloca;
+    Type* type;
+    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
+        auto found = it->find(var);
+        if (found != it->end()) {
+            alloca = found->second.alloca;
+            type = found->second.type;
+            checkVariable = true;
+
+            it->erase(found); //delete the variable
+            break;
+        }
+    }
+
+    if(!checkVariable) throw std::runtime_error("Undeclared variable: " + var);
+
+    if(!dynamic_cast<ClassType* >(type)){
+        throw std::runtime_error("You can't Delete a variable '" + var + "' because isn't an object");
+    }
+    auto classType = dynamic_cast<ClassType* >(type);
+    std::string class_Free =  classType->getNameClass()+ "_free";
+    llvm::Function* d_freeFuncClass = module->getFunction(class_Free);
+    if (!d_freeFuncClass) {
+        throw std::runtime_error("Function not found: " + class_Free);
+    }
+    llvm::Value* ptrToStruct = builder.CreateCall(d_freeFuncClass, {alloca});
+
+    delete type;
+    return;
 }
