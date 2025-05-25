@@ -1,3 +1,7 @@
+Not final version, just a start Idea
+
+
+
 Program      = Stmt* 
 
 Stmt         = VarDeclStmt 
