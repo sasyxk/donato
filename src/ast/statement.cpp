@@ -56,6 +56,7 @@ DefineClass::DefineClass(
     this->functions = publicFunctions;
 }
 
+
 void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     llvm::outs() << "YOLO\n";
     llvm::LLVMContext& ctx = builder.getContext();
@@ -76,6 +77,7 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
         function->codegen(builder);
     }
 
+    generateAllocFunction(builder,  classType->getNameClass(), pointType);
 }
 
 ClassDecl::ClassDecl(std::string nc, std::string vcn, std::vector<Expr *> a) {

@@ -39,3 +39,10 @@ std::pair<llvm::Value*, Type*> getStructMemberGEP(
     StructType* rootType,
     const std::vector<std::string>& memberChain
 );
+
+
+void generateAllocFunction(
+    llvm::IRBuilder<> &builder,
+    std::string className,
+    llvm::StructType* classType
+);
