@@ -334,6 +334,25 @@ Statement* Parser::parseStm(){
         Expr* value = parse();
         return new RefDecl(var, typeVar, value);
     }
+    if(currentToken.type == DELETE){
+        eat(DELETE);
+        std::string var = parseVar(currentToken.value);
+        if(currentToken.type == POINT) {
+            std::vector<std::string> memberChain;
+            do {
+                eat(POINT);
+                std::string memberName = currentToken.value;
+                eat(VAR);
+                memberChain.push_back(memberName);
+
+            } while(currentToken.type == POINT);
+            eat(ENDEXPR);
+            //return new DeleteVarStruct(var, memberChain)
+            throw std::runtime_error("Not yet implemented");
+        }
+        eat(ENDEXPR);
+        return new DeleteVar(var);
+    }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }
 
