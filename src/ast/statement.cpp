@@ -129,8 +129,17 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-    llvm::Type* llvmClassType = ClassType->getLLVMType(ctx);
-    llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmClassType, nullptr, varClassName);
+    //llvm::Type* llvmClassType = ClassType->getLLVMType(ctx);
+    //llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmClassType, nullptr, varClassName);
+
+    //Malloc-----------------------<>
+    std::string class_Alloc = nameClass + "_alloc";
+    llvm::Function* d_mallocFuncClass = module->getFunction(class_Alloc);
+    if (!d_mallocFuncClass) {
+        throw std::runtime_error("Function not found: " + class_Alloc);
+    }
+    llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, varClassName);
+    //Malloc-----------------------<\>
 
     builder.SetInsertPoint(currentBlock);
     symbolTable.back()[varClassName] = {ptrToStruct, ClassType->clone()};
