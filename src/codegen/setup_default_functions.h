@@ -4,4 +4,22 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 
-void setupFunctions(llvm::IRBuilder<> &builder, llvm::Module* module);
+void errorsFunction(
+    llvm::IRBuilder<> &builder,
+    llvm::Module* module
+);
+
+void mallocFunction(
+    llvm::IRBuilder<> &builder,
+    llvm::Module* module
+);
+
+void freeFunction(
+    llvm::IRBuilder<> &builder,
+    llvm::Module* module
+);
+
+void setupFunctions(
+    llvm::IRBuilder<> &builder,
+    llvm::Module* module
+);
