@@ -962,7 +962,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
 
     if(isCallFunc || isClassCallFunc){
         resultCodegen = value->codegen(builder, false);
-        if(!resultCodegen->getLLVMValue()->getType()->isPointerTy()){
+        if(!resultCodegen->getType()->isPointer()){
             throw std::runtime_error(
                 "You cannot assign a value to a reference that is not a pointer."
             );   
@@ -1015,7 +1015,7 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
             type = found->second.type;
             checkVariable = true;
 
-            it->erase(found); //delete the variable
+            it->erase(found); //I need to fix it
             break;
         }
     }
