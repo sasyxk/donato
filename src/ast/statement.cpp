@@ -972,8 +972,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
             );   
         }
         alloca = resultCodegen->getLLVMValue();
-        resultCodegen->getType()->setPointer(false);
-
+        
         if(!(*resultCodegen->getType() == *type)){
             throw std::runtime_error(
                 "You cannot assign a value to a reference with difference type: '" +
@@ -982,7 +981,9 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
                 "'"
             );
         }
+        resultCodegen->getType()->setPointer(false);
         symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
+        delete resultCodegen;
         return;
     }    
 
@@ -990,7 +991,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
         resultCodegen = value->codegen(builder, true);
         alloca = resultCodegen->getLLVMValue();
         typellvm = resultCodegen->getType()->getLLVMType(ctx);
-        resultCodegen->getType()->setPointer(false);
+        
         if(!(*resultCodegen->getType() == *type)){
             throw std::runtime_error(
                 "You cannot assign a value to a reference with difference type: '" +
@@ -999,6 +1000,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
                 "'"
             );
         }
+        resultCodegen->getType()->setPointer(false);
         symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
         delete resultCodegen;
         return;
