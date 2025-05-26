@@ -30,7 +30,9 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     auto [finalPtr, finalType] = getStructMemberGEP(builder, ptrToStruct, rootStruct, memberChain);
 
     if (isPointer) {
-        //Im not really sure if i have to delete finalType, problably not
+        // Finaltype is a type that is taken from the initial list
+        // of the class created in the parser, it will then be destroyed
+        // automatically at the end of the program
         finalType->setPointer(true);
         Value* value = finalType->createValue(finalPtr, ctx);
         finalType->setPointer(false);
