@@ -176,17 +176,19 @@ Value* invokeMemberFunction(
         bool isVar = false;
         
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         Value* value  = arg->codegen(builder, isVar);
 
         llvm::Value* llvmVal = nullptr; 
-        if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
+        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
             throw std::runtime_error(
                 "Function " +
                 memberName +

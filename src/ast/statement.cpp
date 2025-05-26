@@ -172,17 +172,19 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
         bool isVar = false;
         
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         Value* value  = arg->codegen(builder, isVar);
 
         llvm::Value* llvmVal = nullptr; 
-        if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
+        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
             throw std::runtime_error(
                 "Constructor " +
                 nameClass +
@@ -447,7 +449,7 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     for (const auto& param : parameters) {
         llvm::Argument* arg = &*argIt++;
         arg->setName(param.second);
-        if (arg->getType()->isPointerTy()) {
+        if (param.first->isPointer()) {
             // If it's a pointer, save the argument directly --> Become not Pointer
             Type* t = param.first->clone();
             t->setPointer(false);
@@ -554,17 +556,19 @@ void CallFuncStatement::codegen(llvm::IRBuilder<> &builder){
         bool isVar = false;
         
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(callee->getFunctionType()->getParamType(argValues.size())->isPointerTy())
+            if(functionStruct->argType.at(argValues.size())->isPointer()){
                 isVar = true;
+            }
         }
         Value* value  = arg->codegen(builder, isVar);
         llvm::Value* llvmVal = nullptr; 
         
-        if (callee->getFunctionType()->getParamType(argValues.size())->isPointerTy() && !value->getLLVMValue()->getType()->isPointerTy()) {
+        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
             
             throw std::runtime_error(
                 "Function " +
