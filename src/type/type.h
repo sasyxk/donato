@@ -146,6 +146,27 @@ public:
     //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
 };
 
+class PointerType : public Type {
+    Type* typePointed;
+    bool pointer = false;
+public:
+    PointerType(Type* typePointed);
+    ~PointerType() override {
+        delete typePointed;
+    }
+    bool operator==(const Type& other) const override;
+
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    std::string toString() const override;
+    Type* clone() const override;
+    bool isCastTo(Type* other) const override;
+    bool isPointer() const override {return pointer;}
+    void setPointer(bool ptr) override {pointer = ptr;}
+
+    Type* getTypePointed() const {return typePointed;}
+
+};
 
 
 

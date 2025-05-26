@@ -213,8 +213,6 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
     this->nameFunctions = nameFunctions;
 }
 
-
-
 Type* ClassType::clone() const {
     ClassType* newClassType = new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
     return newClassType;
@@ -243,4 +241,42 @@ bool ClassType::isFuctionOfClass(std::string nameFunc) {
         if(name == nameFunc) return true;
     }
     return false;
+}
+
+
+//PointerType--------------------------------------
+PointerType::PointerType(Type* typePointed) {
+    this->typePointed = typePointed;
+}
+
+llvm::Type* PointerType::getLLVMType(llvm::LLVMContext &ctx) const {
+    llvm::Type* baseType = llvm::PointerType::getUnqual(typePointed->getLLVMType(ctx));
+    if (pointer) {
+        return llvm::PointerType::getUnqual(baseType);
+    }
+    return baseType;
+}
+
+Value* PointerType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
+    throw std::runtime_error("PointerType::createValue not yet implemented'");
+    //return new BoolValue(this->clone(), llvmVal, ctx);
+}
+
+bool PointerType::operator==(const Type &other) const {
+    if(auto pointerType = dynamic_cast<const PointerType*>(&other)){
+        if(*this->getTypePointed() == *pointerType->getTypePointed()){
+            return true;
+        }
+    }
+
+    if(*this->getTypePointed() == other){
+        if(pointer == false && other.isPointer() == true){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool PointerType::isCastTo(Type *other) const {
+    throw std::runtime_error("PointerType::isCastTo not possible'");
 }
