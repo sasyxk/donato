@@ -329,7 +329,7 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == REF){
         eat(REF);
-        Type* typeVar = parseType(currentToken.value);
+        Type* typeVar = parseType(currentToken.value, true);
         //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
