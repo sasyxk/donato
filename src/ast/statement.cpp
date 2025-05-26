@@ -945,7 +945,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
     bool isClassCallFunc = false;
     bool isVar = false;
     bool isStructVar = false;
-    //DEVO VERIFICARE SE I TIPI SONO UGUALI
+    
     if (auto* varExpr = dynamic_cast<Var*>(value)) {
         isVar = true;
     }
