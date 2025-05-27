@@ -294,7 +294,10 @@ Statement* Parser::parseStm(){
     if (currentToken.type == UPPERNAME) {
         std::string nameStruct = currentToken.value;
         eat(UPPERNAME);
-
+        if(currentToken.value != "*"){
+            throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "', you need '*'");
+        }
+        eat(OP);
         std::string varStructName = currentToken.value;
         eat(VAR);
         eat(EQ);
@@ -390,12 +393,19 @@ Expr* Parser::parseTerm() {
 }
 
 Expr* Parser::parseFactor() {
-    if (currentToken.type == OP &&
-        currentToken.value == "-") {
-        eat(OP);
-        Expr* x = parseFactor();
-        return new UnaryOp("-", x);
+    if (currentToken.type == OP) {
+        if(currentToken.value == "-"){
+            eat(OP);
+            Expr* x = parseFactor();
+            return new UnaryOp("-", x);
+        }
+        if(currentToken.value == "*"){
+            eat(OP);
+            Expr* x = parseFactor();
+            return new DereferenceOp(x);
+        }
     }
+        
     if (currentToken.type == LPAREN) {
         eat(LPAREN);
         Expr* x = parseExpr();
