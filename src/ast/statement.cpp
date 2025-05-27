@@ -141,8 +141,13 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, varClassName);
     //Malloc-----------------------<\>
 
+    llvm::Type* llvmPointerClassType = llvm::PointerType::getUnqual(classType->getLLVMType(ctx));
+    llvm::AllocaInst* ptrToPointer= builder.CreateAlloca(llvmPointerClassType, nullptr, varClassName);
+
     builder.SetInsertPoint(currentBlock);
-    symbolTable.back()[varClassName] = {ptrToStruct, ClassType->clone()};
+    builder.CreateStore(ptrToStruct, ptrToPointer);
+    
+    symbolTable.back()[varClassName] = {ptrToPointer,  new PointerType(classType->clone())};
     
     //Call the constructor;   
     SymbolFunction* functionStruct = nullptr;
