@@ -675,6 +675,9 @@ void Return::codegen(llvm::IRBuilder<> &builder) {
                 );    
             }
         }
+        else if(auto* DeferenceExpr = dynamic_cast<DereferenceOp*>(expr)){
+            retVal = expr->codegen(builder, true);
+        }
         else {
             throw std::runtime_error(
                 "Return error: the return value is not a pointer"
