@@ -184,3 +184,18 @@ public:
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
+
+class NewOp : public Expr {
+    std::vector<Expr*> args;
+    std::string nameClass;
+    ClassType* classType;
+public:
+    NewOp(std::string nc, std::vector<Expr*> a);
+    ~NewOp(){
+        for(auto arg : args ){
+            delete arg;
+        }
+        delete classType;
+    }
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+};
