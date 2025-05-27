@@ -482,7 +482,6 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
             );
 
             return found->second.type->createValue(llvmValue , ctx);
-            //return Value::createValue(found->second.type->clone(),llvmValue,ctx);
         }
     }
     throw std::runtime_error("Undefined variable: " + name);
@@ -571,3 +570,38 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     return bodyVal;
 }
 
+DereferenceOp::DereferenceOp(Expr* x) : x(x) {}
+
+
+Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    Value* value = x->codegen(builder);
+
+    auto pointerValue = dynamic_cast<PointerValue* >(value);
+    if(pointerValue == nullptr){
+        throw std::runtime_error("DereferenceOp not valid with " + value->getType()->toString());
+    }
+
+    auto pointerType = static_cast<PointerType* >(pointerValue->getType()); 
+
+    Value* result;
+    //if we don't need the pointer, just read the value
+    // of the pointer inside the pointer
+    if(!isPointer){
+        llvm::Value* loadedVal = builder.CreateLoad(
+            pointerType->getTypePointed()->getLLVMType(ctx),
+            pointerValue->getLLVMValue(),
+            "deref_val"
+        );
+        result =  pointerType->getTypePointed()->createValue(loadedVal, ctx);
+    }
+    // else, we need to create a new Value with the pointer  
+    else{
+        auto pointedType = pointerType->getTypePointed();
+        pointedType->setPointer(true);
+        result =  pointedType->createValue(value->getLLVMValue(), ctx);
+    }
+    
+
+    return result;
+}
