@@ -66,13 +66,11 @@ public:
 class ClassDecl : public Statement{
     std::string nameClass;
     std::string varClassName;
-    std::vector<Expr*>  args;
+    Expr* value;
 public:
-    ClassDecl(std::string nc, std::string vcn, std::vector<Expr*> a);
+    ClassDecl(std::string nc, std::string vcn, Expr* v);
     ~ClassDecl(){
-        for(auto arg : args){
-            delete arg;
-        }
+        delete value;
     }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
@@ -186,8 +184,6 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
-
-
  class ClassCallVoidFunc : public Statement {
     std::string firstVariableName;
     std::vector<std::string> memberChain;
@@ -240,8 +236,6 @@ public:
     }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
-
-
 
 class DeleteVar : public Statement {
     std::string var;

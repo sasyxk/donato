@@ -80,7 +80,7 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     generateFreeFunction(builder, classType->getNameClass(), pointType);
 }
 
-ClassDecl::ClassDecl(std::string nc, std::string vcn, std::vector<Expr *> a) {
+ClassDecl::ClassDecl(std::string nc, std::string vcn, Expr* v) {
     bool check = false;
     for(auto st : symbolClassType){
         if(st->getNameClass() == nc){
@@ -93,7 +93,7 @@ ClassDecl::ClassDecl(std::string nc, std::string vcn, std::vector<Expr *> a) {
     
     this->nameClass = nc;
     this->varClassName = vcn;
-    this->args = a;
+    this->value = v;
 }
 
 void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
@@ -108,107 +108,29 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
             break;
         }
     }
-    
     if(checkVariable) throw std::runtime_error("Variable already declared: " + varClassName);
 
-    /*
-    ClassType can never be nullpt since it has
-    been checked in the constructor of this class
-    before, so no need to add additional checks
-    */
-    ClassType* classType;      
-    for (auto type : symbolClassType) {
-        if (type->getNameClass() == nameClass) {
-            classType = type; // Just use to reading
-            break;
-        }
+    Value* pointerClass = value->codegen(builder);
+    auto* pointerType = dynamic_cast<PointerType*>(pointerClass->getType());
+    auto* classType = pointerType ? dynamic_cast<ClassType*>(pointerType->getTypePointed()) : nullptr;
+
+    if (!classType || classType->getNameClass() != nameClass) {
+        throw std::runtime_error(
+            "You cannot assign to the variable '" + varClassName + 
+            "' a value that is not a pointer to the class '" + nameClass + "'"
+        );
     }
 
     // Allocation Class
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
     builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
-    //llvm::Type* llvmClassType = ClassType->getLLVMType(ctx);
-    //llvm::AllocaInst* ptrToStruct = builder.CreateAlloca(llvmClassType, nullptr, varClassName);
-
-    //Malloc-----------------------<>
-    std::string class_Alloc = nameClass + "_alloc";
-    llvm::Function* d_mallocFuncClass = module->getFunction(class_Alloc);
-    if (!d_mallocFuncClass) {
-        throw std::runtime_error("Function not found: " + class_Alloc);
-    }
-    llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, varClassName);
-    //Malloc-----------------------<\>
-
-    llvm::Type* llvmPointerClassType = llvm::PointerType::getUnqual(classType->getLLVMType(ctx));
-    llvm::AllocaInst* ptrToPointer= builder.CreateAlloca(llvmPointerClassType, nullptr, varClassName);
-
+    llvm::AllocaInst* ptrToPointer= builder.CreateAlloca(pointerType->getLLVMType(ctx), nullptr, varClassName);
     builder.SetInsertPoint(currentBlock);
-    builder.CreateStore(ptrToStruct, ptrToPointer);
+    builder.CreateStore(pointerClass->getLLVMValue(), ptrToPointer);
+    symbolTable.back()[varClassName] = {ptrToPointer,  pointerType->clone()};
     
-    symbolTable.back()[varClassName] = {ptrToPointer,  new PointerType(classType->clone())};
-    
-    //Call the constructor;   
-    SymbolFunction* functionStruct = nullptr;
-
-    bool checkFunc = false;
-    for (auto& function : symbolFunctions) {
-        if (function.first == nameClass){
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
-        }
-    }
-    if(!checkFunc)
-        throw std::runtime_error("Constructor '" + nameClass + "' not found");
-
-    if(functionStruct->argType.size() != args.size() + 1){ 
-        throw std::runtime_error("Argument count mismatch for Constructor" + nameClass);
-    }
-
-    llvm::Function* callee = functionStruct->func;
-
-    // Generate argument values
-    std::vector<llvm::Value*> argValues;
-    argValues.push_back(ptrToStruct); //is a pointer
-
-    for(auto* arg : args) {
-        bool isVar = false;
-        
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        Value* value  = arg->codegen(builder, isVar);
-
-        llvm::Value* llvmVal = nullptr; 
-        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
-            throw std::runtime_error(
-                "Constructor " +
-                nameClass +
-                " argument " +
-                std::to_string(argValues.size() + 1) +
-                " wants a reference pass, insert a"  +
-                " variable as an argument"
-            );
-        }
-        
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
-            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
-        }
-        argValues.push_back(!llvmVal ?
-            value->getLLVMValue() : llvmVal);
-        delete value;
-    }
-
-    //It's Void type
-    builder.CreateCall(callee, argValues);
+    return;
 }
 
 DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
