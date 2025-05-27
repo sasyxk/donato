@@ -129,7 +129,7 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     builder.SetInsertPoint(currentBlock);
     builder.CreateStore(pointerClass->getLLVMValue(), ptrToPointer);
     symbolTable.back()[varClassName] = {ptrToPointer,  pointerType->clone()};
-    
+
     return;
 }
 
@@ -948,25 +948,32 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
             alloca = found->second.alloca;
             type = found->second.type;
             checkVariable = true;
-
-            it->erase(found); //I need to fix it
             break;
         }
     }
 
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + var);
 
-    if(!dynamic_cast<ClassType* >(type)){
-        throw std::runtime_error("You can't Delete a variable '" + var + "' because isn't an object");
+    auto pointerType = dynamic_cast<PointerType*>(type);
+    auto classType = pointerType ? dynamic_cast<ClassType*>(pointerType->getTypePointed()) : nullptr;
+
+    if (!classType) {
+        throw std::runtime_error(
+            "You can't Delete a variable '" + var + 
+            "' because isn't an pointer to a class"
+        );
     }
-    auto classType = dynamic_cast<ClassType* >(type);
-    std::string class_Free =  classType->getNameClass()+ "_free";
+    std::string nameClass = classType->getNameClass();
+    std::string class_Free =  nameClass+ "_free";
     llvm::Function* d_freeFuncClass = module->getFunction(class_Free);
     if (!d_freeFuncClass) {
         throw std::runtime_error("Function not found: " + class_Free);
     }
-    llvm::Value* ptrToStruct = builder.CreateCall(d_freeFuncClass, {alloca});
+    llvm::Value* loadedVal = builder.CreateLoad(
+        type->getLLVMType(ctx),
+        alloca,
+        "ptr_" + nameClass + "_val"
+    );
 
-    delete type;
-    return;
+    builder.CreateCall(d_freeFuncClass, {loadedVal});
 }
