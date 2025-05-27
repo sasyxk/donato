@@ -165,7 +165,6 @@ public:
     void setPointer(bool ptr) override {pointer = ptr;}
 
     Type* getTypePointed() const {return typePointed;}
-
 };
 
 

@@ -11,6 +11,7 @@
 #include "double_value.h"
 #include "signed_int_value.h"
 #include "bool_value.h"
+#include "pointer_value.h"
 
 
 struct SymbolInfo {

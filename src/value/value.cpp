@@ -16,9 +16,6 @@ void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMCon
         llvm::raw_string_ostream actualOS(actualStr);
         value->getType()->print(actualOS);
         
-        Type* segmentationfault;
-        segmentationfault->getLLVMType(ctx);
-
         throw std::runtime_error(
             "Value::checkTypeCompatibility Type mismatch:\nExpected: " + expectedOS.str() + 
             "\nActual: " + actualOS.str() +

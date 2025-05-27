@@ -4,6 +4,7 @@
 #include "signed_int_value.h"
 #include "bool_value.h"
 #include "struct_value.h"
+#include "pointer_value.h"
 
 // DoubleType----------------------------------------
 DoubleType::DoubleType(bool isPointer) {
@@ -229,7 +230,16 @@ Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
 }
 
 bool ClassType::operator==(const Type &other) const {
-    return dynamic_cast<const ClassType*>(&other) != nullptr; //todo fix
+    if(auto classType = dynamic_cast<const ClassType*>(&other)){
+        if(classType->getNameClass() == this->getNameClass())
+            return true;
+    }
+
+    if(dynamic_cast<const PointerType*>(&other)){
+        return other == *this;
+    }
+    
+    return false;
 }
 
 bool ClassType::isCastTo(Type *other) const {
@@ -242,7 +252,6 @@ bool ClassType::isFuctionOfClass(std::string nameFunc) {
     }
     return false;
 }
-
 
 //PointerType--------------------------------------
 PointerType::PointerType(Type* typePointed) {
@@ -258,19 +267,18 @@ llvm::Type* PointerType::getLLVMType(llvm::LLVMContext &ctx) const {
 }
 
 Value* PointerType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    throw std::runtime_error("PointerType::createValue not yet implemented'");
-    //return new BoolValue(this->clone(), llvmVal, ctx);
+    return new PointerValue(this->clone(), llvmVal, ctx);
 }
 
 bool PointerType::operator==(const Type &other) const {
     if(auto pointerType = dynamic_cast<const PointerType*>(&other)){
-        if(*this->getTypePointed() == *pointerType->getTypePointed()){
+        if(*this->getTypePointed() == *pointerType->getTypePointed()){ // f(pointer == false && other.isPointer() == true){ ,mmmmmm
             return true;
         }
     }
 
     if(*this->getTypePointed() == other){
-        if(pointer == false && other.isPointer() == true){
+        if(!pointer && other.isPointer()){
             return true;
         }
     }
@@ -279,4 +287,14 @@ bool PointerType::operator==(const Type &other) const {
 
 bool PointerType::isCastTo(Type *other) const {
     throw std::runtime_error("PointerType::isCastTo not possible'");
+}
+
+Type* PointerType::clone() const {
+    auto* p = new PointerType(typePointed->clone());
+    p->setPointer(pointer);
+    return p;
+}
+
+std::string PointerType::toString() const {
+    return "PointerType to " + typePointed->toString();
 }
