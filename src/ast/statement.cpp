@@ -957,6 +957,9 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
     if (auto* varExpr = dynamic_cast<Var*>(value)) {
         isVar = true;
     }
+    else if (auto* callFuncExpr = dynamic_cast<DereferenceOp*>(value)) {
+        isVar = true;
+    }
     else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(value)) {
         isCallFunc = true;
     }
