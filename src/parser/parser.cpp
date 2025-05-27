@@ -315,20 +315,8 @@ Statement* Parser::parseStm(){
             return new StructDecl(nameStruct, varStructName, membersExpr);
         }
         //Class declaration
-        eat(NEW);
-        std::string className = currentToken.value;
-        eat(UPPERNAME);
-        eat(LPAREN);
-        std::vector<Expr*> args;
-        do {
-            if(currentToken.type == RPAREN){break;}
-            Expr* arg = parseExpr();
-            args.push_back(arg);
-        } while (currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RPAREN);
-        eat(ENDEXPR);
-        return new ClassDecl(nameStruct, varStructName, args); //class Name, VarClassName, args
-
+        Expr* x = parse();
+        return new ClassDecl(nameStruct, varStructName, x);
     }
     if(currentToken.type == REF){
         eat(REF);
@@ -491,6 +479,20 @@ Expr* Parser::parseFactor() {
             return new StructVar(name, memberChain);
         }
         return new Var(name); // Just Var
+    }
+    if(currentToken.type == NEW){
+        eat(NEW);
+        std::string className = currentToken.value;
+        eat(UPPERNAME);
+        eat(LPAREN);
+        std::vector<Expr*> args;
+        do {
+            if(currentToken.type == RPAREN){break;}
+            Expr* arg = parseExpr();
+            args.push_back(arg);
+        } while (currentToken.type == COMMA && (eat(COMMA), true));
+        eat(RPAREN);
+        return new NewOp(className, args);
     }
     throw std::runtime_error("Unexpected factor: " + currentToken.value);
 }
