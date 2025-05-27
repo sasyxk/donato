@@ -541,14 +541,14 @@ Expr* Parser::parseNum(std::string val){
     throw std::runtime_error("No valid type associated with value: '" + val + "'");
 }
 
-Type* Parser::parseType(std::string stringType, bool isReference){
+Type* Parser::parseBaseType(std::string stringType){
     if (stringType == "double") {
         eat(TYPE);
-        return new DoubleType(isReference);
+        return new DoubleType();
     } 
     else if (stringType == "bool") {
         eat(TYPE);
-        return new BoolType(isReference);
+        return new BoolType();
     }
     else if(stringType == "auto") {
         eat(AUTO);
@@ -556,19 +556,19 @@ Type* Parser::parseType(std::string stringType, bool isReference){
     }
     else if(stringType == "int8"){
         eat(TYPE);
-        return new SignedIntType(8, isReference);
+        return new SignedIntType(8);
     }
     else if(stringType == "int16"){
         eat(TYPE);
-        return new SignedIntType(16, isReference);
+        return new SignedIntType(16);
     }
     else if(stringType == "int32"){
         eat(TYPE);
-        return new SignedIntType(32, isReference);
+        return new SignedIntType(32);
     }
     else if(stringType == "int64" || stringType == "int"){
         eat(TYPE);
-        return new SignedIntType(64, isReference);
+        return new SignedIntType(64);
     }
     if(stringType == "void"){
         eat(VOID);
@@ -579,7 +579,6 @@ Type* Parser::parseType(std::string stringType, bool isReference){
             if(structType->getNameStruct() == stringType){
                 eat(UPPERNAME);
                 auto* st = structType->clone();
-                st->setPointer(isReference);
                 return st;
             }
         }
@@ -589,7 +588,6 @@ Type* Parser::parseType(std::string stringType, bool isReference){
             if(classType->getNameClass() == stringType){
                 eat(UPPERNAME);
                 auto* st = classType->clone();
-                st->setPointer(isReference);
                 return st;
             }
         } 
@@ -597,6 +595,35 @@ Type* Parser::parseType(std::string stringType, bool isReference){
     throw std::runtime_error("Type '" + stringType + "' does not exist.");
 }
 
+Type* Parser::wrapWithPointers(Type* baseType) {
+    Type* currentType = baseType;
+    if(currentType == nullptr){
+        return nullptr;
+    }
+    while (currentToken.value == "*") {
+        eat(OP);
+        currentType = new PointerType(currentType);
+    }
+    return currentType;
+}
+
+
+Type* Parser::parseType(std::string stringType, bool isReference){   
+     
+    Type* baseType = parseBaseType(stringType);
+
+    if (baseType == nullptr) {
+        return baseType;
+    }
+    
+    Type* finalType = wrapWithPointers(baseType);
+    
+    if (isReference) {
+        finalType->setPointer(true); 
+    }
+    
+    return finalType;
+}
 
 std::string Parser::parseVar(std::string valueVar){
     if(valueVar == "this" &&  !isInsideClass)

@@ -27,4 +27,6 @@ private:
     void eat(TokenType expected);
     std::string parseVar(std::string valueVar);
     Type* parseType(std::string stringType, bool isReference = false);
+    Type* parseBaseType(std::string stringType);
+    Type* wrapWithPointers(Type* baseType);
 };
