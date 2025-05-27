@@ -122,9 +122,8 @@ Statement* Parser::parseStm(){
         } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
         eat(RBRACE);
         return new DefineStruct(nameStruct, members);
-        return nullptr;
     }
-    if (currentToken.type == TYPE || currentToken.type == AUTO) { 
+    if (currentToken.type == TYPE || currentToken.type == AUTO || currentToken.type == UPPERNAME) { 
         Type* typeVar = parseType(currentToken.value);
         //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = parseVar(currentToken.value);
@@ -291,7 +290,7 @@ Statement* Parser::parseStm(){
         Expr* value = parse();
         return new VarUpdt(var, value);
     }
-    if (currentToken.type == UPPERNAME) {
+    if (currentToken.type == UPPERNAME && currentToken.type == OP) {
         std::string nameStruct = currentToken.value;
         eat(UPPERNAME);
         if(currentToken.value != "*"){
@@ -609,7 +608,7 @@ Type* Parser::wrapWithPointers(Type* baseType) {
 
 
 Type* Parser::parseType(std::string stringType, bool isReference){   
-     
+
     Type* baseType = parseBaseType(stringType);
 
     if (baseType == nullptr) {

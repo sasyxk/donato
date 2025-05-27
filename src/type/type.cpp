@@ -286,7 +286,7 @@ bool PointerType::operator==(const Type &other) const {
 }
 
 bool PointerType::isCastTo(Type *other) const {
-    throw std::runtime_error("PointerType::isCastTo not possible'");
+    return false;
 }
 
 Type* PointerType::clone() const {
