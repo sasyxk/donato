@@ -290,7 +290,7 @@ Statement* Parser::parseStm(){
         Expr* value = parse();
         return new VarUpdt(var, value);
     }
-    if (currentToken.type == UPPERNAME && currentToken.type == OP) {
+    if (currentToken.type == UPPERNAME && currentToken.type == OP) { //Blocked for now
         std::string nameStruct = currentToken.value;
         eat(UPPERNAME);
         if(currentToken.value != "*"){
