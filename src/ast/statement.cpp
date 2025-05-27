@@ -58,7 +58,6 @@ DefineClass::DefineClass(
 
 
 void DefineClass::codegen(llvm::IRBuilder<> &builder) {
-    llvm::outs() << "YOLO\n";
     llvm::LLVMContext& ctx = builder.getContext();
 
     StructType* structType = classType->getStructType();
@@ -117,10 +116,10 @@ void ClassDecl::codegen(llvm::IRBuilder<> &builder) {
     been checked in the constructor of this class
     before, so no need to add additional checks
     */
-    ClassType* ClassType;      
+    ClassType* classType;      
     for (auto type : symbolClassType) {
         if (type->getNameClass() == nameClass) {
-            ClassType = type; // Just use to reading
+            classType = type; // Just use to reading
             break;
         }
     }
@@ -412,7 +411,6 @@ Function::Function(
   body(b) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
-    llvm::outs() <<"llvm::namefunction-> " + nameFunc + "   is classFunction: " << classFunction <<"\n\n\n";
     llvm::LLVMContext& ctx = builder.getContext();
 
     std::vector<llvm::Type*> argLLVMTypes;
@@ -430,19 +428,15 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     if(classFunction){
         if(className == nameFunc){
             nameFunc = nameFunc + "_Create_Default";
-            //llvm::outs() <<"llvm::namefunction8888-> " + nameFunc + "\n\n\n";
         }
         else{
             nameFunc = className + "_" + nameFunc;
-            //llvm::outs() <<"llvm::namefunction999-> " + nameFunc + "\n\n\n";
         }
     }
 
     llvm::Function* function = module->getFunction(nameFunc);
 
     if (function) throw std::runtime_error("Redefinition of function: " + nameFunc);
-
-    //llvm::outs() <<"llvm::namefunction-> " + nameFunc + "\n\n\n";
 
     function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, nameFunc, module);
 
@@ -1013,6 +1007,7 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
         }
         resultCodegen->getType()->setPointer(false);
         symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
+
         delete resultCodegen;
         return;
     }
