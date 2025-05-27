@@ -173,3 +173,14 @@ public:
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
+
+
+class DereferenceOp : public Expr {
+    Expr* x;
+public:
+    DereferenceOp(Expr* x);
+    ~DereferenceOp() {
+        delete x;
+    }
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+};
