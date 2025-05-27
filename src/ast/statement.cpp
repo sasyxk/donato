@@ -397,6 +397,12 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     for (Statement* stm : body) {
         stm->codegen(builder);
     }
+    /*llvm::BasicBlock* block = builder.GetInsertBlock();
+    if (!block->getTerminator()) {
+        throw std::runtime_error(
+            "The function " + nameFunc + " does not have a Return"
+        );
+    } */
 
     for (auto& [name, info] : symbolTable.back()) {
         delete info.type;
