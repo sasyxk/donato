@@ -493,6 +493,11 @@ Expr* Parser::parseFactor() {
         eat(RPAREN);
         return new NewOp(className, args);
     }
+    if(currentToken.type == MEM){
+        eat(MEM);
+        Expr* x = parseExpr();
+        return new AddressOp(x);
+    }
     throw std::runtime_error("Unexpected factor: " + currentToken.value);
 }
 //-----------------------------------------------------------------------------------

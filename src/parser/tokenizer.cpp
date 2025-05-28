@@ -57,7 +57,6 @@ Token Tokenizer::nextToken() {
         if (word == "auto") return Token(AUTO, word);
         return Token(VAR, word);
     }
-    //if (c == '&') { pos++; return Token(REF, std::string(1, c)); }
     if (c == '.') { pos++; return Token(POINT, std::string(1, c)); }
     if (c == ':') { pos++; return Token(COLON, std::string(1, c)); }
     if (c == '(') { pos++; return Token(LPAREN, std::string(1, c)); }
@@ -116,6 +115,7 @@ Token Tokenizer::nextToken() {
         pos++;
         return Token(OP, std::string(1, c));
     }
+    if (c == '&') { pos++; return Token(MEM, std::string(1, c)); }
 
     if (c == ';') { pos++; return Token(ENDEXPR, std::string(1, c)); }
 
