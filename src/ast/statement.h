@@ -238,9 +238,11 @@ public:
 };
 
 class DeleteVar : public Statement {
-    std::string var;
+    Expr* value;
 public:
-    DeleteVar(std::string v);
-    ~DeleteVar() = default;
+    DeleteVar(Expr* v);
+    ~DeleteVar(){
+        delete value;
+    }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
