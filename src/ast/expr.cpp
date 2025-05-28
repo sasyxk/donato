@@ -735,8 +735,10 @@ Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     // For functions, make sure they return a pointer
     if (isFunction && !resultCodegen->getType()->isPointer()) {
         throw std::runtime_error(
-            "The function does not return a pointer but a value."
+            "You cannot assign a value to a reference that is not a pointer because\n"
+            "the function you call does not return a pointer but a value."
         );
+
     }
     
     // Save that pointer
