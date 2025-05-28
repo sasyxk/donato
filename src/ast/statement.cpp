@@ -916,7 +916,5 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
     // or placed by the AddressOp ready to be read.
     llvm::Value* alloca = result->getLLVMValue();
 
-    llvm::CallInst* callInst = builder.CreateCall(d_freeFuncClass, {alloca});
-    callInst->print(llvm::outs());
-    llvm::outs() << "\n";
+    builder.CreateCall(d_freeFuncClass, {alloca});
 }
