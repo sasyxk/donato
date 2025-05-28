@@ -854,9 +854,6 @@ RefDecl::RefDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), v
 
 void RefDecl::codegen(llvm::IRBuilder<> &builder) {
 
-    llvm::Function* func = builder.GetInsertBlock()->getParent();
-    llvm::LLVMContext& ctx = builder.getContext();
-
     bool checkVariable = false;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(nameVar);
@@ -867,78 +864,30 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
     }
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
 
-    llvm::Value* alloca;
-    llvm::Type* typellvm;
-    Value* resultCodegen;
- 
-    bool isCallFunc = false;
-    bool isClassCallFunc = false;
-    bool isVar = false;
-    bool isStructVar = false;
+    if(!dynamic_cast<AddressOp*>(value)){
+        //implicit &x ---> ref int y = &x  where int x = 5;
+        value = new AddressOp(value);
+        /*throw std::runtime_error(
+            "When declaring with ref, you must pass the memory address, variable:  " + nameVar
+        );*/
+    }
+
+    // It will always be PointerValue
+    Value* result = value->codegen(builder);
+    PointerType* resultType = static_cast<PointerType*>(result->getType());
     
-    if (auto* varExpr = dynamic_cast<Var*>(value)) {
-        isVar = true;
-    }
-    else if (auto* callFuncExpr = dynamic_cast<DereferenceOp*>(value)) {
-        isVar = true;
-    }
-    else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(value)) {
-        isCallFunc = true;
-    }
-    else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(value)) {
-        isClassCallFunc = true;
-    }
-    else if (auto* structVarExpr = dynamic_cast<StructVar*>(value)) {
-        isStructVar = true;
-    }
-    else {
-        throw std::runtime_error(
-            "You cannot assign a value to a reference that is not a pointer."
+    if(!(*resultType->getTypePointed() == *type)){
+         throw std::runtime_error(
+            "You cannot assign a value to a reference with difference type: '" +
+            resultType->getTypePointed()->toString() + 
+            "' into '"+ type->toString() +
+            "'"
         );
     }
+    llvm::Value* alloca = result->getLLVMValue();
+    symbolTable.back()[nameVar] = {alloca, resultType->getTypePointed()->clone()};
 
-    if(isCallFunc || isClassCallFunc){
-        resultCodegen = value->codegen(builder, false);
-        if(!resultCodegen->getType()->isPointer()){
-            throw std::runtime_error(
-                "You cannot assign a value to a reference that is not a pointer."
-            );   
-        }
-        alloca = resultCodegen->getLLVMValue();
-        
-        if(!(*resultCodegen->getType() == *type)){
-            throw std::runtime_error(
-                "You cannot assign a value to a reference with difference type: '" +
-                resultCodegen->getType()->toString() + 
-                "' into '"+ type->toString() +
-                "'"
-            );
-        }
-        resultCodegen->getType()->setPointer(false);
-        symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
-        delete resultCodegen;
-        return;
-    }    
-
-    if(isVar || isStructVar){
-        resultCodegen = value->codegen(builder, true);
-        alloca = resultCodegen->getLLVMValue();
-        typellvm = resultCodegen->getType()->getLLVMType(ctx);
-        
-        if(!(*resultCodegen->getType() == *type)){
-            throw std::runtime_error(
-                "You cannot assign a value to a reference with difference type: '" +
-                resultCodegen->getType()->toString() + 
-                "' into '"+ type->toString() +
-                "'"
-            );
-        }
-        resultCodegen->getType()->setPointer(false);
-        symbolTable.back()[nameVar] = {alloca, resultCodegen->getType()->clone()};
-
-        delete resultCodegen;
-        return;
-    }
+    delete result;
 }
 
 DeleteVar::DeleteVar(std::string v) : var(v) {}
