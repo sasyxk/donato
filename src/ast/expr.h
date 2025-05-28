@@ -199,3 +199,13 @@ public:
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
+
+class AddressOp : public Expr {
+    Expr* value;
+public:
+    AddressOp(Expr* v);
+    ~AddressOp(){
+        delete value;
+    }
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+};

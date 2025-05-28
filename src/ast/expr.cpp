@@ -638,11 +638,6 @@ Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
     nameMalloc[0] = std::tolower(nameMalloc[0]);
     llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, nameMalloc);
     //Malloc-----------------------<\>
-
-    //builder.SetInsertPoint(currentBlock);
-    //builder.CreateStore(ptrToStruct, ptrToPointer);
-    
-    //symbolTable.back()[varClassName] = {ptrToPointer,  new PointerType(classType->clone())};
     
     //Call the constructor;   
     SymbolFunction* functionStruct = nullptr;
@@ -712,4 +707,49 @@ Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
     delete pointerType;
     
     return result;
+}
+
+AddressOp::AddressOp(Expr* v) : value(v) {}
+
+Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    
+    // If they are of this type, I have to generate the codegen with isPointer set to true
+    bool needsPointer = dynamic_cast<Var*>(value) || 
+                        dynamic_cast<DereferenceOp*>(value) || 
+                        dynamic_cast<StructVar*>(value);
+    
+    // If they are of this type, I have to generate the codegen with isPointer set to false
+    bool isFunction = dynamic_cast<CallFunc*>(value) || 
+                      dynamic_cast<ClassCallFunc*>(value);
+    
+    if (!needsPointer && !isFunction) {
+        throw std::runtime_error(
+            "You cannot assign a value to a reference that is not a pointer (Var StructVar)."
+        );
+    }
+    
+    // Pick the Pointer of the variable with appropriete flag
+    Value* resultCodegen = value->codegen(builder, needsPointer);
+    
+    // For functions, make sure they return a pointer
+    if (isFunction && !resultCodegen->getType()->isPointer()) {
+        throw std::runtime_error(
+            "The function does not return a pointer but a value."
+        );
+    }
+    
+    // Save that pointer
+    llvm::Value* alloca = resultCodegen->getLLVMValue();
+    // Store the default type inside
+    resultCodegen->getType()->setPointer(false);
+    
+    PointerType* pointerType = new PointerType(resultCodegen->getType()->clone());
+    Value* pointerValue = pointerType->createValue(alloca, ctx);
+    
+    // Cleanup
+    delete resultCodegen;
+    delete pointerType;
+    
+    return pointerValue;
 }
