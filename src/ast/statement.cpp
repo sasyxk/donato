@@ -890,32 +890,19 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
     delete result;
 }
 
-DeleteVar::DeleteVar(std::string v) : var(v) {}
+DeleteVar::DeleteVar(Expr* v) : value(v) {}
 
 void DeleteVar::codegen(llvm::IRBuilder<> &builder){
     llvm::LLVMContext& ctx = builder.getContext();
-    bool checkVariable = false;
-    llvm::Value* alloca;
-    Type* type;
-    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
-        auto found = it->find(var);
-        if (found != it->end()) {
-            alloca = found->second.alloca;
-            type = found->second.type;
-            checkVariable = true;
-            break;
-        }
-    }
+    Value* result = value->codegen(builder);
 
-    if(!checkVariable) throw std::runtime_error("Undeclared variable: " + var);
-
-    auto pointerType = dynamic_cast<PointerType*>(type);
+    auto pointerType = dynamic_cast<PointerType*>(result->getType());
     auto classType = pointerType ? dynamic_cast<ClassType*>(pointerType->getTypePointed()) : nullptr;
 
     if (!classType) {
         throw std::runtime_error(
-            "You can't Delete a variable '" + var + 
-            "' because isn't an pointer to a class"
+            "You can't Delete a variable that"
+            " isn't an pointer to a class"
         );
     }
     std::string nameClass = classType->getNameClass();
@@ -925,8 +912,8 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
         throw std::runtime_error("Function not found: " + class_Free);
     }
     llvm::Value* loadedVal = builder.CreateLoad(
-        type->getLLVMType(ctx),
-        alloca,
+        pointerType->getLLVMType(ctx),
+        result->getLLVMValue(),
         "ptr_" + nameClass + "_val"
     );
 
