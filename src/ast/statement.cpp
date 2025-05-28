@@ -911,11 +911,12 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
     if (!d_freeFuncClass) {
         throw std::runtime_error("Function not found: " + class_Free);
     }
-    llvm::Value* loadedVal = builder.CreateLoad(
-        pointerType->getLLVMType(ctx),
-        result->getLLVMValue(),
-        "ptr_" + nameClass + "_val"
-    );
 
-    builder.CreateCall(d_freeFuncClass, {loadedVal});
+    // This value will have already been loaded from the pointer,
+    // or placed by the AddressOp ready to be read.
+    llvm::Value* alloca = result->getLLVMValue();
+
+    llvm::CallInst* callInst = builder.CreateCall(d_freeFuncClass, {alloca});
+    callInst->print(llvm::outs());
+    llvm::outs() << "\n";
 }
