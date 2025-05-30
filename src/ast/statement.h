@@ -63,18 +63,6 @@ public:
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
-class ClassDecl : public Statement{
-    std::string nameClass;
-    std::string varClassName;
-    Expr* value;
-public:
-    ClassDecl(std::string nc, std::string vcn, Expr* v);
-    ~ClassDecl(){
-        delete value;
-    }
-    void codegen(llvm::IRBuilder<>& builder) override;
-};
-
 class DefineStruct : public Statement{
     std::string nameStruct;
     std::vector<std::pair<Type*, std::string>> members;
@@ -85,20 +73,6 @@ public:
             delete member.first;
         }
     }   
-    void codegen(llvm::IRBuilder<>& builder) override;
-};
-
-class StructDecl : public Statement{
-    std::string nameStruct;
-    std::string varStructName;
-    std::vector<Expr*>  membersExpr;
-public:
-    StructDecl(std::string ns, std::string vrs, std::vector<Expr*> me);
-    ~StructDecl(){
-        for(auto memberExpr : membersExpr){
-            delete memberExpr;
-        }
-    }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 

@@ -29,7 +29,6 @@ void Parser::errorFunction(){
     }
 }
 
-
 Statement* Parser::parseCode(){
     Statement* stm = parseStm();
     return stm;
@@ -284,33 +283,6 @@ Statement* Parser::parseStm(){
         eat(EQ);
         Expr* value = parse();
         return new VarUpdt(var, value);
-    }
-    if (currentToken.type == UPPERNAME && currentToken.type == OP) { //Blocked for now
-        std::string nameStruct = currentToken.value;
-        eat(UPPERNAME);
-        if(currentToken.value != "*"){
-            throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "', you need '*'");
-        }
-        eat(OP);
-        std::string varStructName = currentToken.value;
-        eat(VAR);
-        eat(EQ);
-
-        // Struct declaretion
-        if(currentToken.type == LBRACE){
-            eat(LBRACE);
-            std::vector<Expr*> membersExpr;
-            do{
-                Expr* member = parseExpr();
-                membersExpr.push_back(member);
-            }while(currentToken.type == COMMA && (eat(COMMA), true));
-            eat(RBRACE);
-            eat(ENDEXPR);
-            return new StructDecl(nameStruct, varStructName, membersExpr);
-        }
-        //Class declaration
-        Expr* x = parse();
-        return new ClassDecl(nameStruct, varStructName, x);
     }
     if(currentToken.type == REF){
         eat(REF);
