@@ -62,6 +62,26 @@ void freeFunction(
     );
 }
 
+void printFunction(
+    llvm::IRBuilder<> &builder,
+    llvm::Module* module
+){
+    llvm::LLVMContext &ctx = builder.getContext();
+    
+    llvm::FunctionType* printType = llvm::FunctionType::get(
+        llvm::Type::getVoidTy(ctx),
+        { llvm::Type::getInt64Ty(ctx) },
+        false
+    );
+    
+    llvm::Function::Create(
+        printType,
+        llvm::Function::ExternalLinkage,
+        "d_print",
+        module
+    );
+}
+
 void setupFunctions(
     llvm::IRBuilder<> &builder,
     llvm::Module* module
@@ -69,4 +89,5 @@ void setupFunctions(
     errorsFunction(builder, module);
     mallocFunction(builder, module);
     freeFunction(builder, module);
+    printFunction(builder, module);
 }

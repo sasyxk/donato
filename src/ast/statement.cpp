@@ -918,3 +918,20 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
 
     builder.CreateCall(d_freeFuncClass, {alloca});
 }
+
+
+PrintVar::PrintVar(Expr* v) : value(v) {}
+
+void PrintVar::codegen(llvm::IRBuilder<> &builder){
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    Value* result = value->codegen(builder);
+
+    std::string printFunctionName = "d_print";
+    llvm::Function* d_printFunction = module->getFunction(printFunctionName);
+    if (!d_printFunction) {
+        throw std::runtime_error("Function not found: " + printFunctionName);
+    }
+
+    builder.CreateCall(d_printFunction, {result->getLLVMValue()});
+}

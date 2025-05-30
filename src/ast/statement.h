@@ -246,3 +246,14 @@ public:
     }
     void codegen(llvm::IRBuilder<>& builder) override;
 };
+
+
+class PrintVar : public Statement {
+    Expr* value;
+public:
+    PrintVar(Expr* v);
+    ~PrintVar(){
+        delete value;
+    }
+    void codegen(llvm::IRBuilder<>& builder) override;
+};

@@ -31,3 +31,7 @@ void* d_malloc(int64_t size) {
 void d_free(void* ptr) {
     free(ptr);
 }
+
+void d_print(int64_t num){
+    printf("value: %" PRId64 "\n", num);
+}

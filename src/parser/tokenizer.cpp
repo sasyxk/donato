@@ -44,6 +44,7 @@ Token Tokenizer::nextToken() {
         if (word == "void") return Token(VOID, word);
         if (word == "ref") return Token(REF, word);
         if (word == "delete") return Token(DELETE, word);
+        if (word == "print") return Token(PRINT, word);
         if (word == "new") return Token(NEW, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||

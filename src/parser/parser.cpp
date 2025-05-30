@@ -331,6 +331,14 @@ Statement* Parser::parseStm(){
         Expr* value = parse();
         return new DeleteVar(value);
     }
+    if(currentToken.type == PRINT){
+        eat(PRINT);
+        eat(LPAREN);
+        Expr* x = parseExpr(); 
+        eat(RPAREN);
+        eat(ENDEXPR);
+        return new PrintVar(x);
+    }
     throw std::runtime_error("Unexpected Statement Token: '" + currentToken.value + "'");
 }
 
