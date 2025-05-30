@@ -152,6 +152,7 @@ Value* invokeMemberFunction(
     for (auto& function : symbolFunctions) {
         if (function.first == memberName && 
             function.second.classFunction &&
+            function.second.className == classType->getNameClass() &&
             classType->isFuctionOfClass(memberName)
         ){
             functionStruct = &function.second;
