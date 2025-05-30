@@ -188,14 +188,14 @@ public:
 class NewOp : public Expr {
     std::vector<Expr*> args;
     std::string nameClass;
-    ClassType* classType;
+    Type* type;
 public:
     NewOp(std::string nc, std::vector<Expr*> a);
     ~NewOp(){
         for(auto arg : args ){
             delete arg;
         }
-        delete classType;
+        delete type;
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };

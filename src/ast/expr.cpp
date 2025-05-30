@@ -607,39 +607,14 @@ Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     return result;
 }
 
-
-NewOp::NewOp(std::string nc, std::vector<Expr*> a) : nameClass(nc) , args(a){
-    ClassType* classType;      
-    for (auto type : symbolClassType) {
-        if (type->getNameClass() == nameClass) {
-            classType = static_cast<ClassType *>(type->clone()); 
-            break;
-        }
-    }
-    if(classType == nullptr){
-        throw std::runtime_error("ClassDecl: Undefined Class with name '"+nameClass+"'");
-    }
-    this->classType = classType;
-}
-
-Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
+Value* newClass(
+    llvm::IRBuilder<>& builder,
+    std::string &nameClass,
+    std::vector<Expr*> args,
+    llvm::Value* ptrToStruct,
+    Type* type
+){
     llvm::LLVMContext& ctx = builder.getContext();
-    llvm::Function* func = builder.GetInsertBlock()->getParent();
-
-    // Allocation Class
-    llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
-
-    //Malloc-----------------------<>
-    std::string class_Alloc = nameClass + "_alloc";
-    llvm::Function* d_mallocFuncClass = module->getFunction(class_Alloc);
-    if (!d_mallocFuncClass) {
-        throw std::runtime_error("Function not found: " + class_Alloc);
-    }
-    std::string nameMalloc = nameClass;
-    nameMalloc[0] = std::tolower(nameMalloc[0]);
-    llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, nameMalloc);
-    //Malloc-----------------------<\>
-    
     //Call the constructor;   
     SymbolFunction* functionStruct = nullptr;
 
@@ -702,12 +677,105 @@ Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
     //It's Void type
     builder.CreateCall(callee, argValues);
 
-    auto pointerType = new PointerType(classType->clone());
+    auto pointerType = new PointerType(type->clone());
     Value* result = pointerType->createValue(ptrToStruct, ctx);
 
     delete pointerType;
     
     return result;
+
+}
+
+Value* newStruct(
+    llvm::IRBuilder<>& builder,
+    std::string &nameClass,
+    std::vector<Expr*> membersExpr,
+    llvm::Value* ptrToStruct,
+    StructType* structType
+){
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Type* llvmStructType = structType->getLLVMType(ctx);
+
+    const auto& structMembers = structType->getMembers();
+    for (size_t i = 0; i < structMembers.size(); ++i) {
+        const auto& member = structMembers[i];
+        Expr* memberExpr = membersExpr[i];
+
+        llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
+        Value* memberValue = memberExpr->codegen(builder);
+        if (memberValue->getType()->isPointer()){
+            throw std::runtime_error(
+                "You can't assign a ptr to one member of the struct without using ref"
+            );
+        }
+        if(!(*member.first == *memberValue->getType())){
+            if(!memberValue->getType()->isCastTo(member.first)){
+                throw std::runtime_error(
+                    "The type of struct member '" +
+                    member.second + "' (expected '" +
+                    member.first->toString() +
+                    "') is not compatible with the provided value of type '" + 
+                    memberValue->getType()->toString() + "'"
+                );
+            }
+        
+            Value* newVal = memberValue->castTo(member.first, builder);
+            delete memberValue;
+            memberValue = newVal;
+        }
+        builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
+        delete memberValue;
+    }
+    auto pointerType = new PointerType(structType->clone());
+    Value* result = pointerType->createValue(ptrToStruct, ctx);
+
+    delete pointerType;
+
+    return result;
+}
+
+NewOp::NewOp(std::string nc, std::vector<Expr*> a) : nameClass(nc) , args(a){
+    Type* type = nullptr;      
+    for (auto t : symbolClassType) {
+        if (t->getNameClass() == nameClass) {
+            type = static_cast<ClassType *>(t->clone()); 
+            break;
+        }
+    }
+    if (type == nullptr) {
+        for (auto t : symbolStructsType) {
+            if (t->getNameStruct() == nameClass) {
+                type = static_cast<StructType*>(t->clone());
+                break;
+            }
+        }
+    }
+    if (!type) {
+        throw std::runtime_error("Undefined Type with '" + nameClass + "'");
+    }
+    this->type = type;
+}
+
+
+Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
+    // Allocation 
+    llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
+
+    //Malloc-----------------------<>
+    std::string class_Alloc = nameClass + "_alloc";
+    llvm::Function* d_mallocFuncClass = module->getFunction(class_Alloc);
+    if (!d_mallocFuncClass) {
+        throw std::runtime_error("Function not found: " + class_Alloc);
+    }
+    std::string nameMalloc = nameClass;
+    nameMalloc[0] = std::tolower(nameMalloc[0]);
+    llvm::Value* ptrToStruct = builder.CreateCall(d_mallocFuncClass, {}, nameMalloc);
+    //Malloc-----------------------<\>
+    
+    if(auto t = dynamic_cast<StructType*>(type)){
+        return newStruct(builder, nameClass, args, ptrToStruct, t);
+    }
+    return newClass(builder, nameClass, args, ptrToStruct, type);
 }
 
 AddressOp::AddressOp(Expr* v) : value(v) {}
