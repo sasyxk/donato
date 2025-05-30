@@ -29,4 +29,5 @@ private:
     Type* parseType(std::string stringType, bool isReference = false);
     Type* parseBaseType(std::string stringType);
     Type* wrapWithPointers(Type* baseType);
+    void errorFunction();
 };

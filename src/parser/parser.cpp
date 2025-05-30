@@ -17,6 +17,19 @@ bool Parser::hasMoreTokens(){
     return false;
 }
 
+void Parser::errorFunction(){
+    if(currentToken.type == FUNCTION){
+        throw std::runtime_error("Unexpected Statement token 'FUNCTION'");
+    }
+    if(currentToken.type == STRUCT){
+        throw std::runtime_error("Unexpected Statement token 'STRUCT'");
+    }
+    if(currentToken.type == CLASS){
+        throw std::runtime_error("Unexpected Statement token 'CLASS'");
+    }
+}
+
+
 Statement* Parser::parseCode(){
     Statement* stm = parseStm();
     return stm;
@@ -78,13 +91,8 @@ Statement* Parser::parseStm(){
         eat(LBRACE);
         std::vector<Statement*> ConstructorBodyStatemets;
         lastFuncion = nameClass;
-        do { //todo generalize this error with a errorFunction
-            if(currentToken.type == FUNCTION){
-                throw std::runtime_error("Unexpected Statement token 'FUNCTION' inside a Function");
-            }
-            if(currentToken.type == STRUCT){
-                throw std::runtime_error("Unexpected Statement token 'STRUCT' inside a Function");
-            }
+        do { 
+            errorFunction();
             ConstructorBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
         eat(RBRACE);
@@ -125,7 +133,6 @@ Statement* Parser::parseStm(){
     }
     if (currentToken.type == TYPE || currentToken.type == AUTO || currentToken.type == UPPERNAME) { 
         Type* typeVar = parseType(currentToken.value);
-        //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
         Expr* value = parse();
@@ -148,7 +155,6 @@ Statement* Parser::parseStm(){
             isReference = true;
         }
         Type* typeFunc = parseType(currentToken.value, isReference);
-        //eat(TYPE);
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
@@ -170,13 +176,8 @@ Statement* Parser::parseStm(){
         eat(RPAREN);
         eat(LBRACE);
         std::vector<Statement*> functionBodyStatemets;
-        do { //todo generalize this error with a errorFunction
-            if(currentToken.type == FUNCTION){
-                throw std::runtime_error("Unexpected Statement token 'FUNCTION' inside a Function");
-            }
-            if(currentToken.type == STRUCT){
-                throw std::runtime_error("Unexpected Statement token 'STRUCT' inside a Function");
-            }
+        do {
+            errorFunction();
             functionBodyStatemets.push_back(parseStm());
         } while (currentToken.type != RBRACE); 
         eat(RBRACE);
@@ -199,9 +200,7 @@ Statement* Parser::parseStm(){
         std::vector<Statement*> elseStd;
         std::vector<Statement*> thenStd;
         do {
-            if(currentToken.type == FUNCTION){
-                throw std::runtime_error("Unexpected Statement token Function inside a IF");
-            }
+            errorFunction();
             thenStd.push_back(parseStm());
         } while (currentToken.type != RBRACE);
         eat(RBRACE);
@@ -209,9 +208,7 @@ Statement* Parser::parseStm(){
             eat(ELSE);
             eat(LBRACE);
             do {
-                if(currentToken.type == FUNCTION){
-                    throw std::runtime_error("Unexpected Statement token Function inside a ELSE");
-                }
+                errorFunction();
                 elseStd.push_back(parseStm());
             } while (currentToken.type != RBRACE);
             eat(RBRACE);
@@ -232,9 +229,7 @@ Statement* Parser::parseStm(){
         eat(LBRACE);
         std::vector<Statement*> whileStd;
         do {
-            if(currentToken.type == FUNCTION){
-                throw std::runtime_error("Unexpected Statement token Function inside a ELSE");
-            }
+            errorFunction();
             whileStd.push_back(parseStm());
         } while (currentToken.type != RBRACE);
         eat(RBRACE);
