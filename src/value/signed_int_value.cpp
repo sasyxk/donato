@@ -18,8 +18,8 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
 
 void extendValue(
     llvm::IRBuilder<>& builder,
-    llvm::Value* left,
-    llvm::Value* right,
+    llvm::Value*& left,
+    llvm::Value*& right,
     Type* leftType,
     Type* rightType
 ){
