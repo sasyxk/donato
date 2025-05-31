@@ -16,39 +16,25 @@ llvm::Value* SignedIntValue::getLLVMValue() const {
     return value;
 }
 
-llvm::Value* makeOperation(
-    const SignedIntValue* l,
-    const SignedIntValue* r,
-    llvm::Intrinsic::ID op,
+void extendValue(
     llvm::IRBuilder<>& builder,
-    std::string name
-    ){
+    llvm::Value* left,
+    llvm::Value* right,
+    Type* leftType,
+    Type* rightType
+){
     llvm::LLVMContext& ctx = builder.getContext();
-    llvm::Value* lv = l->getLLVMValue();
-    llvm::Value* rv = r->getLLVMValue();
-
-    // Estendi a 64 bit se necessario
     llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
 
-    if (auto* lt = dynamic_cast<SignedIntType*>(l->getType()); lt && lt->getBits() < 64) {
-        lv = builder.CreateSExt(lv, i64Ty, "sext_lhs");
+    if (auto* lt = dynamic_cast<SignedIntType*>(leftType); lt && lt->getBits() < 64) {
+        left = builder.CreateSExt(left, i64Ty, "sext_lhs");
     }
 
-    if (auto* rt = dynamic_cast<SignedIntType*>(r->getType()); rt && rt->getBits() < 64) {
-        rv = builder.CreateSExt(rv, i64Ty, "sext_rhs");
+    if (auto* rt = dynamic_cast<SignedIntType*>(rightType); rt && rt->getBits() < 64) {
+        right = builder.CreateSExt(right, i64Ty, "sext_rhs");
     }
 
-    // Use intrinsic sadd_with_overflow
-    llvm::Value* result = Value::createCheckedIntegerArithmetic(
-        op,
-        lv,
-        rv,
-        builder,
-        name + "_ok",
-        name + "_overflow"
-    );
-
-    return result;
+    return;
 }
 
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
@@ -61,13 +47,29 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     }
 
     if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
-
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
-        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::sadd_with_overflow, builder,"addtmp");
-        Type* newType = new SignedIntType(64);
-        return new SignedIntValue(newType, result, ctx); 
+        llvm::Value* left = this->getLLVMValue();
+        llvm::Value* right = otherValue->getLLVMValue();
+        Type* leftType = this->getType();
+        Type* rightType = otherValue->getType();
+        extendValue(builder, left, right, leftType, rightType);
+        if(true){ //Change With Flag
+            std::string name = "addtmp";
+            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+                llvm::Intrinsic::sadd_with_overflow,
+                left,
+                right,
+                builder,
+                name + "_ok",
+                name + "_overflow"
+            );
+            Type* newType = new SignedIntType(64);
+            return new SignedIntValue(newType, result, ctx); 
+        }
+        else{
+            return nullptr;
+        }
     }
-
     throw std::runtime_error(
         "Unsupported types for addition " + 
         this->getType()->toString() +
@@ -81,9 +83,27 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
-        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::ssub_with_overflow, builder,"subtmp");
-        Type* newType = new SignedIntType(64);
-        return new SignedIntValue(newType, result, ctx);
+        llvm::Value* left = this->getLLVMValue();
+        llvm::Value* right = otherValue->getLLVMValue();
+        Type* leftType = this->getType();
+        Type* rightType = otherValue->getType();
+        extendValue(builder, left, right, leftType, rightType);
+        if(true){ //Change With Flag
+            std::string name = "addtmp";
+            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+                llvm::Intrinsic::ssub_with_overflow,
+                left,
+                right,
+                builder,
+                name + "_ok",
+                name + "_overflow"
+            );
+            Type* newType = new SignedIntType(64);
+            return new SignedIntValue(newType, result, ctx); 
+        }
+        else{
+            return nullptr;
+        }
     }
 
     throw std::runtime_error(
@@ -99,9 +119,27 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
-        llvm::Value* result = makeOperation(this, otherValue, llvm::Intrinsic::smul_with_overflow, builder,"multmp");
-        Type* newType = new SignedIntType(64);
-        return new SignedIntValue(newType, result, ctx);
+        llvm::Value* left = this->getLLVMValue();
+        llvm::Value* right = otherValue->getLLVMValue();
+        Type* leftType = this->getType();
+        Type* rightType = otherValue->getType();
+        extendValue(builder, left, right, leftType, rightType);
+        if(true){ //Change With Flag
+            std::string name = "addtmp";
+            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+                llvm::Intrinsic::smul_with_overflow,
+                left,
+                right,
+                builder,
+                name + "_ok",
+                name + "_overflow"
+            );
+            Type* newType = new SignedIntType(64);
+            return new SignedIntValue(newType, result, ctx); 
+        }
+        else{
+            return nullptr;
+        }
     }
    
     throw std::runtime_error(
@@ -119,7 +157,7 @@ Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
         
         llvm::Value* lhs = this->getLLVMValue();
         llvm::Value* rhs = other->getLLVMValue();
-         llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
+        llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
 
         if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
             lhs = builder.CreateSExt(lhs, i64Ty, "sext_lhs");
@@ -301,17 +339,23 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
     if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
         value = builder.CreateSExt(value, i64Ty, "sext_lhs");
     }
-    //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
-    llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
-    llvm::Value* result = createCheckedIntegerArithmetic(
-        llvm::Intrinsic::ssub_with_overflow,
-        zero,  // 0 - x
-        value,
-        builder,
-        "negtmp_ok",
-        "negtmp_overflow"
-    );
-    return new SignedIntValue(this->getType()->clone(), result, ctx);
+    if(true){
+        llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
+        llvm::Value* result = createCheckedIntegerArithmetic(
+            llvm::Intrinsic::ssub_with_overflow,
+            zero,  // 0 - x
+            value,
+            builder,
+            "negtmp_ok",
+            "negtmp_overflow"
+        );
+        return new SignedIntValue(new SignedIntType(64), result, ctx);
+    }
+    else{
+        //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
+        //return new SignedIntValue(this->getType()->clone(), result, ctx);
+        return nullptr;
+    }
 }
 
 Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
