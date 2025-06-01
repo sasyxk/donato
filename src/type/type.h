@@ -98,6 +98,7 @@ class StructType : public Type{
     std::vector<std::pair<Type*, std::string>> members;
     bool pointer = false;
 public:
+    StructType(std::string nameStruct) { this->nameStruct = nameStruct;}
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
     ~StructType() override {
         for(auto memeber : members){
@@ -119,6 +120,9 @@ public:
     std::string getNameStruct() const {return nameStruct;}
     std::vector<std::pair<Type*, std::string>> getMembers() {return members;}
     size_t getMembersSize() {return members.size();}
+
+    void setMembers( std::vector<std::pair<Type*, std::string>> members) {this->members = members;}
+
 };
 
 class ClassType : public Type {
