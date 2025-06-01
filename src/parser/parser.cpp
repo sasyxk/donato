@@ -120,15 +120,41 @@ Statement* Parser::parseStm(){
         eat(UPPERNAME);
         eat(LBRACE);
         std::vector<std::pair<Type*, std::string>> members;
+        StructType* structType = new StructType(nameStruct);
         do {
-            Type* type = parseType(currentToken.value);
+            Type* type;
+            if(currentToken.value == nameStruct){
+                eat(UPPERNAME);
+                type = new SpecialType(nameStruct, structType);
+                if(currentToken.value != "*"){
+                    throw std::runtime_error(
+                        "You cannot define private member '" +
+                        nameStruct +
+                        "' of struct '" +
+                        nameStruct +
+                        "' without pointer"
+                    );
+                }
+                do{
+                    eat(OP);
+                    type = new PointerType(type);
+                }while(currentToken.value == "*");
+            }
+            else{
+                type = parseType(currentToken.value);
+            }
             std::string member = currentToken.value;
             eat(VAR);
             members.emplace_back(type, member);
             eat(ENDEXPR);
         } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
         eat(RBRACE);
-        return new DefineStruct(nameStruct, members);
+
+        structType->setMembers(members);
+        
+        //throw std::runtime_error("Stop");
+
+        return new DefineStruct(structType);
     }
     if (currentToken.type == TYPE || currentToken.type == AUTO || currentToken.type == UPPERNAME) { 
         Type* typeVar = parseType(currentToken.value);
