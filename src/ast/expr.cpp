@@ -696,7 +696,19 @@ Value* newStruct(
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Type* llvmStructType = structType->getLLVMType(ctx);
 
+    
+
     const auto& structMembers = structType->getMembers();
+
+
+    if(structMembers.size() != membersExpr.size()){
+       throw std::runtime_error(
+            "Incorrect number of arguments passed to struct '" +
+            nameClass +
+            "' during 'new' instantiation."
+        );
+    }
+
     for (size_t i = 0; i < structMembers.size(); ++i) {
         const auto& member = structMembers[i];
         Expr* memberExpr = membersExpr[i];
