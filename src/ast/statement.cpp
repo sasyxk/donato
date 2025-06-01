@@ -80,33 +80,29 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     generateFreeFunction(builder, classType->getNameClass(), pointType);
 }
 
-DefineStruct::DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m) : nameStruct(ns), members(m) {
-    StructType* structType = new StructType(nameStruct, members); //todo channge the logic of private member of DefineStruct, complete useless now, just remove and use this object like private for the codegen
+DefineStruct::DefineStruct(StructType* structType) {
+    
     for(auto st : symbolStructsType){
-        if(st == structType || structType->equalName(*st)){
-            delete structType;
-            throw std::runtime_error("The Struct has already been defined: \n" + st->toString());
+        if(st->getNameStruct() == structType->getNameStruct()){
+            throw std::runtime_error("The Struct has already been defined: " + st->toString());
         }
     } 
+    for(auto ct : symbolClassType){
+        if(ct->getNameClass() == structType->getNameStruct()){
+            throw std::runtime_error("You cannto define a Struct with the dame name of: " + ct->toString());
+        }
+    }
     symbolStructsType.push_back(structType);
+    this->structType = static_cast<StructType*>(structType->clone());
 }
 
 void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
 
     llvm::LLVMContext& ctx = builder.getContext();
-
-    StructType* structType;
-    for(auto typeValue : symbolStructsType){
-        if(typeValue->getNameStruct() == nameStruct){
-            structType = typeValue;
-            break;
-        }
-    }
-
-    llvm::StructType* pointType = llvm::StructType::create(ctx, nameStruct);
+    llvm::StructType* pointType = llvm::StructType::create(ctx, structType->getNameStruct());
 
     std::vector<llvm::Type*> members;
-    for(auto member : this->members){
+    for(auto member : structType->getMembers()){
         members.push_back(member.first->getLLVMType(ctx));
     }
     pointType->setBody(members);
@@ -751,25 +747,26 @@ void DeleteVar::codegen(llvm::IRBuilder<> &builder){
 
     auto pointerType = dynamic_cast<PointerType*>(result->getType());
     auto classType = pointerType ? dynamic_cast<ClassType*>(pointerType->getTypePointed()) : nullptr;
+    auto structType = pointerType ? dynamic_cast<StructType*>(pointerType->getTypePointed()) : nullptr;
 
-    if (!classType) {
+    if (!classType && !structType) {
         throw std::runtime_error(
             "You can't Delete a variable that"
-            " isn't an pointer to a class"
+            " isn't an pointer to a Class or Struct"
         );
     }
-    std::string nameClass = classType->getNameClass();
-    std::string class_Free =  nameClass+ "_free";
-    llvm::Function* d_freeFuncClass = module->getFunction(class_Free);
-    if (!d_freeFuncClass) {
-        throw std::runtime_error("Function not found: " + class_Free);
+    std::string name = classType? classType->getNameClass() : structType->getNameStruct();
+    std::string object_Free =  name+ "_free";
+    llvm::Function* d_freeFuncObj = module->getFunction(object_Free);
+    if (!d_freeFuncObj) {
+        throw std::runtime_error("Function not found: " + object_Free);
     }
 
     // This value will have already been loaded from the pointer,
     // or placed by the AddressOp ready to be read.
     llvm::Value* alloca = result->getLLVMValue();
 
-    builder.CreateCall(d_freeFuncClass, {alloca});
+    builder.CreateCall(d_freeFuncObj, {alloca});
 }
 
 

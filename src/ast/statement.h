@@ -64,14 +64,11 @@ public:
 };
 
 class DefineStruct : public Statement{
-    std::string nameStruct;
-    std::vector<std::pair<Type*, std::string>> members;
+    StructType* structType; 
 public:
-    DefineStruct(std::string ns, std::vector<std::pair<Type*, std::string>> m);
+    DefineStruct(StructType* st);
     ~DefineStruct() {
-        for(auto member : members){
-            delete member.first;
-        }
+        delete structType;
     }   
     void codegen(llvm::IRBuilder<>& builder) override;
 };
