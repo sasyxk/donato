@@ -172,4 +172,26 @@ public:
 };
 
 
+class SpecialType : public Type {
+    Type* symbolTypeREF;
+    std::string nameSymbol;
+public:
+    SpecialType(std::string nameSymbol,  Type* symbolTypeREF);
+    ~SpecialType() override = default;
+
+    bool operator==(const Type& other) const override;
+
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    std::string toString() const override {return "S_" + symbolTypeREF->toString();}
+    Type* clone() const override { return new SpecialType(*this); }
+    bool isCastTo(Type* other) const override;
+    bool isPointer() const override;
+    void setPointer(bool ptr) override;
+
+    std::string getNameSymbol() const {return nameSymbol;}
+    Type* getSybolREF() const {return symbolTypeREF;}
+
+};
+
 

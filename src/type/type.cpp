@@ -315,3 +315,61 @@ Type* PointerType::clone() const {
 std::string PointerType::toString() const {
     return "PointerType to " + typePointed->toString();
 }
+
+//SpecialType----------------------------------------
+
+SpecialType::SpecialType(std::string nameSymbol, Type* symbolTypeREF) {
+    this->nameSymbol = nameSymbol;
+    this->symbolTypeREF = symbolTypeREF;
+}
+
+bool SpecialType::operator==(const Type& other) const {
+    //const StructType* otherType = dynamic_cast<const StructType*>(&other);
+
+    /*Degug
+    if(auto cc = dynamic_cast<StructType*>(this->symbolTypeREF)){
+        llvm::outs() << "cc->getMembersSize(): " <<cc->getMembersSize() << "\n"; 
+        for(auto& [type, name] : cc->getMembers()){
+            llvm::outs() << "name: " << name << "  type: " << type->toString() << "\n";
+            if(auto cc2 = dynamic_cast<PointerType*>(type)){
+                auto cc3 = dynamic_cast<SpecialType*>(cc2->getTypePointed());
+                auto cc4 = dynamic_cast<StructType*> (cc3->symbolTypeREF);
+                llvm::outs() << "cc3->getMembersSize(): " <<cc4->getMembersSize() << "\n"; 
+                for(auto& [type, name] : cc4->getMembers()){
+                    llvm::outs() << "3name: " << name << "  type: " << type->toString() << "\n";
+                }
+            }
+        }
+    }*/
+    if(auto otherType =  dynamic_cast<const StructType*>(&other)){
+        return this->nameSymbol == otherType->getNameStruct();
+    }
+    if(auto otherType =  dynamic_cast<const ClassType*>(&other)){
+        return this->nameSymbol == otherType->getNameClass();
+    }
+    if(auto otherType = dynamic_cast<const SpecialType*>(&other)){
+        return this->nameSymbol == otherType->nameSymbol;
+    }
+
+    return false;
+}
+
+llvm::Type* SpecialType::getLLVMType(llvm::LLVMContext& ctx) const {
+    return this->symbolTypeREF->getLLVMType(ctx);
+}
+
+Value* SpecialType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) {
+    return this->symbolTypeREF->createValue(llvmVal, ctx);
+}
+
+bool SpecialType::isCastTo(Type* other) const {
+    return this->symbolTypeREF->isCastTo(other);
+}
+
+bool SpecialType::isPointer() const {
+    throw std::runtime_error("SpecialType does not support 'isPointer()'");
+}
+
+void SpecialType::setPointer(bool ptr) {
+    throw std::runtime_error("SpecialType does not support 'setPointer()'");
+}
