@@ -329,7 +329,7 @@ SpecialType::SpecialType(std::string nameSymbol, Type* symbolTypeREF) {
 bool SpecialType::operator==(const Type& other) const {
     //const StructType* otherType = dynamic_cast<const StructType*>(&other);
 
-    /*Degug
+    /*Debug
     if(auto cc = dynamic_cast<StructType*>(this->symbolTypeREF)){
         llvm::outs() << "cc->getMembersSize(): " <<cc->getMembersSize() << "\n"; 
         for(auto& [type, name] : cc->getMembers()){
@@ -358,11 +358,35 @@ bool SpecialType::operator==(const Type& other) const {
 }
 
 llvm::Type* SpecialType::getLLVMType(llvm::LLVMContext& ctx) const {
-    return this->symbolTypeREF->getLLVMType(ctx);
+    llvm::Type* baseType =  this->symbolTypeREF->getLLVMType(ctx);
+    if (pointer) {
+        return llvm::PointerType::getUnqual(baseType);
+    }
+    return baseType;
 }
 
 Value* SpecialType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) {
-    return this->symbolTypeREF->createValue(llvmVal, ctx);
+
+    /*
+     * When create the value, obviously use the internal type
+     * which however is the global type of the symbolTable, so it
+     * is necessary to temporarily set it to true in the case
+     * in which pointer is true, and immediately after having generated 
+     * the value, return to the previous state or false, because that 
+     * type globally will always be false. This is possible because the
+     * creation of the value occurs in these internal calls, so during 
+     * the calls, no one will read the global state, so at the end of 
+     * the call globally nothing has changed but locally I have obtained 
+     * the pointer type that was needed
+     */
+    if(pointer){
+        this->symbolTypeREF->setPointer(true);
+    }
+    Value* result = this->symbolTypeREF->createValue(llvmVal, ctx);
+    if(pointer){
+        this->symbolTypeREF->setPointer(false);
+    }
+    return result;
 }
 
 bool SpecialType::isCastTo(Type* other) const {
@@ -370,9 +394,10 @@ bool SpecialType::isCastTo(Type* other) const {
 }
 
 bool SpecialType::isPointer() const {
-    throw std::runtime_error("SpecialType does not support 'isPointer()'");
+    return this->pointer;
 }
 
 void SpecialType::setPointer(bool ptr) {
-    throw std::runtime_error("SpecialType does not support 'setPointer()'");
+    this->pointer = ptr;
+    return;
 }

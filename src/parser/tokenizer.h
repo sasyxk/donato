@@ -21,4 +21,10 @@ public:
     Tokenizer(const std::string& s);
     Token nextToken();
     std::string getPos();
+    void setPosition(size_t pos) {
+        this->pos = pos;
+    }
+    size_t getCurrentPos(){
+        return this->pos;
+    }
 };

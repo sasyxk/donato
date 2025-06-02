@@ -5,25 +5,10 @@ DefineClass::DefineClass(
     std::vector<std::pair<Type *, std::string>> privateMembers,
     std::vector<std::pair<Type *, std::string>> constructorArgs,
     std::vector<Statement *> ConstructorBodyStatemets,
-    std::vector<Function *> publicFunctions
+    std::vector<Function *> publicFunctions,
+    ClassType* classType
 ){
-    for(auto st : symbolClassType){  
-        if(st->getNameClass() == nameClass) {
-            throw std::runtime_error(
-                "The Class has already been defined: \n" 
-                + nameClass
-            );
-        }
-    }
-    for(auto st : symbolStructsType){
-        if(st->getNameStruct() == nameClass){
-            throw std::runtime_error(
-                "You cannot declare a class with the same name as a struct: " +
-                nameClass
-            );
-        }
-    }
-    StructType* structType = new StructType(nameClass, privateMembers);
+    StructType* structType = classType->getStructType();
     structType->setPointer(true); 
     constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
     Function* constructor = new Function(
@@ -47,13 +32,10 @@ DefineClass::DefineClass(
 
     publicFunctions.insert(publicFunctions.begin(), constructor); //not good for performance
 
-
-    ClassType* classType = new ClassType(structType, nameFunctions);
-
-    symbolClassType.push_back(static_cast<ClassType*>(classType->clone()));
-
-    this->classType = classType;
+    // Having to clone it because this classType is the one inside the symbolTable
+    this->classType = static_cast<ClassType*>(classType->clone());
     this->functions = publicFunctions;
+
 }
 
 
@@ -72,12 +54,12 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
     //todo generalize this part end the codegene parte of the DefineStruct: same code
     //todo ---------------------------------------------------<
 
+    generateAllocFunction(builder, classType->getNameClass(), pointType);
+    generateFreeFunction(builder, classType->getNameClass(), pointType);
+
     for(auto function : functions){
         function->codegen(builder);
     }
-
-    generateAllocFunction(builder, classType->getNameClass(), pointType);
-    generateFreeFunction(builder, classType->getNameClass(), pointType);
 }
 
 DefineStruct::DefineStruct(StructType* structType) {
@@ -89,7 +71,7 @@ DefineStruct::DefineStruct(StructType* structType) {
     } 
     for(auto ct : symbolClassType){
         if(ct->getNameClass() == structType->getNameStruct()){
-            throw std::runtime_error("You cannto define a Struct with the dame name of: " + ct->toString());
+            throw std::runtime_error("You cannto define a Struct with the name name of: " + ct->toString());
         }
     }
     symbolStructsType.push_back(structType);

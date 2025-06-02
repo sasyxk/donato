@@ -109,10 +109,10 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;//todo
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
     std::string toString() const override;
     Type* clone() const override;
-    bool isCastTo(Type* other) const override {return false;}  //todo
+    bool isCastTo(Type* other) const override {return false;}
     bool isPointer() const override {return pointer;}
     void setPointer(bool ptr) override {pointer = ptr;}
 
@@ -130,6 +130,7 @@ class ClassType : public Type {
     StructType* structType;
     std::vector<std::string> nameFunctions;
 public:
+    ClassType(StructType* structType){ this->structType = structType;}
     ClassType(StructType* structType, std::vector<std::string> nameFunctions);
     ~ClassType() override {
         delete structType;
@@ -147,7 +148,11 @@ public:
     std::string getNameClass() const {return structType->getNameStruct();}
     StructType* getStructType() {return structType;}
     bool isFuctionOfClass(std::string nameFunc);
-    //void setLLVMType(llvm::Type* t) {structType->setLLVMType(t);};
+    
+    void setMembers(std::vector<std::pair<Type*, std::string>> members) {this->structType->setMembers(members);}
+    void setNameFunctions(std::vector<std::string> nameFunctions) {this->nameFunctions = nameFunctions;}
+    std::vector<std::string> GetnameFunctions() {return this->nameFunctions ;} 
+
 };
 
 class PointerType : public Type {
@@ -175,6 +180,7 @@ public:
 class SpecialType : public Type {
     Type* symbolTypeREF;
     std::string nameSymbol;
+    bool pointer = false;
 public:
     SpecialType(std::string nameSymbol,  Type* symbolTypeREF);
     ~SpecialType() override = default;

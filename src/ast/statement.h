@@ -52,7 +52,8 @@ public:
         std::vector<std::pair<Type *, std::string>> pm,
         std::vector<std::pair<Type *, std::string>> ca,
         std::vector<Statement *> cbs,
-        std::vector<Function*> pf 
+        std::vector<Function*> pf,
+        ClassType* classType
     );
     ~DefineClass() {
         delete classType;

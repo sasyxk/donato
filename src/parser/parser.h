@@ -30,4 +30,5 @@ private:
     Type* parseBaseType(std::string stringType);
     Type* wrapWithPointers(Type* baseType);
     void errorFunction();
+    std::vector<std::string> parseClassFunctionNames();
 };

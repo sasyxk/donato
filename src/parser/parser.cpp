@@ -34,6 +34,68 @@ Statement* Parser::parseCode(){
     return stm;
 }
 
+
+void checkInSymbolClassType(ClassType* classType){
+    for(auto st : symbolStructsType){
+        if(st->getNameStruct() == classType->getNameClass()){
+            throw std::runtime_error("The Class has already been defined: " + st->toString());
+        }
+    } 
+    for(auto ct : symbolClassType){
+        if(ct->getNameClass() == classType->getNameClass()){
+            throw std::runtime_error("You cannot define a Class with the name name of: " + ct->toString());
+        }
+    }
+}
+
+
+std::vector<std::string> Parser::parseClassFunctionNames(){
+    std::vector<std::string> nameFunctions;
+    eat(UPPERNAME);
+    eat(LPAREN);
+    while(currentToken.type != RPAREN){
+        eat(currentToken.type);
+    }
+    eat(RPAREN);
+    int braceCount = 1;
+    eat(LBRACE);
+    while (braceCount > 0) {
+        if (currentToken.type == LBRACE) {
+            braceCount++;
+        } else if (currentToken.type == RBRACE) {
+            braceCount--;
+        }
+        eat(currentToken.type);
+    }
+    while(currentToken.type == FUNCTION){
+        eat(FUNCTION);
+        if(currentToken.type == VAR || currentToken.type == UPPERNAME || currentToken.type == VOID || TYPE){
+            eat(currentToken.type);
+        }
+        while(currentToken.value == "*"){
+            eat(currentToken.type);
+        }
+        nameFunctions.push_back(currentToken.value);
+        eat(VAR);
+        eat(LPAREN);
+        while(currentToken.type != RPAREN){
+            eat(currentToken.type);
+        }
+        eat(RPAREN);
+        eat(LBRACE);
+        int braceCount = 1;
+        while (braceCount > 0) {
+            if (currentToken.type == LBRACE) {
+                braceCount++;
+            } else if (currentToken.type == RBRACE) {
+                braceCount--;
+            }
+            eat(currentToken.type);
+        }
+    }
+    return nameFunctions;
+}
+
 Statement* Parser::parseStm(){
     if(currentToken.type == CLASS){
         eat(CLASS);
@@ -49,10 +111,33 @@ Statement* Parser::parseStm(){
             eat(COLON);
         }
         std::vector<std::pair<Type*, std::string>> privateMembers;
+        StructType* structType = new StructType(nameClass);
+        ClassType* classType = new ClassType(structType);
+
         if(currentToken.type != PUBLIC || havePrivateMembers){
             havePrivateMembers = true;
             do {
-                Type* type = parseType(currentToken.value);
+                Type* type;
+                if(currentToken.value == nameClass){
+                    eat(UPPERNAME);
+                    type = new SpecialType(nameClass, classType);
+                    if(currentToken.value != "*"){
+                        throw std::runtime_error(
+                            "You cannot define private member '" +
+                            nameClass +
+                            "' of struct '" +
+                            nameClass +
+                            "' without pointer"
+                        );
+                    }
+                    do{
+                        eat(OP);
+                        type = new PointerType(type);
+                    }while(currentToken.value == "*");
+                }
+                else{
+                    type = parseType(currentToken.value);
+                }
                 std::string privateMember = currentToken.value;
                 eat(VAR);
                 privateMembers.emplace_back(type, privateMember);
@@ -61,6 +146,23 @@ Statement* Parser::parseStm(){
         }
         eat(PUBLIC);
         eat(COLON);
+        classType->setMembers(privateMembers);
+        checkInSymbolClassType(classType);
+
+        // Load current position
+        size_t currPos = tokenizer.getCurrentPos();
+        Token currentToken_ = currentToken;
+
+        //parse names
+        auto nameFunctions = parseClassFunctionNames();
+        classType->setNameFunctions(nameFunctions);
+
+        // Restore position
+        tokenizer.setPosition(currPos);
+        currentToken = currentToken_;
+        
+        symbolClassType.push_back(classType);
+
         if(currentToken.value != nameClass){
             throw std::runtime_error(
                 "Define the Constructor of class '"+
@@ -108,11 +210,14 @@ Statement* Parser::parseStm(){
         eat(RBRACE);
         isInsideClass = false;
         nameOfClass = "";
+
         return new DefineClass(nameClass,
             privateMembers,
             constructorArgs,
             ConstructorBodyStatemets,
-            publicFunctions);
+            publicFunctions,
+            classType
+        );
     }
     if(currentToken.type == STRUCT){
         eat(STRUCT);
@@ -151,8 +256,6 @@ Statement* Parser::parseStm(){
         eat(RBRACE);
 
         structType->setMembers(members);
-        
-        //throw std::runtime_error("Stop");
 
         return new DefineStruct(structType);
     }
@@ -186,7 +289,9 @@ Statement* Parser::parseStm(){
             eat(REF);
             isReference = true;
         }
+        std::cout << "AURAw\n";
         Type* typeFunc = parseType(currentToken.value, isReference);
+        std::cout << "AURA\n";
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
