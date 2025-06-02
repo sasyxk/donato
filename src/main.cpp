@@ -86,6 +86,20 @@ int main(int argc, char** argv) {
     }
     symbolTable.clear();
 
+    /*
+    for(auto& scope : symbolStructsType) {
+        delete scope;
+    }
+    symbolStructsType.clear();
+    */
+
+    /*
+    for(auto& scope : symbolClassType) {
+        delete scope;
+    }
+    symbolClassType.clear();
+    */
+
     // Cleanup - deallocating the AST
     for (Statement* stm : ast) {
         delete stm;

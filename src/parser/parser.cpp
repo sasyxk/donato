@@ -378,8 +378,7 @@ Expr* Parser::parseFactor() {
             Expr* x = parseFactor();
             return new DereferenceOp(x);
         }
-    }
-        
+    }       
     if (currentToken.type == LPAREN) {
         eat(LPAREN);
         Expr* x = parseExpr();
@@ -484,6 +483,20 @@ Expr* Parser::parseFactor() {
         eat(MEM);
         Expr* x = parseExpr();
         return new AddressOp(x);
+    }
+    if(currentToken.type == NULLPTR){
+        eat(NULLPTR);
+        if(currentToken.value != "<"){
+            throw std::runtime_error("Unexpected factor: " + currentToken.value);
+        }
+        eat(CONDOP);
+        Type* type = parseType(currentToken.value);
+        if(currentToken.value != ">"){
+            throw std::runtime_error("Unexpected factor: " + currentToken.value);
+        }
+        eat(CONDOP);
+        return new NullPtr(type);
+
     }
     throw std::runtime_error("Unexpected factor: " + currentToken.value);
 }
@@ -603,7 +616,7 @@ Type* Parser::parseType(std::string stringType, bool isReference){
 
     Type* baseType = parseBaseType(stringType);
 
-    if (baseType == nullptr) {
+    if (baseType == nullptr) { //todo fix auto type standalone
         return baseType;
     }
     

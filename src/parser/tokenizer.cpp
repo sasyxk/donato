@@ -46,6 +46,7 @@ Token Tokenizer::nextToken() {
         if (word == "delete") return Token(DELETE, word);
         if (word == "print") return Token(PRINT, word);
         if (word == "new") return Token(NEW, word);
+        if (word == "nullptr") return Token(NULLPTR, word);
         if (word == "true" || word == "false") return Token(NUM, word);
         if (word == "double" ||
             word == "bool"   ||

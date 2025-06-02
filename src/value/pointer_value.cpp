@@ -50,7 +50,21 @@ Value* PointerValue::eq(Value* other, llvm::IRBuilder<>& builder) {
 }
 
 Value* PointerValue::neq(Value* other, llvm::IRBuilder<>& builder) {
-    throw std::runtime_error("neq comparison is not supported for pointer values.");
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    if (auto pointerTypeother = dynamic_cast<const PointerType*>(other->getType())) {
+        if(*pointerTypeother == *this->getType()){
+            llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "neqPointertmp");
+            return new BoolValue(new BoolType(), result, ctx);
+        }
+    }
+
+    throw std::runtime_error(
+        "Unsupported types for equality comparison: " +
+        this->getType()->toString() +
+        " == " +
+        other->getType()->toString()
+    );
 }
 
 Value* PointerValue::lt(Value* other, llvm::IRBuilder<>& builder) {

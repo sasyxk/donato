@@ -836,3 +836,15 @@ Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     
     return pointerValue;
 }
+
+
+NullPtr::NullPtr(Type* t) : type(t) {}
+
+Value* NullPtr::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::PointerType* ptrType = llvm::PointerType::getUnqual(type->getLLVMType(ctx));
+    llvm::Value* nullPtr = llvm::ConstantPointerNull::get(ptrType);
+    type = new PointerType(type);
+   
+    return type->createValue(nullPtr, ctx);
+}

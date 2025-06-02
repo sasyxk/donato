@@ -6,7 +6,7 @@ enum TokenType { DVAR, NUM, VAR, OP, IF, THEN, ELSE, LET, IN, COMMA,
                  LPAREN, RPAREN, EQ, END, ENDEXPR, RETURN,LBRACE ,RBRACE,
                  CONDOP, WHILE, COMMENT, FUNCTION, TYPE, AUTO, STRUCT,
                  UPPERNAME, POINT, REF, CLASS, PUBLIC, PRIVATE, COLON, 
-                 THIS, VOID, DELETE, NEW, MEM, PRINT};
+                 THIS, VOID, DELETE, NEW, MEM, PRINT, NULLPTR};
 
 struct Token {
     TokenType type;

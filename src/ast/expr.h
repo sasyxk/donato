@@ -209,3 +209,13 @@ public:
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
+
+class NullPtr : public Expr {
+    Type* type;
+public:
+    NullPtr(Type* t);
+    ~NullPtr() {
+        delete type;
+    }
+    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+};
