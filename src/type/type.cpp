@@ -289,16 +289,19 @@ Value* PointerType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
 
 bool PointerType::operator==(const Type &other) const {
     if(auto pointerType = dynamic_cast<const PointerType*>(&other)){
-        if(*this->getTypePointed() == *pointerType->getTypePointed()){ // f(pointer == false && other.isPointer() == true){ ,mmmmmm
+        if(*this->getTypePointed() == *pointerType->getTypePointed()){
             return true;
         }
     }
 
-    if(*this->getTypePointed() == other){
+    //todo Verify that the comparisons with the Pointer are working correctly
+    /*if(*this->getTypePointed() == other){
+        llvm::outs() << "other.tostring() :" << other.toString() << "\n";
         if(!pointer && other.isPointer()){
+            llvm::outs() << "EHEHEHEH\n";  //todo fix 
             return true;
         }
-    }
+    }*/
     return false;
 }
 
