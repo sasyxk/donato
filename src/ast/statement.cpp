@@ -114,35 +114,40 @@ void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
 VarStructUpdt::VarStructUpdt(std::string nv, std::vector<std::string>  mc, Expr *v) : nameVar(nv), memberChain(mc), value(v) {}
 
 void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
+    
     llvm::LLVMContext& ctx = builder.getContext();
     bool checkVariable = false;
     llvm::Value* ptrToStruct;
-    StructType* type;
+    Type* typeT = nullptr;
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(nameVar);
         if (found != it->end()) {
             ptrToStruct = found->second.alloca;
-            type = dynamic_cast<StructType*>(found->second.type);
+            typeT = found->second.type;
             checkVariable = true;
             break;
         }
     }
-
     if(!checkVariable) 
         throw std::runtime_error(
             "Undeclared variable: "
             + nameVar
         );
-    if(!type) 
+
+    StructType* type = dynamic_cast<StructType*>(typeT);
+    if(type == nullptr){
         throw std::runtime_error(
             "variable: " +
              nameVar +
             " is not a Struct variable but '" +
-            type->toString() +
+            typeT->toString() +
             "'"
         );
+    } 
     auto [fieldPtr, memberType] = getStructMemberGEP(builder, ptrToStruct, type, memberChain);
+   
     Value* memberValue = value->codegen(builder);
+    
     if (memberValue->getType()->isPointer()){
         throw std::runtime_error(
             "You can't Update a member to of the struct to a ptr"
