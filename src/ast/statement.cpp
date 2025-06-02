@@ -604,7 +604,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     Value* val = value->codegen(builder);
     if (val->getType()->isPointer()){
         throw std::runtime_error(
-            "You can't update a variable into a ptr"
+            "You can't update a variable with value IsPointer()= true"
         );
     }
     
