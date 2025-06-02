@@ -156,12 +156,19 @@ Statement* Parser::parseStm(){
 
         return new DefineStruct(structType);
     }
-    if (currentToken.type == TYPE || currentToken.type == AUTO || currentToken.type == UPPERNAME) { 
+    if (currentToken.type == TYPE  || currentToken.type == UPPERNAME) { 
         Type* typeVar = parseType(currentToken.value);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
         Expr* value = parse();
         return new VarDecl(var, typeVar, value);
+    }
+    if(currentToken.type == AUTO){
+        eat(AUTO);
+        std::string var = parseVar(currentToken.value);
+        eat(EQ);
+        Expr* value = parse();
+        return new VarDecl(var, nullptr, value);
     }
     if(currentToken.type == RETURN) {
         eat(RETURN);
@@ -554,10 +561,6 @@ Type* Parser::parseBaseType(std::string stringType){
         eat(TYPE);
         return new BoolType();
     }
-    else if(stringType == "auto") {
-        eat(AUTO);
-        return nullptr;
-    }
     else if(stringType == "int8"){
         eat(TYPE);
         return new SignedIntType(8);
@@ -601,9 +604,7 @@ Type* Parser::parseBaseType(std::string stringType){
 
 Type* Parser::wrapWithPointers(Type* baseType) {
     Type* currentType = baseType;
-    if(currentType == nullptr){
-        return nullptr;
-    }
+
     while (currentToken.value == "*") {
         eat(OP);
         currentType = new PointerType(currentType);
@@ -616,10 +617,6 @@ Type* Parser::parseType(std::string stringType, bool isReference){
 
     Type* baseType = parseBaseType(stringType);
 
-    if (baseType == nullptr) { //todo fix auto type standalone
-        return baseType;
-    }
-    
     Type* finalType = wrapWithPointers(baseType);
     
     if (isReference) {
