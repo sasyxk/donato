@@ -289,9 +289,7 @@ Statement* Parser::parseStm(){
             eat(REF);
             isReference = true;
         }
-        std::cout << "AURAw\n";
         Type* typeFunc = parseType(currentToken.value, isReference);
-        std::cout << "AURA\n";
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
