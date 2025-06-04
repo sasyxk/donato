@@ -284,75 +284,15 @@ void ClassCallVoidFunc::codegen(llvm::IRBuilder<>& builder) {
 
 CallFuncStatement::CallFuncStatement(std::string nf, std::vector<Expr *> a) : funcName(nf), args(a) {}
 
-void CallFuncStatement::codegen(llvm::IRBuilder<> &builder){
-    SymbolFunction* functionStruct = nullptr;
-
-    bool checkFunc = false;
-    for (auto& function : symbolFunctions) {
-        if (function.first == funcName && !function.second.classFunction) {
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
-        }
-    }
-    if(!checkFunc)
-        throw std::runtime_error("Function not found: " + funcName);
-
-    if(functionStruct->argType.size() != args.size()){
-        throw std::runtime_error("Argument count mismatch for " + funcName);
-    }
-    if(dynamic_cast<VoidType*>(functionStruct->returnType)  == nullptr){
-        throw std::runtime_error(
-            "The function '"
-            + funcName +
-            "'is not a Void, Can't call without store the return value "
-        );
-    }
-
-    llvm::LLVMContext& ctx = builder.getContext();
-
+void CallFuncStatement::codegen(llvm::IRBuilder<> &builder) {
+    FunctionCallParams params;
+    params.functionName = funcName;
+    params.requiresVoidReturn = true;
+    
+    auto [functionStruct, argValues] = prepareAndValidateFunctionCall(params, args, builder);
+    
     llvm::Function* callee = functionStruct->func;
-
-    // Generate argument values
-    std::vector<llvm::Value*> argValues;
-    for(auto* arg : args) {
-        bool isVar = false;
-        
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        Value* value  = arg->codegen(builder, isVar);
-        llvm::Value* llvmVal = nullptr; 
-        
-        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
-            
-            throw std::runtime_error(
-                "Function " +
-                funcName +
-                " argument " +
-                std::to_string(argValues.size() + 1) +
-                " wants a reference pass, insert a"  +
-                " variable as an argument"
-            );
-        }
-        
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
-            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
-        }
-        argValues.push_back(!llvmVal ?
-            value->getLLVMValue() : llvmVal);
-        delete value;
-    }
-
     builder.CreateCall(callee, argValues);
-    return;
 }
 
 ReturnVoid::ReturnVoid(std::string fn, std::string noc) : funcName(fn), nameOfClass(noc) {}

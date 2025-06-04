@@ -13,6 +13,7 @@
 #include "bool_value.h"
 #include "pointer_value.h"
 
+class Expr;
 
 struct SymbolInfo {
     llvm::Value* alloca;  
@@ -26,6 +27,18 @@ struct SymbolFunction {
     bool classFunction = false;
     std::string className = "";
 };
+
+// Struttura per i parametri della funzione generalizzata
+struct FunctionCallParams {
+    std::string functionName;
+    std::string className = "";  // Vuoto per funzioni non-member
+    bool isClassFunction = false;
+    bool isConstructor = false;   // Per costruttori - logica di ricerca diversa
+    bool requiresVoidReturn = false;  // Per CallFuncStatement
+    std::vector<llvm::Value*> extraArgs;  // Per argomenti aggiuntivi come 'this' pointer
+};
+
+
 
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 extern std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
@@ -52,3 +65,32 @@ void generateFreeFunction(
     std::string className,
     llvm::StructType* classType
 );
+
+
+Value* invokeMemberFunction(
+    std::string nameOfClass,
+    ClassType* classType,
+    std::string memberName,
+    std::string nameCurrVar,
+    std::vector<Expr*> args,
+    llvm::Value* currentPtr,
+    bool wantReturn,
+    llvm::IRBuilder<>& builder
+);
+
+Value* generateClassFunctionCall(
+    llvm::IRBuilder<>& builder,
+    const std::string firstVariableName,
+    const std::vector<std::string> memberChain,
+    const std::string nameOfClass,
+    const std::vector<Expr*> args,
+    bool returnsValue
+);
+
+// Funzione generalizzata per la preparazione e validazione delle chiamate a funzione
+std::pair<SymbolFunction*, std::vector<llvm::Value*>> 
+prepareAndValidateFunctionCall(
+    const FunctionCallParams& params,
+    const std::vector<Expr*>& args,
+    llvm::IRBuilder<>& builder
+); 

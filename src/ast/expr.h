@@ -7,27 +7,6 @@ public:
     virtual Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) = 0;
 };
 
-
-Value* invokeMemberFunction(
-    std::string nameOfClass,
-    ClassType* classType,
-    std::string memberName,
-    std::string nameCurrVar,
-    std::vector<Expr*> args,
-    llvm::Value* currentPtr,
-    bool wantReturn,
-    llvm::IRBuilder<>& builder
-);
-
-Value* generateClassFunctionCall(
-    llvm::IRBuilder<>& builder,
-    const std::string firstVariableName,
-    const std::vector<std::string> memberChain,
-    const std::string nameOfClass,
-    const std::vector<Expr*> args,
-    bool returnsValue
-);
-
 class StructVar : public Expr {
     std::string varStructName;
     std::vector<std::string> memberChain;

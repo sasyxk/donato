@@ -50,305 +50,18 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
 //todo nameOfClass here is useless
 Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
-    // Search for the function in the module
-    SymbolFunction* functionStruct = nullptr;
-
-    bool checkFunc = false;
-    for (auto& function : symbolFunctions) {
-        if (function.first == funcName && !function.second.classFunction) {
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
-        }
-    }
-    if(!checkFunc)
-        throw std::runtime_error("Function not found: " + funcName);
-        
-    if(functionStruct->argType.size() != args.size()){
-        throw std::runtime_error("Argument count mismatch for " + funcName);
-    }
-
     llvm::LLVMContext& ctx = builder.getContext();
-
+    
+    FunctionCallParams params;
+    params.functionName = funcName;
+    
+    auto [functionStruct, argValues] = prepareAndValidateFunctionCall(params, args, builder);
+    
     llvm::Function* callee = functionStruct->func;
-
-    // Generate argument values
-    std::vector<llvm::Value*> argValues;
-    for(auto* arg : args) {
-        bool isVar = false;
-        
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        Value* value  = arg->codegen(builder, isVar);
-        llvm::Value* llvmVal = nullptr; 
-        
-        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
-            
-            throw std::runtime_error(
-                "Function " +
-                funcName +
-                " argument " +
-                std::to_string(argValues.size() + 1) +
-                " wants a reference pass, insert a"  +
-                " variable as an argument"
-            );
-        }
-        
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
-            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
-        }
-        argValues.push_back(!llvmVal ?
-            value->getLLVMValue() : llvmVal);
-        delete value;
-    }
-
     llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
     Type* returnType = functionStruct->returnType;
     
-    Value* returnValue = returnType->createValue(llvmValueReturn, ctx);
-
-    return returnValue;
-}
-
-
-/*
-    Create at llvm level the actual
-    function call of the class member.
-*/
-Value* invokeMemberFunction(
-    std::string nameOfClass,
-    ClassType* classType,
-    std::string memberName,
-    std::string nameCurrVar,
-    std::vector<Expr*> args,
-    llvm::Value* currentPtr,
-    bool wantReturn,
-    llvm::IRBuilder<>& builder
-){
-    if(nameOfClass != "" && classType == nullptr) {
-        for(auto& classType1 : symbolClassType){
-            if(nameOfClass == classType1->getNameClass()){
-                classType = classType1;
-                break;
-            }
-        }
-    }
-    if(classType == nullptr){ //debug error
-        throw std::runtime_error("ClassType is nullpt in ClassCallFunc::codegen");
-    }
-
-    // memberName is a fuction
-    SymbolFunction* functionStruct = nullptr;
-
-    bool checkFunc = false;
-    for (auto& function : symbolFunctions) {
-        if (function.first == memberName && 
-            function.second.classFunction &&
-            function.second.className == classType->getNameClass() &&
-            classType->isFuctionOfClass(memberName)
-        ){
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
-        }
-    }
-    if(!checkFunc)
-        throw std::runtime_error("Function '" + memberName + "' of class '"+ classType->getNameClass() + "' not found, var: " +nameCurrVar );
-
-    if(functionStruct->argType.size() != args.size() + 1){
-        throw std::runtime_error("Argument count mismatch for " + memberName);
-    }
-
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    llvm::Function* callee = functionStruct->func;
-
-    // Generate argument values
-    std::vector<llvm::Value*> argValues;
-    argValues.push_back(currentPtr); // is a pointer
-
-    for(auto* arg : args) {
-        bool isVar = false;
-        
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        Value* value  = arg->codegen(builder, isVar);
-
-        llvm::Value* llvmVal = nullptr; 
-        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
-            throw std::runtime_error(
-                "Function " +
-                memberName +
-                " argument " +
-                std::to_string(argValues.size() + 1) +
-                " wants a reference pass, insert a"  +
-                " variable as an argument"
-            );
-        }
-        
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
-            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
-        }
-        argValues.push_back(!llvmVal ?
-            value->getLLVMValue() : llvmVal);
-        delete value;
-    }
-
-   if (wantReturn) {
-        Type* returnType = functionStruct->returnType;
-        llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-        return returnType->createValue(llvmValueReturn, ctx);
-    } else {
-        if (!dynamic_cast<VoidType*>(functionStruct->returnType)) {
-            throw std::runtime_error("Expected void return type in " + memberName);
-        }
-        builder.CreateCall(callee, argValues);
-        return nullptr;
-    }
-}
-
-Value* generateClassFunctionCall(
-    llvm::IRBuilder<>& builder,
-    const std::string firstVariableName,
-    const std::vector<std::string> memberChain,
-    const std::string nameOfClass,
-    const std::vector<Expr*> args,
-    bool returnsValue
-){
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    /*
-        Pointer to the memory area
-        where the variable is located
-        and Type of that variable
-    */
-    llvm::Value* ptrToStruct = nullptr;
-    Type* type = nullptr;
-
-    // Retrieve the variable from the symbolTable
-    bool foundVar = false;
-    for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
-        auto found = it->find(firstVariableName);
-        if (found != it->end()) {
-            ptrToStruct = found->second.alloca;
-            type = found->second.type;
-            foundVar = true;
-            break;
-        }
-    }
-    if (!foundVar)
-        throw std::runtime_error("Undeclared variable: " + firstVariableName);
-
-    // This is the value returned by the last GEP performed in the cycle
-    llvm::Value* currentPtr = ptrToStruct;
-
-    std::string nameCurrVar = firstVariableName;
-
-    // We loop over the length of all members passed by the parser
-    for (size_t depth = 0; depth < memberChain.size(); ++depth) {
-        const std::string& memberName = memberChain[depth];
-
-        if (auto classType = dynamic_cast<ClassType*>(type)) {
-            /*
-                If the current variable is of the type ClassType,
-                then the next member in the chain must be
-                the last one, since it must be the class
-                function that will be called.
-            */
-            if(depth + 1 < memberChain.size()){
-                throw std::runtime_error(
-                    "The class variable '" +
-                    nameCurrVar +
-                    "' cannot have multiple internal calls"
-                );
-            }
-
-            // Get the return value of the called function
-            /*
-                If the current member of the chain is not the
-                variable with the name 'this', then you need
-                to pass what type of class that member has.
-            */
-            return invokeMemberFunction(
-                nameOfClass,
-                classType,  // ClassType
-                memberName,
-                nameCurrVar,
-                args,
-                currentPtr,
-                returnsValue,
-                builder
-            );
-        }
-
-        if (auto structType = dynamic_cast<StructType*>(type)) {
-            auto members = structType->getMembers();
-            size_t index = 0;
-            bool found = false;
-
-            /*
-                Check if the selected member is present
-                in the current struct
-            */
-            for (size_t i = 0; i < members.size(); ++i) {
-                if (members[i].second == memberName) {
-                    index = i;
-                    found = true;
-                    break;
-                }
-            }
-
-            /* 
-                if we don't find the member in the struct,
-                but the struct it's 'this' with just one argument
-                we need to discover if is a function
-            */
-            if(!found && nameOfClass != "" && (depth + 1 == memberChain.size())) {
-                return invokeMemberFunction(
-                    nameOfClass,
-                    nullptr,  // ClassType
-                    memberName,
-                    nameCurrVar,
-                    args,
-                    currentPtr,
-                    returnsValue,
-                    builder
-                );
-            }
-
-            if (!found)
-                throw std::runtime_error("Member '" + memberName + "' not found in struct '"+ nameCurrVar +"'");
-
-            /*
-                Get a pointer to the specified member
-                (by index) within the struct instance
-            */
-            currentPtr = builder.CreateStructGEP(structType->getLLVMType(ctx), currentPtr, index, memberName);
-            nameCurrVar = memberName;
-
-            type = members[index].first;
-        } else {
-            throw std::runtime_error("Invalid variable member of chain: '"+ nameCurrVar+"' with type '"+type->toString()+"'");
-        }
-    }
-
-    throw std::runtime_error("Invalid member chain access.");
+    return returnType->createValue(llvmValueReturn, ctx);
 }
 
 ClassCallFunc::ClassCallFunc(
@@ -613,77 +326,24 @@ Value* newClass(
     std::vector<Expr*> args,
     llvm::Value* ptrToStruct,
     Type* type
-){
+) {
     llvm::LLVMContext& ctx = builder.getContext();
-    //Call the constructor;   
-    SymbolFunction* functionStruct = nullptr;
-
-    bool checkFunc = false;
-    for (auto& function : symbolFunctions) {
-        if (function.first == nameClass){
-            functionStruct = &function.second;
-            checkFunc = true;
-            break;
-        }
-    }
-    if(!checkFunc)
-        throw std::runtime_error("Constructor '" + nameClass + "' not found");
-
-    if(functionStruct->argType.size() != args.size() + 1){ 
-        throw std::runtime_error("Argument count mismatch for Constructor" + nameClass);
-    }
-
+    
+    FunctionCallParams params;
+    params.functionName = nameClass;
+    params.isConstructor = true;  // Usa logica di ricerca per costruttori
+    params.extraArgs.push_back(ptrToStruct);  // Aggiungi il pointer alla struct come primo argomento
+    
+    auto [functionStruct, argValues] = prepareAndValidateFunctionCall(params, args, builder);
+    
     llvm::Function* callee = functionStruct->func;
-
-    // Generate argument values
-    std::vector<llvm::Value*> argValues;
-    argValues.push_back(ptrToStruct); //is a pointer
-
-    for(auto* arg : args) {
-        bool isVar = false;
-        
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if(functionStruct->argType.at(argValues.size())->isPointer()){
-                isVar = true;
-            }
-        }
-        Value* value  = arg->codegen(builder, isVar);
-
-        llvm::Value* llvmVal = nullptr; 
-        if (functionStruct->argType.at(argValues.size())->isPointer() && !value->getType()->isPointer()) {
-            throw std::runtime_error(
-                "Constructor " +
-                nameClass +
-                " argument " +
-                std::to_string(argValues.size() + 1) +
-                " wants a reference pass, insert a"  +
-                " variable as an argument"
-            );
-        }
-        
-        if(!(*value->getType() ==  *functionStruct->argType.at(argValues.size())  )){
-            throw std::runtime_error("Type mismatch in argument " + std::to_string(argValues.size() + 1));
-        }
-        argValues.push_back(!llvmVal ?
-            value->getLLVMValue() : llvmVal);
-        delete value;
-    }
-
-    //It's Void type
     builder.CreateCall(callee, argValues);
-
+    
     auto pointerType = new PointerType(type->clone());
     Value* result = pointerType->createValue(ptrToStruct, ctx);
-
     delete pointerType;
     
     return result;
-
 }
 
 Value* newStruct(
