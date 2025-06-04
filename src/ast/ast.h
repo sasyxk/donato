@@ -28,24 +28,21 @@ struct SymbolFunction {
     std::string className = "";
 };
 
-// Struttura per i parametri della funzione generalizzata
+// Structure for generalized function call parameters
 struct FunctionCallParams {
     std::string functionName;
-    std::string className = "";  // Vuoto per funzioni non-member
+    std::string className = ""; 
     bool isClassFunction = false;
-    bool isConstructor = false;   // Per costruttori - logica di ricerca diversa
-    bool requiresVoidReturn = false;  // Per CallFuncStatement
-    std::vector<llvm::Value*> extraArgs;  // Per argomenti aggiuntivi come 'this' pointer
+    bool isConstructor = false;  
+    bool requiresVoidReturn = false;  
+    std::vector<llvm::Value*> extraArgs;  // For additional arguments like 'this' pointer
 };
-
-
 
 extern std::vector<std::map<std::string, SymbolInfo>> symbolTable;
 extern std::vector<std::pair<std::string, SymbolFunction>> symbolFunctions;
 extern std::vector<StructType* > symbolStructsType;
 extern std::vector<ClassType* > symbolClassType;
 extern llvm::Module* module;
-
 
 std::pair<llvm::Value*, Type*> getStructMemberGEP(
     llvm::IRBuilder<>& builder,
@@ -65,7 +62,6 @@ void generateFreeFunction(
     std::string className,
     llvm::StructType* classType
 );
-
 
 Value* invokeMemberFunction(
     std::string nameOfClass,
@@ -87,7 +83,6 @@ Value* generateClassFunctionCall(
     bool returnsValue
 );
 
-// Funzione generalizzata per la preparazione e validazione delle chiamate a funzione
 std::pair<SymbolFunction*, std::vector<llvm::Value*>> 
 prepareAndValidateFunctionCall(
     const FunctionCallParams& params,

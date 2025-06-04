@@ -188,23 +188,25 @@ void generateFreeFunction(
 }
 
 
-
-
-
-/**/
+// This function prepares and validates a function or constructor call in the code generation phase.
+// It searches for the correct function definition based on the name and context, such as whether
+// it's a constructor or a class method. It checks that the number of arguments matches the expected
+// function signature and ensures the return type is compatible when a void return is required.
+// Then, it generates the LLVM IR values for the arguments, handling reference passing and type checking.
+// Finally, it returns the matched function along with the list of generated argument values.
 std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunctionCall(
     const FunctionCallParams& params,
     const std::vector<Expr*>& args,
     llvm::IRBuilder<>& builder
 ) {
-    // 1. Ricerca della funzione
+   // Function search
     SymbolFunction* functionStruct = nullptr;
     bool checkFunc = false;
     
     for (auto& function : symbolFunctions) {
         bool nameMatch = (function.first == params.functionName);
         
-        // Logica di ricerca diversa per costruttori
+        // Logic for constructor
         if (params.isConstructor) {
             if (nameMatch) {
                 functionStruct = &function.second;
@@ -212,7 +214,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
                 break;
             }
         } else {
-            // Logica normale per funzioni e metodi
+            // Logic for functions and methods
             bool classMatch = params.isClassFunction ? 
                 (function.second.classFunction && function.second.className == params.className) :
                 (!function.second.classFunction);
@@ -237,7 +239,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         throw std::runtime_error(errorMsg);
     }
     
-    // 2. Validazione numero argomenti
+    // Validate number of arguments
     size_t expectedArgCount = args.size() + params.extraArgs.size();
     if (functionStruct->argType.size() != expectedArgCount) {
         std::string context;
@@ -251,7 +253,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         throw std::runtime_error("Argument count mismatch for " + context);
     }
     
-    // 3. Controllo tipo di ritorno per void (se richiesto)
+   // Check return type for void (if required)
     if (params.requiresVoidReturn && dynamic_cast<VoidType*>(functionStruct->returnType) == nullptr) {
         throw std::runtime_error(
             "The function '" + params.functionName + 
@@ -259,20 +261,20 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         );
     }
     
-    // 4. Generazione valori argomenti
+    // Generate argument values
     std::vector<llvm::Value*> argValues;
     
-    // Aggiungi argomenti extra (come 'this' pointer) all'inizio
+    // Add extra arguments (like 'this' pointer) at the beginning
     for (auto* extraArg : params.extraArgs) {
         argValues.push_back(extraArg);
     }
     
-    // Processa gli argomenti normali
+    // Process normal arguments
     for (auto* arg : args) {
         size_t currentArgIndex = argValues.size();
         bool isVar = false;
         
-        // Controlla se l'argomento deve essere passato per riferimento
+       // Check whether the argument should be passed by reference
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
             if (functionStruct->argType.at(currentArgIndex)->isPointer()) {
                 isVar = true;
@@ -286,7 +288,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         
         Value* value = arg->codegen(builder, isVar);
         
-        // Validazione tipo pointer
+        // Reference validation
         if (functionStruct->argType.at(currentArgIndex)->isPointer() && 
             !value->getType()->isPointer()) {
             throw std::runtime_error(
@@ -296,7 +298,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
             );
         }
         
-        // Validazione tipo
+        // Type validation
         if (!(*value->getType() == *functionStruct->argType.at(currentArgIndex))) {
             throw std::runtime_error(
                 "Type mismatch in argument " + std::to_string(currentArgIndex + 1)
@@ -309,8 +311,6 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
     
     return {functionStruct, argValues};
 }
-
-
 
 /*
     Create at llvm level the actual

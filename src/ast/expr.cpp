@@ -331,8 +331,8 @@ Value* newClass(
     
     FunctionCallParams params;
     params.functionName = nameClass;
-    params.isConstructor = true;  // Usa logica di ricerca per costruttori
-    params.extraArgs.push_back(ptrToStruct);  // Aggiungi il pointer alla struct come primo argomento
+    params.isConstructor = true; 
+    params.extraArgs.push_back(ptrToStruct); // Add the pointer to the struct as the first argument
     
     auto [functionStruct, argValues] = prepareAndValidateFunctionCall(params, args, builder);
     
@@ -356,10 +356,7 @@ Value* newStruct(
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Type* llvmStructType = structType->getLLVMType(ctx);
 
-    
-
     const auto& structMembers = structType->getMembers();
-
 
     if(structMembers.size() != membersExpr.size()){
        throw std::runtime_error(
