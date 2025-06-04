@@ -65,13 +65,22 @@ Digit        = "0" | ... | "9"
 
 *** Function declaration with pattern matching ***
 function operation(x, y, op) {
-    match (x, y, op) {
+    int x = match (x, y, op) {
         case (_, _, "+") => x + y
         case (_, _, "-") => x - y
         case (_, _, "*") => x * y
         case (_, _, "/") => x / y
         case _           => "Invalid operation"
     }
+}
+
+match
+int func(int x, int y, bool value) {
+  (4, _, _)        => x + 8
+  (5, _, _)        => x + 9
+  (1, 1, _)        => x + y - 1
+  (_, _, false)    => x + x
+  (_, _, _)        => y
 }
 
 *** Variable declaration and update ***

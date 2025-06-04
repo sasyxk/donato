@@ -254,7 +254,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
     }
     
    // Check return type for void (if required)
-    if (params.requiresVoidReturn && dynamic_cast<VoidType*>(functionStruct->returnType) == nullptr) {
+    if (params.requiresVoidReturn && dynamic_cast<VoidType*>(functionStruct->returnType.type) == nullptr) {
         throw std::runtime_error(
             "The function '" + params.functionName + 
             "' is not Void, Can't call without store the return value"
@@ -276,12 +276,12 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         
        // Check whether the argument should be passed by reference
         if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if (functionStruct->argType.at(currentArgIndex)->isPointer()) {
+            if (functionStruct->argType.at(currentArgIndex).isReference) {
                 isVar = true;
             }
         }
         else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if (functionStruct->argType.at(currentArgIndex)->isPointer()) {
+            if (functionStruct->argType.at(currentArgIndex).isReference) {
                 isVar = true;
             }
         }
@@ -289,8 +289,8 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         Value* value = arg->codegen(builder, isVar);
         
         // Reference validation
-        if (functionStruct->argType.at(currentArgIndex)->isPointer() && 
-            !value->getType()->isPointer()) {
+        if (functionStruct->argType.at(currentArgIndex).isReference && 
+            value->getAllocation() != nullptr) {
             throw std::runtime_error(
                 "Function " + params.functionName + 
                 " argument " + std::to_string(currentArgIndex + 1) + 
@@ -299,7 +299,7 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
         }
         
         // Type validation
-        if (!(*value->getType() == *functionStruct->argType.at(currentArgIndex))) {
+        if (!(*value->getType() == *functionStruct->argType.at(currentArgIndex).type)) {
             throw std::runtime_error(
                 "Type mismatch in argument " + std::to_string(currentArgIndex + 1)
             );
@@ -351,11 +351,11 @@ Value* invokeMemberFunction(
     llvm::Function* callee = functionStruct->func;
     
    if (wantReturn) {
-        Type* returnType = functionStruct->returnType;
+        Type* returnType = functionStruct->returnType.type;
         llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
         return returnType->createValue(llvmValueReturn, ctx);
     } else {
-        if (!dynamic_cast<VoidType*>(functionStruct->returnType)) {
+        if (!dynamic_cast<VoidType*>(functionStruct->returnType.type)) {
             throw std::runtime_error("Expected void return type in " + memberName);
         }
         builder.CreateCall(callee, argValues);

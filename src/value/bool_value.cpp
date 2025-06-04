@@ -1,9 +1,7 @@
 #include "bool_value.h"
 
-BoolValue::BoolValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
-    Value::checkTypeCompatibility(type, value, ctx);
+BoolValue::BoolValue(Type* type) {
     this->type = type;
-    this->value = value;
 }
 
 Type* BoolValue::getType() const {
@@ -19,7 +17,8 @@ Value* BoolValue::add(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const BoolType*>(other->getType())) {
         llvm::Value* result = builder.CreateOr(this->getLLVMValue(), other->getLLVMValue(), "addbooltmp");
-        return new BoolValue(this->getType()->clone(), result, ctx);
+        //return new BoolValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -38,7 +37,7 @@ Value* BoolValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const BoolType*>(other->getType())) {
         llvm::Value* result = builder.CreateAnd(this->getLLVMValue(), other->getLLVMValue(), "mulbooltmp");
-        return new BoolValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -60,7 +59,7 @@ Value* BoolValue::eq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const BoolType*>(other->getType())) {
         llvm::Value* result = builder.CreateICmpEQ(this->getLLVMValue(), other->getLLVMValue(), "eqbooltmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -75,7 +74,7 @@ Value* BoolValue::neq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const BoolType*>(other->getType())) {
         llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "neqbooltmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -105,12 +104,12 @@ Value* BoolValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* result = builder.CreateNot(this->getLLVMValue(), "negbooltmp");
-    return new BoolValue(this->getType()->clone(), result, ctx);
+    return this->getType()->createValue(result, ctx);
 }
 
-Value* BoolValue::getBoolValue(llvm::IRBuilder<> &builder)
-{
-    return new BoolValue(new BoolType(), this->getLLVMValue(), builder.getContext());
+Value* BoolValue::getBoolValue(llvm::IRBuilder<> &builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+    return this->getType()->createValue(this->getLLVMValue(), ctx);
 }
 
 Value *BoolValue::castTo(Type *other, llvm::IRBuilder<> &builder) {

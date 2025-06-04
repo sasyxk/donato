@@ -21,8 +21,8 @@ struct SymbolInfo {
 };
 
 struct SymbolFunction {
-    Type* returnType;
-    std::vector<Type* > argType;
+    TypeInfo returnType;
+    std::vector<TypeInfo> argType;
     llvm::Function* func;
     bool classFunction = false;
     std::string className = "";

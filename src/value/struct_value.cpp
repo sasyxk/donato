@@ -1,10 +1,8 @@
 #include "struct_value.h"
 #include "bool_value.h"
 
-StructValue::StructValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
-    Value::checkTypeCompatibility(type, value, ctx);
+StructValue::StructValue(Type* type) {
     this->type = type;
-    this->value = value;
 }
 
 Type* StructValue::getType() const {

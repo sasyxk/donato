@@ -136,7 +136,8 @@ Statement* Parser::parseStm(){
                     }while(currentToken.value == "*");
                 }
                 else{
-                    type = parseType(currentToken.value);
+                    TypeInfo typeInfo = parseType(currentToken.value);
+                    type = typeInfo.type;
                 }
                 std::string privateMember = currentToken.value;
                 eat(VAR);
@@ -174,7 +175,7 @@ Statement* Parser::parseStm(){
         }
         eat(UPPERNAME);
         eat(LPAREN);
-        std::vector<std::pair<Type*, std::string>> constructorArgs; // (type name),
+        std::vector<std::pair<TypeInfo, std::string>> constructorArgs; // (type name),
         do {
             if(currentToken.type == RPAREN){break;}
             bool isReference = false;
@@ -182,11 +183,11 @@ Statement* Parser::parseStm(){
                 eat(REF);
                 isReference = true;
             }
-            Type* type = parseType(currentToken.value, isReference);
+            TypeInfo typeInfo = parseType(currentToken.value, isReference);
             //eat(TYPE);
             std::string arg = currentToken.value;
             eat(VAR);
-            constructorArgs.emplace_back(type, arg);
+            constructorArgs.emplace_back(typeInfo, arg);
         } while (currentToken.type == COMMA && (eat(COMMA), true));
         eat(RPAREN);
         eat(LBRACE);
@@ -230,6 +231,7 @@ Statement* Parser::parseStm(){
             Type* type;
             if(currentToken.value == nameStruct){
                 eat(UPPERNAME);
+                Type* type;
                 type = new SpecialType(nameStruct, structType);
                 if(currentToken.value != "*"){
                     throw std::runtime_error(
@@ -246,7 +248,8 @@ Statement* Parser::parseStm(){
                 }while(currentToken.value == "*");
             }
             else{
-                type = parseType(currentToken.value);
+                TypeInfo typeInfo = parseType(currentToken.value);
+                type = typeInfo.type;
             }
             std::string member = currentToken.value;
             eat(VAR);
@@ -260,11 +263,11 @@ Statement* Parser::parseStm(){
         return new DefineStruct(structType);
     }
     if (currentToken.type == TYPE  || currentToken.type == UPPERNAME) { 
-        Type* typeVar = parseType(currentToken.value);
+        TypeInfo typeVar = parseType(currentToken.value);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
         Expr* value = parse();
-        return new VarDecl(var, typeVar, value);
+        return new VarDecl(var, typeVar.type, value);
     }
     if(currentToken.type == AUTO){
         eat(AUTO);
@@ -289,12 +292,12 @@ Statement* Parser::parseStm(){
             eat(REF);
             isReference = true;
         }
-        Type* typeFunc = parseType(currentToken.value, isReference);
+        TypeInfo typeFunc = parseType(currentToken.value, isReference);
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
         eat(LPAREN);
-        std::vector<std::pair<Type*, std::string>> parameters; // (type name),
+        std::vector<std::pair<TypeInfo, std::string>> parameters; // (type name),
         do {
             if(currentToken.type == RPAREN){break;}
             bool isReference = false;
@@ -302,7 +305,7 @@ Statement* Parser::parseStm(){
                 eat(REF);
                 isReference = true;
             }
-            Type* type = parseType(currentToken.value, isReference);
+            TypeInfo type = parseType(currentToken.value, isReference);
             //eat(TYPE);
             std::string param = currentToken.value;
             eat(VAR);
@@ -422,12 +425,12 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == REF){
         eat(REF);
-        Type* typeVar = parseType(currentToken.value, true);
+        TypeInfo typeVar = parseType(currentToken.value, true);
         //typeVar == nullptr ? eat(AUTO) : eat(TYPE);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
         Expr* value = parse();
-        return new RefDecl(var, typeVar, value);
+        return new RefDecl(var, typeVar.type, value);
     }
     if(currentToken.type == DELETE){
         eat(DELETE);
@@ -600,12 +603,12 @@ Expr* Parser::parseFactor() {
             throw std::runtime_error("Unexpected factor: " + currentToken.value);
         }
         eat(CONDOP);
-        Type* type = parseType(currentToken.value);
+        TypeInfo typeInfo = parseType(currentToken.value);
         if(currentToken.value != ">"){
             throw std::runtime_error("Unexpected factor: " + currentToken.value);
         }
         eat(CONDOP);
-        return new NullPtr(type);
+        return new NullPtr(typeInfo.type);
 
     }
     throw std::runtime_error("Unexpected factor: " + currentToken.value);
@@ -688,7 +691,7 @@ Type* Parser::parseBaseType(std::string stringType){
         for(auto structType : symbolStructsType){
             if(structType->getNameStruct() == stringType){
                 eat(UPPERNAME);
-                auto* st = structType->clone();
+                auto* st = structType;
                 return st;
             }
         }
@@ -697,7 +700,7 @@ Type* Parser::parseBaseType(std::string stringType){
        for(auto classType : symbolClassType){
             if(classType->getNameClass() == stringType){
                 eat(UPPERNAME);
-                auto* st = classType->clone();
+                auto* st = classType;
                 return st;
             }
         } 
@@ -716,17 +719,14 @@ Type* Parser::wrapWithPointers(Type* baseType) {
 }
 
 
-Type* Parser::parseType(std::string stringType, bool isReference){   
+TypeInfo Parser::parseType(std::string stringType, bool isReference){   
 
     Type* baseType = parseBaseType(stringType);
 
     Type* finalType = wrapWithPointers(baseType);
+
+    return TypeInfo{finalType, isReference};
     
-    if (isReference) {
-        finalType->setPointer(true); 
-    }
-    
-    return finalType;
 }
 
 std::string Parser::parseVar(std::string valueVar){

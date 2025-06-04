@@ -10,17 +10,17 @@ public:
 
 
 class Function : public Statement{
-    Type* typeFunc;
+    TypeInfo typeFunc;
     std::string nameFunc;
-    std::vector<std::pair<Type*, std::string>> parameters;
+    std::vector<std::pair<TypeInfo, std::string>> parameters;
     std::vector<Statement*> body;
     bool classFunction;
     std::string className;
 public:
     Function(
-        Type* tf, 
+        TypeInfo tf, 
         const std::string nf, 
-        const std::vector<std::pair<Type*, std::string>> p,
+        const std::vector<std::pair<TypeInfo, std::string>> p,
         std::vector<Statement*> b,
         bool classFunction = false,
         std::string className = ""
@@ -29,10 +29,6 @@ public:
         for (Statement* stmt : body) {
             delete stmt;
         }
-        for(auto param : parameters){
-            delete param.first;
-        }
-        delete typeFunc;
     }
 
     void codegen(llvm::IRBuilder<>& builder) override;
@@ -50,13 +46,12 @@ public:
     DefineClass(
         std::string nc,
         std::vector<std::pair<Type *, std::string>> pm,
-        std::vector<std::pair<Type *, std::string>> ca,
+        std::vector<std::pair<TypeInfo, std::string>> ca,
         std::vector<Statement *> cbs,
         std::vector<Function*> pf,
         ClassType* classType
     );
     ~DefineClass() {
-        delete classType;
         for (auto function : functions){
             delete function;
         }
@@ -68,9 +63,7 @@ class DefineStruct : public Statement{
     StructType* structType; 
 public:
     DefineStruct(StructType* st);
-    ~DefineStruct() {
-        delete structType;
-    }   
+    ~DefineStruct() = default; 
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 
@@ -80,7 +73,9 @@ class VarStructUpdt : public Statement{
     Expr* value;
 public:
     VarStructUpdt(std::string nv, std::vector<std::string> mc, Expr* v);
-    ~VarStructUpdt(){};
+    ~VarStructUpdt() {
+        delete value;
+    };
     void codegen(llvm::IRBuilder<>& builder) override;
 };
 

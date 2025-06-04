@@ -1,10 +1,8 @@
 #include "pointer_value.h"
 #include "bool_value.h"
 
-PointerValue::PointerValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
-    Value::checkTypeCompatibility(type, value, ctx);
+PointerValue::PointerValue(Type* type) {
     this->type = type;
-    this->value = value;
 }
 
 Type* PointerValue::getType() const {
@@ -37,7 +35,8 @@ Value* PointerValue::eq(Value* other, llvm::IRBuilder<>& builder) {
     if (auto pointerTypeother = dynamic_cast<const PointerType*>(other->getType())) {
         if(*pointerTypeother == *this->getType()){
             llvm::Value* result = builder.CreateICmpEQ(this->getLLVMValue(), other->getLLVMValue(), "eqPointertmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -55,7 +54,8 @@ Value* PointerValue::neq(Value* other, llvm::IRBuilder<>& builder) {
     if (auto pointerTypeother = dynamic_cast<const PointerType*>(other->getType())) {
         if(*pointerTypeother == *this->getType()){
             llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "neqPointertmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -87,11 +87,21 @@ Value* PointerValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* result = builder.CreateNot(this->getLLVMValue(), "negbooltmp");
-    return new BoolValue(this->getType()->clone(), result, ctx);
+    Type* boolType = new BoolType();
+    return boolType->createValue(result, ctx);
 }
 
 Value* PointerValue::getBoolValue(llvm::IRBuilder<> &builder) {
-    return new BoolValue(new BoolType(), this->getLLVMValue(), builder.getContext());
+    llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Value* ptr = this->getLLVMValue();
+    llvm::Value* result = builder.CreateICmpNE(
+        ptr,
+        llvm::Constant::getNullValue(ptr->getType()),
+        "ptr_non_null"
+    );
+
+    Type* boolType = new BoolType();
+    return boolType->createValue(result, ctx);
 }
 
 Value *PointerValue::castTo(Type *other, llvm::IRBuilder<> &builder) {

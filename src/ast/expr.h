@@ -12,6 +12,7 @@ class StructVar : public Expr {
     std::vector<std::string> memberChain;
 public:
     StructVar(const std::string& vsn, const std::vector<std::string> &mn);
+    ~StructVar()  = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
@@ -90,9 +91,7 @@ class DoubleNum : public Expr {
     Type* type;
 public:
     DoubleNum(double v, Type* t);
-    ~DoubleNum() {
-        delete type;  
-    }
+    ~DoubleNum()  = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
@@ -101,9 +100,7 @@ class SignedIntNum : public Expr {
     Type* type;
 public:
     SignedIntNum(std::int64_t v, Type* t);
-    ~SignedIntNum() {
-        delete type;  
-    }
+    ~SignedIntNum()  = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
@@ -112,9 +109,7 @@ class BoolNum : public Expr {
     Type* type;
 public:
     BoolNum(bool v, Type* t);
-    ~BoolNum() {
-        delete type;  
-    }
+    ~BoolNum() = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
@@ -122,6 +117,7 @@ class Var : public Expr {
     std::string name;
 public:
     Var(const std::string& n);
+    ~Var() = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
 
@@ -174,7 +170,6 @@ public:
         for(auto arg : args ){
             delete arg;
         }
-        delete type;
     }
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };
@@ -193,8 +188,6 @@ class NullPtr : public Expr {
     Type* type;
 public:
     NullPtr(Type* t);
-    ~NullPtr() {
-        delete type;
-    }
+    ~NullPtr() = default;
     Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
 };

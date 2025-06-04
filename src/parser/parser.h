@@ -26,7 +26,7 @@ private:
     Expr* parseNum(std::string val);
     void eat(TokenType expected);
     std::string parseVar(std::string valueVar);
-    Type* parseType(std::string stringType, bool isReference = false);
+    TypeInfo parseType(std::string stringType, bool isReference = false);
     Type* parseBaseType(std::string stringType);
     Type* wrapWithPointers(Type* baseType);
     void errorFunction();

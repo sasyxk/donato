@@ -7,11 +7,13 @@
 
 class Type;
 
+struct TypeInfo;
+
 class Value {
 public:
     virtual ~Value() = default;
 
-    static void checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx);
+    static void checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx, bool alloca);
     static llvm::Value* createCheckedIntegerArithmetic(
         llvm::Intrinsic::ID op,
         llvm::Value* l,
@@ -23,6 +25,10 @@ public:
 
     virtual Type* getType() const = 0;
     virtual llvm::Value* getLLVMValue() const = 0;
+    virtual llvm::Value* getAllocation() const = 0;
+    virtual bool isReference() const = 0;
+    virtual void setAlloca(llvm::Value* alloca, Type* type, llvm::LLVMContext &ctx) = 0;
+    virtual void setLLVMValue(llvm::Value* value, Type* type, llvm::LLVMContext &ctx) = 0;
 
     virtual Value* add(Value* other, llvm::IRBuilder<>& builder) = 0;  // +
     virtual Value* sub(Value* other, llvm::IRBuilder<>& builder) = 0;  // -

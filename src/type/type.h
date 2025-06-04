@@ -12,14 +12,21 @@ public:
     virtual bool operator==(const Type& other) const = 0;
 
     virtual llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const = 0;
-    virtual Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) = 0;
+    virtual Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) = 0;
     virtual std::string toString() const = 0;
-    virtual Type* clone() const = 0;
     virtual bool isCastTo(Type* other) const= 0;
-    virtual bool isPointer() const = 0;
-    virtual void setPointer(bool ptr) = 0;
+    virtual llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const = 0;
 
 };
+
+struct TypeInfo {
+    Type* type;
+    bool isReference;
+    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const {
+        return isReference ? type->getAllocaType(ctx) : type->getLLVMType(ctx);
+    }
+};
+
 
 class DoubleType : public Type{
     bool pointer = false;
@@ -30,12 +37,13 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override {return "double";}
-    Type* clone() const override { return new DoubleType(*this); }
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
 }; 
 
@@ -49,12 +57,13 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override { return "int" + std::to_string(bits); }
-    Type* clone() const override { return new SignedIntType(*this); }
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
     unsigned getBits() const {return bits;}
 }; 
@@ -68,12 +77,13 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override {return "bool";}
-    Type* clone() const override { return new BoolType(*this); }
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 }; 
 
 class VoidType : public Type{
@@ -84,12 +94,13 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override {return "void";}
-    Type* clone() const override { return new VoidType(*this); }
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override;
-    void setPointer(bool ptr) override;
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
 };
 
@@ -100,21 +111,18 @@ class StructType : public Type{
 public:
     StructType(std::string nameStruct) { this->nameStruct = nameStruct;}
     StructType(std::string ns, std::vector<std::pair<Type*, std::string>> m);
-    ~StructType() override {
-        for(auto memeber : members){
-            delete memeber.first;
-        }
-    }
+    ~StructType() override = default;
 
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override;
-    Type* clone() const override;
     bool isCastTo(Type* other) const override {return false;}
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
     bool equalName(const StructType& other);
     std::string getNameStruct() const {return nameStruct;}
@@ -132,18 +140,17 @@ class ClassType : public Type {
 public:
     ClassType(StructType* structType){ this->structType = structType;}
     ClassType(StructType* structType, std::vector<std::string> nameFunctions);
-    ~ClassType() override {
-        delete structType;
-    }
+    ~ClassType() override = default;
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override {return "class" + structType->getNameStruct();}
-    Type* clone() const override;
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return structType->isPointer();}
-    void setPointer(bool ptr) override {structType->setPointer(ptr);}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
     std::string getNameClass() const {return structType->getNameStruct();}
     StructType* getStructType() {return structType;}
@@ -160,18 +167,17 @@ class PointerType : public Type {
     bool pointer = false;
 public:
     PointerType(Type* typePointed);
-    ~PointerType() override {
-        delete typePointed;
-    }
+    ~PointerType() override = default;
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference = false) override;
     std::string toString() const override;
-    Type* clone() const override;
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override {return pointer;}
-    void setPointer(bool ptr) override {pointer = ptr;}
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
     Type* getTypePointed() const {return typePointed;}
 };
@@ -188,12 +194,13 @@ public:
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) override;
+    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx , bool isReference = false) override;
     std::string toString() const override {return "S_" + symbolTypeREF->toString();}
-    Type* clone() const override { return new SpecialType(*this); }
     bool isCastTo(Type* other) const override;
-    bool isPointer() const override;
-    void setPointer(bool ptr) override;
+    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
+        llvm::Type* baseType = getLLVMType(ctx); 
+        return llvm::PointerType::getUnqual(baseType);
+    }
 
     std::string getNameSymbol() const {return nameSymbol;}
     Type* getSybolREF() const {return symbolTypeREF;}

@@ -29,22 +29,15 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
     auto [finalPtr, finalType] = getStructMemberGEP(builder, ptrToStruct, rootStruct, memberChain);
 
-    if (isPointer) {
-        // Finaltype is a type that is taken from the initial list
-        // of the class created in the parser, it will then be destroyed
-        // automatically at the end of the program
-        finalType->setPointer(true);
-        Value* value = finalType->createValue(finalPtr, ctx);
-        finalType->setPointer(false);
-        return value;
-    }
 
+    Value* value = finalType->createValue(finalPtr, ctx, true);
     llvm::Value* loadedVal = builder.CreateLoad(
         finalType->getLLVMType(ctx),
         finalPtr,
         memberChain.back() + "_val"
     );
-    return finalType->createValue(loadedVal, ctx);
+    value->setLLVMValue(loadedVal, finalType, ctx);
+    return value;
 }
 
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
@@ -59,9 +52,9 @@ Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     
     llvm::Function* callee = functionStruct->func;
     llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-    Type* returnType = functionStruct->returnType;
+    Type* returnType = functionStruct->returnType.type;
     
-    return returnType->createValue(llvmValueReturn, ctx);
+    return returnType->createValue(llvmValueReturn, ctx, functionStruct->returnType.isReference);
 }
 
 ClassCallFunc::ClassCallFunc(
@@ -143,7 +136,7 @@ DoubleNum::DoubleNum(double v, Type* t) : val(v) , type(t) {}
 Value* DoubleNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* llvmValue = llvm::ConstantFP::get(ctx, llvm::APFloat(val));
-    return new DoubleValue(type->clone(), llvmValue, ctx);
+    return type->createValue(llvmValue, ctx);
 }
 
 SignedIntNum::SignedIntNum(std::int64_t v, Type* t) : val(v) , type(t) {}
@@ -158,7 +151,7 @@ Value* SignedIntNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
         val,
         true
     );
-    return new SignedIntValue(type->clone(), llvmValue, ctx);
+    return type->createValue(llvmValue, ctx);
 }
 
 BoolNum::BoolNum(bool v, Type* t) : val(v) , type(t) {}
@@ -166,14 +159,14 @@ BoolNum::BoolNum(bool v, Type* t) : val(v) , type(t) {}
 Value* BoolNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* llvmValue = llvm::ConstantInt::get(ctx, llvm::APInt(1, val ? 1 : 0));
-    return new BoolValue(type->clone(), llvmValue, ctx);
+    return type->createValue(llvmValue, ctx);
 }
 
 Var::Var(const std::string& n) : name(n) {}
 
 Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::Function* func = builder.GetInsertBlock()->getParent();
-    llvm::outs() << "VAR the name of func is : " << func << "\n";
+    llvm::outs() << "Retrive Var : " << name << "\n";
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
     llvm::LLVMContext& ctx = builder.getContext();
@@ -181,21 +174,14 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     for (auto it = symbolTable.rbegin(); it != symbolTable.rend(); ++it) {
         auto found = it->find(name);
         if (found != it->end()) { 
-            if(isPointer){
-                llvm::Value* provaVal = found->second.alloca;
-                Type* provaType = found->second.type->clone();
-                provaType->setPointer(true);
-                Value* value = provaType->createValue(provaVal , ctx);
-                delete provaType;
-                return value;
-            }
+            Value* value = found->second.type->createValue(found->second.alloca , ctx, true);
             llvm::Value* llvmValue = builder.CreateLoad(
                 found->second.type->getLLVMType(ctx), 
                 found->second.alloca, 
                 name + "_val"
             );
-
-            return found->second.type->createValue(llvmValue , ctx);
+            value->setLLVMValue(llvmValue, found->second.type, ctx);
+            return value;
         }
     }
     throw std::runtime_error("Undefined variable: " + name);
@@ -246,6 +232,7 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     delete thenVal;
     delete elseVal;
     delete condVal;
+
     return phiValue;
 }
 
@@ -269,16 +256,13 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
         llvm::outs() << "The variable allocated with name: " << alloca->getName() << "\n";
 
-        symbolTable.back()[name] = {alloca, value->getType()->clone()};
+        symbolTable.back()[name] = {alloca, value->getType()};
 
         delete value;
     }
 
     Value* bodyVal = body->codegen(builder);
 
-    for (auto& [name, info] : symbolTable.back()) {
-        delete info.type;
-    }
     symbolTable.pop_back();
 
     return bodyVal;
@@ -297,25 +281,26 @@ Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     }
 
     auto pointerType = static_cast<PointerType* >(pointerValue->getType()); 
-
-    Value* result;
-    //if we don't need the pointer, just read the value
-    // of the pointer inside the pointer
-    if(!isPointer){
-        llvm::Value* loadedVal = builder.CreateLoad(
-            pointerType->getTypePointed()->getLLVMType(ctx),
-            pointerValue->getLLVMValue(),
-            "deref_val"
+    llvm::Value* ptrAlloca;
+    if(value->isReference()){
+        ptrAlloca = builder.CreateLoad(
+            pointerType->getLLVMType(ctx),
+            pointerValue->getAllocation(),
+            "load_value"
         );
-        result =  pointerType->getTypePointed()->createValue(loadedVal, ctx);
     }
-    // else, we need to create a new Value with the pointer  
     else{
-        auto pointedType = pointerType->getTypePointed();
-        pointedType->setPointer(true);
-        result =  pointedType->createValue(value->getLLVMValue(), ctx);
+        ptrAlloca = pointerValue->getLLVMValue();
     }
     
+    llvm::Value* loadedVal = builder.CreateLoad(
+        pointerType->getTypePointed()->getLLVMType(ctx),
+        ptrAlloca,
+        "deref_val"
+    );
+    Value* result =  pointerType->getTypePointed()->createValue(loadedVal, ctx);
+    result->setAlloca(pointerValue->getLLVMValue(), pointerType->getTypePointed(), ctx);
+    llvm::outs() << "CIRCOLINO\n";
 
     return result;
 }
@@ -339,10 +324,9 @@ Value* newClass(
     llvm::Function* callee = functionStruct->func;
     builder.CreateCall(callee, argValues);
     
-    auto pointerType = new PointerType(type->clone());
+    auto pointerType = new PointerType(type);
     Value* result = pointerType->createValue(ptrToStruct, ctx);
-    delete pointerType;
-    
+    llvm::outs() << "AURA:::"<<result->getType()->toString() <<"\n";
     return result;
 }
 
@@ -372,10 +356,15 @@ Value* newStruct(
 
         llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
         Value* memberValue = memberExpr->codegen(builder);
-        if (memberValue->getType()->isPointer()){
-            throw std::runtime_error(
-                "You can't assign a ptr to one member of the struct without using ref"
+        if (memberValue->getLLVMValue() == nullptr){
+
+            llvm::Value* loadedVal = builder.CreateLoad(
+                memberValue->getType()->getLLVMType(ctx),
+                memberValue->getAllocation(),
+                member.second + "_val"
             );
+            memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);
+    
         }
         if(!(*member.first == *memberValue->getType())){
             if(!memberValue->getType()->isCastTo(member.first)){
@@ -395,10 +384,8 @@ Value* newStruct(
         builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
         delete memberValue;
     }
-    auto pointerType = new PointerType(structType->clone());
+    auto pointerType = new PointerType(structType);
     Value* result = pointerType->createValue(ptrToStruct, ctx);
-
-    delete pointerType;
 
     return result;
 }
@@ -407,14 +394,14 @@ NewOp::NewOp(std::string nc, std::vector<Expr*> a) : nameClass(nc) , args(a){
     Type* type = nullptr;      
     for (auto t : symbolClassType) {
         if (t->getNameClass() == nameClass) {
-            type = static_cast<ClassType *>(t->clone()); 
+            type = static_cast<ClassType *>(t); 
             break;
         }
     }
     if (type == nullptr) {
         for (auto t : symbolStructsType) {
             if (t->getNameStruct() == nameClass) {
-                type = static_cast<StructType*>(t->clone());
+                type = static_cast<StructType*>(t);
                 break;
             }
         }
@@ -451,45 +438,19 @@ AddressOp::AddressOp(Expr* v) : value(v) {}
 
 Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
-    
-    // If they are of this type, I have to generate the codegen with isPointer set to true
-    bool needsPointer = dynamic_cast<Var*>(value) || 
-                        dynamic_cast<DereferenceOp*>(value) || 
-                        dynamic_cast<StructVar*>(value);
-    
-    // If they are of this type, I have to generate the codegen with isPointer set to false
-    bool isFunction = dynamic_cast<CallFunc*>(value) || 
-                      dynamic_cast<ClassCallFunc*>(value);
-    
-    if (!needsPointer && !isFunction) {
+
+    Value* resultCodegen = value->codegen(builder);
+
+    llvm::Value* alloca = resultCodegen->getAllocation();
+    if(alloca == nullptr){
         throw std::runtime_error(
             "You cannot assign a value to a reference that is not a pointer (Var StructVar)."
         );
     }
-    
-    // Pick the Pointer of the variable with appropriete flag
-    Value* resultCodegen = value->codegen(builder, needsPointer);
-    
-    // For functions, make sure they return a pointer
-    if (isFunction && !resultCodegen->getType()->isPointer()) {
-        throw std::runtime_error(
-            "You cannot assign a value to a reference that is not a pointer because\n"
-            "the function you call does not return a pointer but a value."
-        );
 
-    }
-    
-    // Save that pointer
-    llvm::Value* alloca = resultCodegen->getLLVMValue();
-    // Store the default type inside
-    resultCodegen->getType()->setPointer(false);
-    
-    PointerType* pointerType = new PointerType(resultCodegen->getType()->clone());
+    PointerType* pointerType = new PointerType(resultCodegen->getType());
     Value* pointerValue = pointerType->createValue(alloca, ctx);
-    
-    // Cleanup
     delete resultCodegen;
-    delete pointerType;
     
     return pointerValue;
 }

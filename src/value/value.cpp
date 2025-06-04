@@ -4,10 +4,10 @@
 #include "signed_int_value.h"
 #include "runtime_errors.h"
 
-void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx) {
-    
+void Value::checkTypeCompatibility(Type* type, llvm::Value* value, llvm::LLVMContext& ctx, bool alloca) {
+    llvm::Type* typeLLVM = alloca ? type->getAllocaType(ctx) : type->getLLVMType(ctx);
 
-    if(type->getLLVMType(ctx) != value->getType()) {
+    if(typeLLVM != value->getType()) {
         std::string expectedStr;
         llvm::raw_string_ostream expectedOS(expectedStr);
         type->getLLVMType(ctx)->print(expectedOS);

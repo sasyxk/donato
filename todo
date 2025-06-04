@@ -16,6 +16,8 @@ debug running with all FLAG active, or Performance Running.
 FLAGS: OVERFLOW CHECK, TRUNC CHECK,
 () Implement the NULLPTR CKECK.
 
+-[] To complete the checks errors from operations in ***Value
+
 -[Done] If I have a statement like this: int x = p.getX();
   but in general if on the right I return a ptr,
   When I check if the result is of the same type,

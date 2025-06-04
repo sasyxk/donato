@@ -2,10 +2,8 @@
 #include "bool_value.h"
 #include "runtime_errors.h"
 
-SignedIntValue::SignedIntValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
-    Value::checkTypeCompatibility(type, value, ctx);
+SignedIntValue::SignedIntValue(Type* type) {
     this->type = type;
-    this->value = value;
 }
 
 Type* SignedIntValue::getType() const {
@@ -37,8 +35,8 @@ void extendValue(
     return;
 }
 
-void examineIsPointerError(Type* t, Type* h){
-    if(t->isPointer() == true || h->isPointer() == true){
+void examineIsPointerError(llvm::Value* t, llvm::Value* h){
+    if(t == nullptr || h == nullptr){
         throw std::runtime_error(
             "Unsupported addition for isPointer = true"
         );
@@ -48,7 +46,7 @@ void examineIsPointerError(Type* t, Type* h){
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    examineIsPointerError(this->getType(), other->getType());
+    examineIsPointerError(this->getLLVMValue(), other->getLLVMValue()); //todofix, create load
     
     if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
@@ -68,7 +66,7 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_overflow"
             );
             Type* newType = new SignedIntType(64);
-            return new SignedIntValue(newType, result, ctx); 
+            return newType->createValue(result, ctx);
         }
         else{
             return nullptr;
@@ -103,7 +101,7 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_overflow"
             );
             Type* newType = new SignedIntType(64);
-            return new SignedIntValue(newType, result, ctx); 
+            return newType->createValue(result, ctx);
         }
         else{
             return nullptr;
@@ -139,7 +137,7 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_overflow"
             );
             Type* newType = new SignedIntType(64);
-            return new SignedIntValue(newType, result, ctx); 
+            return newType->createValue(result, ctx);
         }
         else{
             return nullptr;
@@ -215,7 +213,7 @@ Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
         builder.SetInsertPoint(okBlock);
         llvm::Value* result = builder.CreateSDiv(lhs, rhs, "divtmp");
         Type* newType = new SignedIntType(64);
-        return new SignedIntValue(newType, result, ctx);
+        return newType->createValue(result, ctx);
         
     }
 
@@ -233,7 +231,8 @@ Value* SignedIntValue::eq(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpEQ(this->getLLVMValue(), other->getLLVMValue(), "eqtmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -251,7 +250,8 @@ Value* SignedIntValue::neq(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "netmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -269,7 +269,8 @@ Value* SignedIntValue::lt(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSLT(this->getLLVMValue(), other->getLLVMValue(), "ltmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -287,7 +288,8 @@ Value* SignedIntValue::lte(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSLE(this->getLLVMValue(), other->getLLVMValue(), "leqtmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -305,7 +307,8 @@ Value* SignedIntValue::gt(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSGT(this->getLLVMValue(), other->getLLVMValue(), "gtmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -323,7 +326,8 @@ Value* SignedIntValue::gte(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSGE(this->getLLVMValue(), other->getLLVMValue(), "geqtmp");
-            return new BoolValue(new BoolType(), result, ctx);
+            Type* boolType = new BoolType();
+            return boolType->createValue(result, ctx);
         }
     }
 
@@ -353,7 +357,8 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
             "negtmp_ok",
             "negtmp_overflow"
         );
-        return new SignedIntValue(new SignedIntType(64), result, ctx);
+        Type* newType = new SignedIntType(64);
+        return newType->createValue(result, ctx);
     }
     else{
         //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
@@ -371,14 +376,15 @@ Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
         llvm::APInt(32, 0)),
         "ifconf"
     );
-    return new BoolValue(new BoolType(), result, ctx);
+    Type* boolType = new BoolType();
+    return boolType->createValue(result, ctx);
 }
 
-
+ 
 Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other)) {
+    if ( SignedIntType* otherType = dynamic_cast< SignedIntType*>(other)) {
         const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
         if (thisType->getBits() > otherType->getBits()) {
             //todo Add runtime check for truncation whether or not there is data loss
@@ -410,11 +416,14 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
             builder.CreateUnreachable();
 
             builder.SetInsertPoint(okBlock);
-            return new SignedIntValue(otherType->clone(), truncated, ctx);
+            Type* type = otherType;
+            return type->createValue(truncated, ctx);
+
         } 
         else if (thisType->getBits() < otherType->getBits()) {
             llvm::Value* newValue = builder.CreateSExt(this->getLLVMValue(), otherType->getLLVMType(ctx), "sext_left_casting");
-            return new SignedIntValue(otherType->clone(), newValue, ctx);
+            Type* type = otherType;
+            return type->createValue(newValue, ctx);
         }
     }
     throw std::runtime_error(

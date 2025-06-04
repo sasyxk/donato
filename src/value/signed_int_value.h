@@ -5,14 +5,26 @@
 class SignedIntValue : public Value {
     Type* type;
     llvm::Value* value;
+    llvm::Value* alloca;
 public:
-    SignedIntValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx);
-    ~SignedIntValue() override {
-        delete type;
-    };
+    SignedIntValue(Type* type);
+    ~SignedIntValue() = default;
 
     Type* getType() const override;
     llvm::Value* getLLVMValue() const override;
+    llvm::Value* getAllocation() const override {return alloca;}
+    bool isReference() const override {
+        if(alloca != nullptr && value == nullptr) return true;
+        return false;
+    }
+    void setAlloca(llvm::Value* value, Type* type, llvm::LLVMContext &ctx) override {
+        checkTypeCompatibility(type, value , ctx, true);
+        this->alloca = value;
+    }
+    void setLLVMValue(llvm::Value* value, Type* type, llvm::LLVMContext &ctx) override {
+        checkTypeCompatibility(type, value , ctx, false);
+        this->value = value;
+    }
 
     Value* add(Value* other, llvm::IRBuilder<>& builder) override;
     Value* sub(Value* other, llvm::IRBuilder<>& builder) override;

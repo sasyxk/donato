@@ -3,16 +3,15 @@
 DefineClass::DefineClass(
     std::string nameClass,
     std::vector<std::pair<Type *, std::string>> privateMembers,
-    std::vector<std::pair<Type *, std::string>> constructorArgs,
+    std::vector<std::pair<TypeInfo, std::string>> constructorArgs,
     std::vector<Statement *> ConstructorBodyStatemets,
     std::vector<Function *> publicFunctions,
     ClassType* classType
 ){
     StructType* structType = classType->getStructType();
-    structType->setPointer(true); 
-    constructorArgs.insert(constructorArgs.begin(), {structType->clone(), "this"});
+    constructorArgs.insert(constructorArgs.begin(), {{structType, true}, "this"});
     Function* constructor = new Function(
-        new VoidType(),
+        {new VoidType(), false},
         nameClass,  
         constructorArgs,
         ConstructorBodyStatemets
@@ -22,18 +21,15 @@ DefineClass::DefineClass(
 
     std::vector<std::string> nameFunctions;
     for(auto function : publicFunctions){
-        function->setClassArg(static_cast<StructType*>(structType->clone()));
+        function->setClassArg(static_cast<StructType*>(structType));
         function->setClassFunction(true);
         function->setClassName(nameClass);
         nameFunctions.push_back(function->getName());
     }
-    // Must be pointer only in the first argument of the function, not in general
-    structType->setPointer(false); 
 
     publicFunctions.insert(publicFunctions.begin(), constructor); //not good for performance
 
-    // Having to clone it because this classType is the one inside the symbolTable
-    this->classType = static_cast<ClassType*>(classType->clone());
+    this->classType = static_cast<ClassType*>(classType);
     this->functions = publicFunctions;
 
 }
@@ -75,7 +71,7 @@ DefineStruct::DefineStruct(StructType* structType) {
         }
     }
     symbolStructsType.push_back(structType);
-    this->structType = static_cast<StructType*>(structType->clone());
+    this->structType = static_cast<StructType*>(structType);
 }
 
 void DefineStruct::codegen(llvm::IRBuilder<> &builder) {
@@ -130,10 +126,13 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
    
     Value* memberValue = value->codegen(builder);
     
-    if (memberValue->getType()->isPointer()){
-        throw std::runtime_error(
-            "You can't Update a member to of the struct to a ptr"
+    if (memberValue->getLLVMValue() == nullptr){
+        llvm::Value* loadedVal = builder.CreateLoad(
+            memberValue->getType()->getLLVMType(ctx),
+            memberValue->getAllocation(),
+            memberChain.back() + "_val"
         );
+        memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);
     }
 
     if(!(*memberType == *memberValue->getType())){
@@ -156,9 +155,9 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
 }
 
 Function::Function(
-    Type* tf, 
+    TypeInfo tf, 
     const std::string nf,
-    const std::vector<std::pair<Type*, std::string>> p,
+    const std::vector<std::pair<TypeInfo, std::string>> p,
     std::vector<Statement*> b,
     bool classFunction,
     std::string className
@@ -172,13 +171,13 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     std::vector<llvm::Type*> argLLVMTypes;
-    std::vector<Type*> argTypes;
-    for (const auto& param : parameters) {
-        argLLVMTypes.push_back(param.first->getLLVMType(ctx));
-        argTypes.push_back(param.first->clone());
+    std::vector<TypeInfo> argTypes;
+    for (const auto& [typeInfoparam, nameArg] : parameters) {
+        argLLVMTypes.push_back(typeInfoparam.getLLVMType(ctx));
+        argTypes.push_back(typeInfoparam);
     }
 
-    llvm::Type* returnType = typeFunc->getLLVMType(ctx);
+    llvm::Type* returnType = typeFunc.getLLVMType(ctx);
 
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, argLLVMTypes, false);
 
@@ -203,25 +202,23 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     symbolTable.emplace_back();
 
     llvm::Function::arg_iterator argIt = function->arg_begin();
-    for (const auto& param : parameters) {
+    for (const auto& [typeInfoparam, nameArg] : parameters) {
         llvm::Argument* arg = &*argIt++;
-        arg->setName(param.second);
-        if (param.first->isPointer()) {
-            // If it's a pointer, save the argument directly --> Become not Pointer
-            Type* t = param.first->clone();
-            t->setPointer(false);
-            symbolTable.back()[param.second] = {arg, t};
+        arg->setName(nameArg);
+        llvm::Value* alloca;
+        if (typeInfoparam.isReference) {
+            alloca = arg;
         } 
         else {
-            llvm::AllocaInst* alloca = builder.CreateAlloca(arg->getType(), nullptr, param.second);
+            alloca = builder.CreateAlloca(arg->getType(), nullptr, nameArg);
             builder.CreateStore(arg, alloca);
-            symbolTable.back()[param.second] = {alloca, param.first->clone()};
         }
+        symbolTable.back()[nameArg] = {alloca, typeInfoparam.type};
     }
     symbolFunctions.emplace_back(
         realName,
         SymbolFunction{
-            typeFunc->clone(),
+            typeFunc,
             argTypes,
             function,
             classFunction,
@@ -240,14 +237,11 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         );
     } */
 
-    for (auto& [name, info] : symbolTable.back()) {
-        delete info.type;
-    }
     symbolTable.pop_back();
 }
 
 void Function::setClassArg(StructType* argType) {
-    parameters.insert(parameters.begin(), {argType, "this"});
+    parameters.insert(parameters.begin(), {{argType, true}, "this"});
 }
 
 void Function::setClassFunction(bool value) {
@@ -298,21 +292,21 @@ void CallFuncStatement::codegen(llvm::IRBuilder<> &builder) {
 ReturnVoid::ReturnVoid(std::string fn, std::string noc) : funcName(fn), nameOfClass(noc) {}
 
 void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
-    Type* returnType = nullptr;
+    TypeInfo returnType = {nullptr, false};
     for (const auto& func : symbolFunctions) {
         if (func.first == funcName &&
             func.second.className == nameOfClass    
         ){    
-            returnType = func.second.returnType->clone();
+            returnType = func.second.returnType;
             break;
         }
     }
-    if(returnType == nullptr)
+    if(returnType.type == nullptr)
         throw std::runtime_error(
             "Return error No function '" + funcName + "' found in symbolFunctions"
         );
     
-    if (dynamic_cast<VoidType*>(returnType) == nullptr) {
+    if (dynamic_cast<VoidType*>(returnType.type) == nullptr) {
         throw std::runtime_error(
             "The function '"+funcName+"' is Void expected  'return;'"
         );
@@ -321,93 +315,60 @@ void ReturnVoid::codegen(llvm::IRBuilder<> &builder){
 }
 
 
-
 Return::Return(Expr* e, std::string fn, std::string noc) : expr(e), funcName(fn), nameOfClass(noc) {}
 
 void Return::codegen(llvm::IRBuilder<> &builder) {
-    Type* returnType = nullptr;
+    TypeInfo returnType = {nullptr, false};
     for (const auto& func : symbolFunctions) {
         if (func.first == funcName &&
             func.second.className == nameOfClass    
         ){  
-            returnType = func.second.returnType->clone();
+            returnType = func.second.returnType;
             break;
         }
     }
-    if(returnType == nullptr)
+    if(returnType.type == nullptr){
         throw std::runtime_error(
             "Return error No function '" + funcName + "' found in symbolFunctions"
         );
-
-    // Handled the fact that it could be a pointer
-    bool pointer = returnType->isPointer() ? true : false;
-    Value* retVal;
-    if(pointer){
-        //DEVO VERIFICARE SE I RISULTATI SONO DEI PUNTATORI
-        if (auto* varExpr = dynamic_cast<Var*>(expr)) {
-            retVal = expr->codegen(builder, true);
-        }
-
-        else if (auto* structVarExpr = dynamic_cast<StructVar*>(expr)) {
-            retVal = expr->codegen(builder, true);
-        }
-
-        else if (auto* callFuncExpr = dynamic_cast<CallFunc*>(expr)) {
-            retVal = expr->codegen(builder, false);
-            if(!retVal->getType()->isPointer()){
-                throw std::runtime_error(
-                    "Retun of '"+
-                    funcName +
-                    "' You cannot assign a value to a reference that is not a pointer."
-                );   
-            }
-        }
-
-        else if (auto* classCallFuncExpr = dynamic_cast<ClassCallFunc*>(expr)) {
-            retVal = expr->codegen(builder, false);
-            if(!retVal->getType()->isPointer()){
-                throw std::runtime_error(
-                    "The Retun of '"+
-                    funcName +
-                    "' You cannot assign a value to a reference that is not a pointer."
-                );    
-            }
-        }
-        else if(auto* DeferenceExpr = dynamic_cast<DereferenceOp*>(expr)){
-            retVal = expr->codegen(builder, true);
-        }
-        else {
-            throw std::runtime_error(
-                "Return error: the return value is not a pointer"
-            );
-        }
-    }
-    if(!pointer){
-        retVal = expr->codegen(builder);
-        if(retVal->getType()->isPointer()){
-            throw std::runtime_error(
-                "Retun of '"+
-                funcName +
-                "' You cannot assign a value to a reference is a pointer."
-            );   
-        }
     }
 
-    if(retVal == nullptr){
-        throw std::runtime_error(
-            "THE RUNNING CODE MUST NOT ENTER HERE"
-        );
-    }
+    Value* retVal = expr->codegen(builder);
 
-    if(!(*retVal->getType() == *returnType))
+    if(!(*retVal->getType() == *returnType.type)){
         throw std::runtime_error(
             "The returned type '" +
             retVal->getType()->toString() + 
             "' is not compatible with the type that the function '" +
             funcName +
-            "', is supposed to return '"+returnType->toString()+"'"
+            "', is supposed to return '"+returnType.type->toString()+"'"
         );
-    builder.CreateRet(retVal->getLLVMValue());
+    }
+
+    llvm::Value* retValLLVM;
+    if(returnType.isReference){
+        retValLLVM = retVal->getAllocation();
+        if(retValLLVM == nullptr){
+            throw std::runtime_error(
+                "The Retun of '"+
+                funcName +
+                "' You cannot return a value that is not a variable."
+            );    
+        }
+    }
+    else {
+        retValLLVM = retVal->getLLVMValue();
+        if(retValLLVM == nullptr){
+            llvm::Value* loadedVal = builder.CreateLoad(
+                retVal->getType()->getLLVMType(builder.getContext()),
+                retVal->getAllocation(),
+                "load_val"
+            );
+            retValLLVM = loadedVal;
+        }
+    }
+    builder.CreateRet(retValLLVM);
+
 }
 
 WhileStm::WhileStm(Expr* c, std::vector<Statement*> w) : cond(c), whileExpr(w) {}
@@ -440,9 +401,6 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     }
     builder.CreateBr(condWhileBB);
 
-    for (auto& [name, info] : symbolTable.back()) {
-        delete info.type;
-    }
     symbolTable.pop_back();
 
     builder.SetInsertPoint(nextBB);
@@ -485,9 +443,6 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
         builder.CreateBr(mergeBB);
     }
 
-    for (auto& [name, info] : symbolTable.back()) {
-        delete info.type;
-    }
     symbolTable.pop_back();
     symbolTable.emplace_back();
 
@@ -501,9 +456,6 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
         }
     }
 
-    for (auto& [name, info] : symbolTable.back()) {
-        delete info.type;
-    }
     symbolTable.pop_back();
 
     builder.SetInsertPoint(mergeBB);
@@ -529,10 +481,13 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     if(!checkVariable) throw std::runtime_error("Undeclared variable: " + nameVar);
 
     Value* val = value->codegen(builder);
-    if (val->getType()->isPointer()){
-        throw std::runtime_error(
-            "You can't update a variable with value IsPointer()= true"
+    if (val->getLLVMValue() == nullptr){
+        llvm::Value* loadedVal = builder.CreateLoad(
+            val->getType()->getLLVMType(ctx),
+            val->getAllocation(),
+            nameVar + "_val"
         );
+        val->setLLVMValue(loadedVal, val->getType(), ctx);
     }
     
     if(!(*val->getType() == *type)){
@@ -556,8 +511,7 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
 VarDecl::VarDecl(const std::string n, Type* t, Expr* v) : nameVar(n), type(t), value(v) {}
 
-void VarDecl::codegen(llvm::IRBuilder<> &builder)
-{
+void VarDecl::codegen(llvm::IRBuilder<> &builder) {
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::LLVMContext& ctx = builder.getContext();
@@ -572,8 +526,9 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder)
     }
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
  
-    Value* val = value->codegen(builder);
-    if (val->getType()->isPointer()){
+    Value* val = value->codegen(builder); //todo to see
+    llvm::outs() << "val: " << val << "\n";
+    if (val->isReference()){
         throw std::runtime_error(
             "You can't assign a variable a ptr without using ref"
         );
@@ -583,10 +538,16 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder)
     llvm::Type* typeVar;
     if(!type){
         typeVar = val->getType()->getLLVMType(ctx);
-        type = val->getType()->clone();
+        type = val->getType();
     }
     else{
+        llvm::outs() << "type: " << type <<"\n";
+        llvm::outs() << "val->getType(): " << val->getType() <<"\n";
+        llvm::outs() << "type: " << type->toString() << "\n";
+        llvm::outs() << "val->getType(): " << val->getType()->toString() << "\n";
+        //llvm::outs() << (*val->getType() == *type) << "\n";
         if(!(*val->getType() == *type)){
+            llvm::outs() << "Dentro if\n";
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
                     "VarDecl::Type mismatch for variable '" + 
@@ -601,6 +562,7 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder)
             delete val;
             val = newVal;
         }
+        llvm::outs() << "Fuori if\n";
         typeVar = type->getLLVMType(ctx);
     }
     
@@ -621,7 +583,7 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder)
 
     llvm::outs() << "The variable allocated with name: " << alloca->getName() << "\n";
 
-    symbolTable.back()[nameVar] = {alloca, val->getType()->clone()};
+    symbolTable.back()[nameVar] = {alloca, val->getType()};
 
     delete val;
 }
@@ -640,28 +602,27 @@ void RefDecl::codegen(llvm::IRBuilder<> &builder) {
     }
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
 
-    if(!dynamic_cast<AddressOp*>(value)){
-        //implicit &x ---> ref int y = &x  where int x = 5;
-        value = new AddressOp(value);
-        /*throw std::runtime_error(
-            "When declaring with ref, you must pass the memory address, variable:  " + nameVar
-        );*/
-    }
-
-    // It will always be PointerValue
+    llvm::outs() << "REF declaration: " << nameVar <<"\n";
     Value* result = value->codegen(builder);
-    PointerType* resultType = static_cast<PointerType*>(result->getType());
+
+    // The alloca Value must be != nullptr
+    llvm::Value* alloca = result->getAllocation();
+    if(alloca == nullptr){
+        throw std::runtime_error(
+            "Reference assignment cannot be done with constant values, variable: '" + nameVar +"'"
+        );
+    }
     
-    if(!(*resultType->getTypePointed() == *type)){
+    Type* resultType = result->getType();
+    if(!(*result->getType() == *type)){
          throw std::runtime_error(
             "You cannot assign a value to a reference with difference type: '" +
-            resultType->getTypePointed()->toString() + 
+            resultType->toString() + 
             "' into '"+ type->toString() +
             "'"
         );
     }
-    llvm::Value* alloca = result->getLLVMValue();
-    symbolTable.back()[nameVar] = {alloca, resultType->getTypePointed()->clone()};
+    symbolTable.back()[nameVar] = {alloca, resultType};
 
     delete result;
 }

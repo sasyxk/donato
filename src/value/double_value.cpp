@@ -1,10 +1,8 @@
 #include "double_value.h"
 #include "bool_value.h"
 
-DoubleValue::DoubleValue(Type* type, llvm::Value* value, llvm::LLVMContext &ctx) {
-    Value::checkTypeCompatibility(type, value, ctx);
+DoubleValue::DoubleValue(Type* type) {
     this->type = type;
-    this->value = value;
 }
 
 Type* DoubleValue::getType() const {
@@ -20,7 +18,7 @@ Value* DoubleValue::add(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())){
         llvm::Value* result = builder.CreateFAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
-        return new DoubleValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(this->getLLVMValue(), ctx);
     }
 
     throw std::runtime_error(
@@ -35,7 +33,7 @@ Value* DoubleValue::sub(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFSub(this->getLLVMValue(), other->getLLVMValue(), "subtmp");
-        return new DoubleValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(this->getLLVMValue(), ctx);
     }
 
     throw std::runtime_error(
@@ -50,7 +48,7 @@ Value* DoubleValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFMul(this->getLLVMValue(), other->getLLVMValue(), "multmp");
-        return new DoubleValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(this->getLLVMValue(), ctx);
     }
 
     throw std::runtime_error(
@@ -65,7 +63,7 @@ Value* DoubleValue::div(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFDiv(this->getLLVMValue(), other->getLLVMValue(), "divtmp");
-        return new DoubleValue(this->getType()->clone(), result, ctx);
+        return this->getType()->createValue(this->getLLVMValue(), ctx);
     }
 
     throw std::runtime_error(
@@ -80,7 +78,7 @@ Value* DoubleValue::eq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOEQ(this->getLLVMValue(), other->getLLVMValue(), "eqtmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        return this->getType()->createValue(this->getLLVMValue(), ctx);
     }
 
     throw std::runtime_error(
@@ -95,7 +93,10 @@ Value* DoubleValue::neq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpONE(this->getLLVMValue(), other->getLLVMValue(), "netmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        //return new BoolValue(new BoolType(), result, ctx);
+        //Type* boolType = retriveType("bool");
+        Type* boolType = new BoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -110,7 +111,8 @@ Value* DoubleValue::lt(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOLT(this->getLLVMValue(), other->getLLVMValue(), "ltmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        Type* boolType = new BoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -125,7 +127,8 @@ Value* DoubleValue::lte(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOLE(this->getLLVMValue(), other->getLLVMValue(), "leqtmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        Type* boolType = new BoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -140,14 +143,16 @@ Value* DoubleValue::gt(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOGT(this->getLLVMValue(), other->getLLVMValue(), "gtmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        Type* boolType = new BoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
         "Unsupported types for greater-than comparison: " +
         this->getType()->toString() +
         " > " +
-        other->getType()->toString());
+        other->getType()->toString()
+    );
 }
 
 Value* DoubleValue::gte(Value* other, llvm::IRBuilder<>& builder) {
@@ -155,7 +160,8 @@ Value* DoubleValue::gte(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOGE(this->getLLVMValue(), other->getLLVMValue(), "geqtmp");
-        return new BoolValue(new BoolType(), result, ctx);
+        Type* boolType = new BoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -169,11 +175,12 @@ Value* DoubleValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* result = builder.CreateFNeg(this->getLLVMValue(), "negtmp");
-    return new DoubleValue(this->getType()->clone(), result, ctx);
+    return this->getType()->createValue(this->getLLVMValue(), ctx);
 }
 
-Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder)
-{
+Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
     llvm::Value* result = builder.CreateFCmpONE(
         this->getLLVMValue(),
         llvm::ConstantFP::get(builder.getContext(),
@@ -181,7 +188,8 @@ Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder)
         "ifconf"
     );
 
-    return new BoolValue(new BoolType(), result, builder.getContext());
+    Type* boolType = new BoolType();
+    return boolType->createValue(result, ctx);
 }
 
 Value *DoubleValue::castTo(Type *other, llvm::IRBuilder<> &builder) {

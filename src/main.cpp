@@ -79,11 +79,6 @@ int main(int argc, char** argv) {
     symbolFunctions.clear();*/
 
     // Cleanup - deallocating Variables
-    for (auto& scope : symbolTable) {
-        for (auto& [name, info] : scope) {
-            delete info.type;
-        }
-    }
     symbolTable.clear();
 
     /*

@@ -12,15 +12,17 @@ DoubleType::DoubleType(bool isPointer) {
 }
 
 llvm::Type *DoubleType::getLLVMType(llvm::LLVMContext &ctx) const {
-    llvm::Type* baseType = llvm::Type::getDoubleTy(ctx); 
-    if (pointer) {
-        return llvm::PointerType::getUnqual(baseType);
-    }
-    return baseType;
+    return llvm::Type::getDoubleTy(ctx);
 }
 
-Value *DoubleType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new DoubleValue(this->clone(), llvmVal, ctx);
+Value *DoubleType::createValue(llvm::Value* llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new DoubleValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
 
 bool DoubleType::operator==(const Type &other) const
@@ -59,15 +61,18 @@ llvm::Type* SignedIntType::getLLVMType(llvm::LLVMContext &ctx) const {
         default:
             throw std::invalid_argument("Unsupported bit width for SignedIntType: " + std::to_string(bits));
     }
-    if (pointer) {
-        return llvm::PointerType::getUnqual(baseType);
-    }
     return baseType;
 }
-
-Value *SignedIntType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new SignedIntValue(this->clone(), llvmVal, ctx);
+Value *SignedIntType::createValue(llvm::Value* llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new SignedIntValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
+
 
 bool SignedIntType::operator==(const Type &other) const {
     if (const SignedIntType* otherInt = dynamic_cast<const SignedIntType*>(&other)) {
@@ -90,15 +95,17 @@ BoolType::BoolType(bool isPointer) {
 }
 
 llvm::Type* BoolType::getLLVMType(llvm::LLVMContext &ctx) const {
-    llvm::Type* baseType = llvm::Type::getInt1Ty(ctx);
-    if (pointer) {
-        return llvm::PointerType::getUnqual(baseType);
-    }
-    return baseType;
+    return llvm::Type::getInt1Ty(ctx);
 }
 
-Value *BoolType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new BoolValue(this->clone(), llvmVal, ctx);
+Value *BoolType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new BoolValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
 
 bool BoolType::operator==(const Type &other) const {
@@ -122,20 +129,12 @@ llvm::Type* VoidType::getLLVMType(llvm::LLVMContext& ctx) const {
 }
 
 // Creazione di un valore VoidValue
-Value* VoidType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) {
+Value* VoidType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference) {
     throw std::runtime_error("VoidType does not support createValue.");
 }
 
 bool VoidType::isCastTo(Type* other) const {
     return false;
-}
-
-bool VoidType::isPointer() const {
-    throw std::runtime_error("VoidType does not support 'isPointer()'");
-}
-
-void VoidType::setPointer(bool ptr) {
-    throw std::runtime_error("VoidType does not support 'setPointer()'");
 }
 
 //StructType----------------------------------------
@@ -144,23 +143,8 @@ StructType::StructType(std::string ns, std::vector<std::pair<Type*, std::string>
     this->members = m;
 }
 
-Type* StructType::clone() const {
-    std::vector<std::pair<Type*, std::string>> clonedMembers;
-    for (const auto& [typePtr, name] : this->members) {
-        clonedMembers.push_back({typePtr->clone(), name});
-    }
-    StructType* newStructType = new StructType(this->nameStruct, clonedMembers);
-    newStructType->setPointer(this->pointer);
-    
-    return newStructType;
-}
-
 llvm::Type* StructType::getLLVMType(llvm::LLVMContext &ctx) const { 
-    llvm::StructType* structType = llvm::StructType::getTypeByName(ctx, this->nameStruct);
-    if(pointer){
-        return llvm::PointerType::getUnqual(structType);
-    }
-    return structType;
+    return llvm::StructType::getTypeByName(ctx, this->nameStruct);
 }
 
 bool StructType::operator==(const Type &other) const {
@@ -220,8 +204,14 @@ bool StructType::equalName(const StructType &other) {
     return false;
 }
 
-Value* StructType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new StructValue(this->clone(), llvmVal, ctx);
+Value* StructType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new StructValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
 
 //ClassType----------------------------------------
@@ -231,19 +221,18 @@ ClassType::ClassType(StructType* structType, std::vector<std::string> nameFuncti
     this->nameFunctions = nameFunctions;
 }
 
-Type* ClassType::clone() const {
-    ClassType* newClassType = new ClassType(static_cast<StructType* >(this->structType->clone()), this->nameFunctions);
-    return newClassType;
-}
-
 llvm::Type* ClassType::getLLVMType(llvm::LLVMContext &ctx) const {
     return this->structType->getLLVMType(ctx);
 }
 
-Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new StructValue(this->clone(), llvmVal, ctx);
-    //return new BoolValue(new BoolType, llvmVal, ctx);  //todo fix
-    throw std::invalid_argument("Unsupported ClassType::createValue");
+Value *ClassType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new StructValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
 
 bool ClassType::operator==(const Type &other) const {
@@ -276,15 +265,17 @@ PointerType::PointerType(Type* typePointed) {
 }
 
 llvm::Type* PointerType::getLLVMType(llvm::LLVMContext &ctx) const {
-    llvm::Type* baseType = llvm::PointerType::getUnqual(typePointed->getLLVMType(ctx));
-    if (pointer) {
-        return llvm::PointerType::getUnqual(baseType);
-    }
-    return baseType;
+    return llvm::PointerType::getUnqual(typePointed->getLLVMType(ctx));
 }
 
-Value* PointerType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx) {
-    return new PointerValue(this->clone(), llvmVal, ctx);
+Value* PointerType::createValue(llvm::Value *llvmVal, llvm::LLVMContext &ctx, bool isReference) {
+    Value* value =  new PointerValue(this);
+    if(isReference){
+        value->setAlloca(llvmVal, this, ctx);
+        return value;
+    }
+    value->setLLVMValue(llvmVal, this, ctx);
+    return value;
 }
 
 bool PointerType::operator==(const Type &other) const {
@@ -293,26 +284,11 @@ bool PointerType::operator==(const Type &other) const {
             return true;
         }
     }
-
-    //todo Verify that the comparisons with the Pointer are working correctly
-    /*if(*this->getTypePointed() == other){
-        llvm::outs() << "other.tostring() :" << other.toString() << "\n";
-        if(!pointer && other.isPointer()){
-            llvm::outs() << "EHEHEHEH\n";  //todo fix 
-            return true;
-        }
-    }*/
     return false;
 }
 
 bool PointerType::isCastTo(Type *other) const {
     return false;
-}
-
-Type* PointerType::clone() const {
-    auto* p = new PointerType(typePointed->clone());
-    p->setPointer(pointer);
-    return p;
 }
 
 std::string PointerType::toString() const {
@@ -327,23 +303,6 @@ SpecialType::SpecialType(std::string nameSymbol, Type* symbolTypeREF) {
 }
 
 bool SpecialType::operator==(const Type& other) const {
-    //const StructType* otherType = dynamic_cast<const StructType*>(&other);
-
-    /*Debug
-    if(auto cc = dynamic_cast<StructType*>(this->symbolTypeREF)){
-        llvm::outs() << "cc->getMembersSize(): " <<cc->getMembersSize() << "\n"; 
-        for(auto& [type, name] : cc->getMembers()){
-            llvm::outs() << "name: " << name << "  type: " << type->toString() << "\n";
-            if(auto cc2 = dynamic_cast<PointerType*>(type)){
-                auto cc3 = dynamic_cast<SpecialType*>(cc2->getTypePointed());
-                auto cc4 = dynamic_cast<StructType*> (cc3->symbolTypeREF);
-                llvm::outs() << "cc3->getMembersSize(): " <<cc4->getMembersSize() << "\n"; 
-                for(auto& [type, name] : cc4->getMembers()){
-                    llvm::outs() << "3name: " << name << "  type: " << type->toString() << "\n";
-                }
-            }
-        }
-    }*/
     if(auto otherType =  dynamic_cast<const StructType*>(&other)){
         return this->nameSymbol == otherType->getNameStruct();
     }
@@ -358,46 +317,14 @@ bool SpecialType::operator==(const Type& other) const {
 }
 
 llvm::Type* SpecialType::getLLVMType(llvm::LLVMContext& ctx) const {
-    llvm::Type* baseType =  this->symbolTypeREF->getLLVMType(ctx);
-    if (pointer) {
-        return llvm::PointerType::getUnqual(baseType);
-    }
-    return baseType;
+    return  this->symbolTypeREF->getLLVMType(ctx);
 }
 
-Value* SpecialType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx) {
+Value* SpecialType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference) {
 
-    /*
-     * When create the value, obviously use the internal type
-     * which however is the global type of the symbolTable, so it
-     * is necessary to temporarily set it to true in the case
-     * in which pointer is true, and immediately after having generated 
-     * the value, return to the previous state or false, because that 
-     * type globally will always be false. This is possible because the
-     * creation of the value occurs in these internal calls, so during 
-     * the calls, no one will read the global state, so at the end of 
-     * the call globally nothing has changed but locally I have obtained 
-     * the pointer type that was needed
-     */
-    if(pointer){
-        this->symbolTypeREF->setPointer(true);
-    }
-    Value* result = this->symbolTypeREF->createValue(llvmVal, ctx);
-    if(pointer){
-        this->symbolTypeREF->setPointer(false);
-    }
-    return result;
+    return this->symbolTypeREF->createValue(llvmVal, ctx, isReference);
 }
 
 bool SpecialType::isCastTo(Type* other) const {
     return this->symbolTypeREF->isCastTo(other);
-}
-
-bool SpecialType::isPointer() const {
-    return this->pointer;
-}
-
-void SpecialType::setPointer(bool ptr) {
-    this->pointer = ptr;
-    return;
 }
