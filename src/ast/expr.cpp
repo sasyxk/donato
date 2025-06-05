@@ -83,6 +83,12 @@ BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l),
 Value* BinaryCond::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     Value* l = left->codegen(builder);
     Value* r = right->codegen(builder);
+    if (l->getLLVMValue() == nullptr){
+       l->loadLLVMValue("left_op", builder);
+    }
+    if (r->getLLVMValue() == nullptr){
+       r->loadLLVMValue("right_op", builder);
+    }
     Value* result;
     
     if      (op == "==") result = l->eq(r,builder);
@@ -103,6 +109,12 @@ BinaryOp::BinaryOp(const std::string& o, Expr* l, Expr* r) : op(o), left(l), rig
 Value* BinaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     Value* l = left->codegen(builder);
     Value* r = right->codegen(builder);
+    if (l->getLLVMValue() == nullptr){
+       l->loadLLVMValue("left_op", builder);
+    }
+    if (r->getLLVMValue() == nullptr){
+       r->loadLLVMValue("right_op", builder);
+    }
     Value* result;
 
     if       (op == "+") result = l->add(r,builder);
@@ -120,6 +132,9 @@ UnaryOp::UnaryOp(const std::string& o, Expr* x) : op(o), x(x) {}
 
 Value* UnaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     Value* v = x->codegen(builder);
+    if (v->getLLVMValue() == nullptr){
+       v->loadLLVMValue("unary_op", builder);
+    }
     Value* result = v->neg(builder);
     
     delete v;
@@ -189,6 +204,9 @@ IfOp::IfOp(Expr* c, Expr* t, Expr* e) : cond(c), thenExpr(t), elseExpr(e) {}
 Value* IfOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
     Value* condVal = cond->codegen(builder);
+    if (condVal->getLLVMValue() == nullptr){
+       condVal->loadLLVMValue("cond_op", builder);
+    }
 
     // Check if the condition is already a boolean value
     if(!dynamic_cast<const BoolType*>(condVal->getType())){
@@ -206,11 +224,17 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     
     builder.SetInsertPoint(thenBB);
     Value* thenVal = thenExpr->codegen(builder);
+    if (thenVal->getLLVMValue() == nullptr){
+       thenVal->loadLLVMValue("then_op", builder);
+    }
     llvm::BasicBlock* thenExitBB = builder.GetInsertBlock();
     builder.CreateBr(mergeBB);
     
     builder.SetInsertPoint(elseBB);
     Value* elseVal = elseExpr->codegen(builder);
+    if (elseVal->getLLVMValue() == nullptr){
+       thenVal->loadLLVMValue("else_op", builder);
+    }
     llvm::BasicBlock* elseExitBB = builder.GetInsertBlock();
     builder.CreateBr(mergeBB);
     
@@ -244,6 +268,9 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     for (auto& [name, expr] : bindings) {
 
         Value* value = expr->codegen(builder);
+        if (value->getLLVMValue() == nullptr){
+            value->loadLLVMValue("let_op", builder);
+        }
         llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
         builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
         llvm::AllocaInst* alloca = builder.CreateAlloca(value->getType()->getLLVMType(ctx), nullptr, name);
@@ -259,6 +286,9 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     }
 
     Value* bodyVal = body->codegen(builder);
+    if (bodyVal->getLLVMValue() == nullptr){
+        bodyVal->loadLLVMValue("body_let_op", builder);
+    }
 
     symbolTable.pop_back();
 
@@ -341,13 +371,6 @@ Value* newStruct(
         Value* memberValue = memberExpr->codegen(builder);
         if (memberValue->getLLVMValue() == nullptr){
             memberValue->loadLLVMValue(member.second, builder);
-            /*llvm::Value* loadedVal = builder.CreateLoad(
-                memberValue->getType()->getLLVMType(ctx),
-                memberValue->getAllocation(),
-                member.second + "_val"
-            );
-            memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);*/
-    
         }
         if(!(*member.first == *memberValue->getType())){
             if(!memberValue->getType()->isCastTo(member.first)){

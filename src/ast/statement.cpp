@@ -128,12 +128,6 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
     
     if (memberValue->getLLVMValue() == nullptr){
         memberValue->loadLLVMValue(memberChain.back(), builder);
-        /*llvm::Value* loadedVal = builder.CreateLoad(
-            memberValue->getType()->getLLVMType(ctx),
-            memberValue->getAllocation(),
-            memberChain.back() + "_val"
-        );
-        memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);*/
     }
 
     if(!(*memberType == *memberValue->getType())){
@@ -390,6 +384,7 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
 
     builder.SetInsertPoint(condWhileBB);
     Value* condVal = cond->codegen(builder);
+    
     // Check if the condition is already a boolean value
     if(!dynamic_cast<const BoolType*>(condVal->getType())){
         Value* newCondVal = condVal->getBoolValue(builder);  // Convert to boolean
@@ -416,6 +411,9 @@ IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e) : co
 
 void IfStm::codegen(llvm::IRBuilder<>& builder) {
     Value* condVal = cond->codegen(builder);
+    if (condVal->getLLVMValue() == nullptr){
+        condVal->loadLLVMValue("if_cond_stm", builder);
+    }
     // Check if the condition is already a boolean value
     if(!dynamic_cast<const BoolType*>(condVal->getType())){
         Value* newCondVal = condVal->getBoolValue(builder);  // Convert to boolean
@@ -489,12 +487,6 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
     Value* val = value->codegen(builder);
     if (val->getLLVMValue() == nullptr){
         val->loadLLVMValue(nameVar, builder);
-        /*llvm::Value* loadedVal = builder.CreateLoad(
-            val->getType()->getLLVMType(ctx),
-            val->getAllocation(),
-            nameVar + "_val"
-        );
-        val->setLLVMValue(loadedVal, val->getType(), ctx);*/
     }
     
     if(!(*val->getType() == *type)){
@@ -534,7 +526,6 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
  
     Value* val = value->codegen(builder);
-
     if (val->getLLVMValue() == nullptr){
        val->loadLLVMValue(nameVar, builder);
     }
@@ -630,6 +621,9 @@ DeleteVar::DeleteVar(Expr* v) : value(v) {}
 void DeleteVar::codegen(llvm::IRBuilder<> &builder){
     llvm::LLVMContext& ctx = builder.getContext();
     Value* result = value->codegen(builder);
+    if (result->getLLVMValue() == nullptr){
+        result->loadLLVMValue("delete_ptr", builder);
+    }
 
     auto pointerType = dynamic_cast<PointerType*>(result->getType());
     auto classType = pointerType ? dynamic_cast<ClassType*>(pointerType->getTypePointed()) : nullptr;
@@ -662,6 +656,9 @@ void PrintVar::codegen(llvm::IRBuilder<> &builder){
     llvm::LLVMContext& ctx = builder.getContext();
 
     Value* result = value->codegen(builder);
+    if (result->getLLVMValue() == nullptr){
+        result->loadLLVMValue("print", builder);
+    }
 
     std::string printFunctionName = "d_print";
     llvm::Function* d_printFunction = module->getFunction(printFunctionName);
