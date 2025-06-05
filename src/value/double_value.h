@@ -25,6 +25,9 @@ public:
         checkTypeCompatibility(type, value , ctx, false);
         this->value = value;
     }
+    void loadLLVMValue(std::string name, llvm::IRBuilder<>& builder) override {
+        Value::loadLLVMValueDefault(name, builder, this);
+    }
 
     Value* add(Value* other, llvm::IRBuilder<>& builder) override;
     Value* sub(Value* other, llvm::IRBuilder<>& builder) override;

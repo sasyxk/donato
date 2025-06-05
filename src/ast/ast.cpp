@@ -272,40 +272,34 @@ std::pair<SymbolFunction*, std::vector<llvm::Value*>> prepareAndValidateFunction
     // Process normal arguments
     for (auto* arg : args) {
         size_t currentArgIndex = argValues.size();
-        bool isVar = false;
-        
-       // Check whether the argument should be passed by reference
-        if (Var* varPtr = dynamic_cast<Var*>(arg)) {
-            if (functionStruct->argType.at(currentArgIndex).isReference) {
-                isVar = true;
-            }
+      
+        Value* value = arg->codegen(builder);
+        bool isReference = functionStruct->argType.at(currentArgIndex).isReference;
+        Type* typeArg = functionStruct->argType.at(currentArgIndex).type;
+
+        if(!isReference && value->getLLVMValue() == nullptr){
+            value->loadLLVMValue("load", builder);
         }
-        else if (StructVar* structVarPtr = dynamic_cast<StructVar*>(arg)) {
-            if (functionStruct->argType.at(currentArgIndex).isReference) {
-                isVar = true;
-            }
-        }
-        
-        Value* value = arg->codegen(builder, isVar);
-        
+
         // Reference validation
-        if (functionStruct->argType.at(currentArgIndex).isReference && 
-            value->getAllocation() != nullptr) {
+        if (isReference && value->getAllocation() == nullptr) {
             throw std::runtime_error(
                 "Function " + params.functionName + 
                 " argument " + std::to_string(currentArgIndex + 1) + 
                 " wants a reference pass, insert a variable as an argument"
             );
         }
+
+        llvm::Value* argToFunc = isReference ? value->getAllocation() : value->getLLVMValue();
         
         // Type validation
-        if (!(*value->getType() == *functionStruct->argType.at(currentArgIndex).type)) {
+        if (!(*value->getType() == *typeArg)) {
             throw std::runtime_error(
                 "Type mismatch in argument " + std::to_string(currentArgIndex + 1)
             );
         }
         
-        argValues.push_back(value->getLLVMValue());
+        argValues.push_back(argToFunc);
         delete value;
     }
     

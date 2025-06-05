@@ -22,6 +22,7 @@ public:
         const std::string& okBlockName = "arith_ok",
         const std::string& errorBlockName = "arith_overflow"
     );
+    static void loadLLVMValueDefault(std::string& name, llvm::IRBuilder<>& builder, Value* value);
 
     virtual Type* getType() const = 0;
     virtual llvm::Value* getLLVMValue() const = 0;
@@ -29,6 +30,7 @@ public:
     virtual bool isReference() const = 0;
     virtual void setAlloca(llvm::Value* alloca, Type* type, llvm::LLVMContext &ctx) = 0;
     virtual void setLLVMValue(llvm::Value* value, Type* type, llvm::LLVMContext &ctx) = 0;
+    virtual void loadLLVMValue(std::string name, llvm::IRBuilder<>& builder) = 0;
 
     virtual Value* add(Value* other, llvm::IRBuilder<>& builder) = 0;  // +
     virtual Value* sub(Value* other, llvm::IRBuilder<>& builder) = 0;  // -

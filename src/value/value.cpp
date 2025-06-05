@@ -66,3 +66,20 @@ llvm::Value *Value::createCheckedIntegerArithmetic(
     builder.SetInsertPoint(okBlock);
     return result;
 }
+
+void Value::loadLLVMValueDefault(std::string &name, llvm::IRBuilder<> &builder, Value *value) {
+    llvm::LLVMContext& ctx = builder.getContext();
+
+    llvm::Value* alloca = value->getAllocation();
+    if(alloca == nullptr){
+        throw std::runtime_error("You can't load a constant value: " + name);
+    }
+    Type* type= value->getType();
+
+    llvm::Value* loadedVal = builder.CreateLoad(
+                                type->getLLVMType(ctx),
+                                alloca,
+                                name + "_val"
+                            );
+    value->setLLVMValue(loadedVal, type, ctx);
+}
