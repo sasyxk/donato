@@ -35,7 +35,7 @@ Value* PointerValue::eq(Value* other, llvm::IRBuilder<>& builder) {
     if (auto pointerTypeother = dynamic_cast<const PointerType*>(other->getType())) {
         if(*pointerTypeother == *this->getType()){
             llvm::Value* result = builder.CreateICmpEQ(this->getLLVMValue(), other->getLLVMValue(), "eqPointertmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -54,7 +54,7 @@ Value* PointerValue::neq(Value* other, llvm::IRBuilder<>& builder) {
     if (auto pointerTypeother = dynamic_cast<const PointerType*>(other->getType())) {
         if(*pointerTypeother == *this->getType()){
             llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "neqPointertmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -87,7 +87,7 @@ Value* PointerValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* result = builder.CreateNot(this->getLLVMValue(), "negbooltmp");
-    Type* boolType = new BoolType();
+    Type* boolType = TypeManager::instance().getBoolType();
     return boolType->createValue(result, ctx);
 }
 
@@ -100,7 +100,7 @@ Value* PointerValue::getBoolValue(llvm::IRBuilder<> &builder) {
         "ptr_non_null"
     );
 
-    Type* boolType = new BoolType();
+    Type* boolType = TypeManager::instance().getBoolType();
     return boolType->createValue(result, ctx);
 }
 

@@ -151,10 +151,6 @@ bool StructType::operator==(const Type &other) const {
     if(auto structType = dynamic_cast<const StructType*>(&other)){
         return structType->nameStruct == this->nameStruct;
     }
-
-    if(auto specialType = dynamic_cast<const SpecialType*>(&other)){
-        return specialType->getNameSymbol() == this->nameStruct;
-    }
     return false;
 
 }
@@ -258,38 +254,4 @@ bool PointerType::isCastTo(Type *other) const {
 
 std::string PointerType::toString() const {
     return "PointerType to " + typePointed->toString();
-}
-
-//SpecialType----------------------------------------
-
-SpecialType::SpecialType(std::string nameSymbol, Type* symbolTypeREF) {
-    this->nameSymbol = nameSymbol;
-    this->symbolTypeREF = symbolTypeREF;
-}
-
-bool SpecialType::operator==(const Type& other) const {
-    if(auto otherType =  dynamic_cast<const StructType*>(&other)){
-        return this->nameSymbol == otherType->getNameStruct();
-    }
-    if(auto otherType =  dynamic_cast<const ClassType*>(&other)){
-        return this->nameSymbol == otherType->getNameClass();
-    }
-    if(auto otherType = dynamic_cast<const SpecialType*>(&other)){
-        return this->nameSymbol == otherType->nameSymbol;
-    }
-
-    return false;
-}
-
-llvm::Type* SpecialType::getLLVMType(llvm::LLVMContext& ctx) const {
-    return  this->symbolTypeREF->getLLVMType(ctx);
-}
-
-Value* SpecialType::createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx, bool isReference) {
-
-    return this->symbolTypeREF->createValue(llvmVal, ctx, isReference);
-}
-
-bool SpecialType::isCastTo(Type* other) const {
-    return this->symbolTypeREF->isCastTo(other);
 }

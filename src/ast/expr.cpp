@@ -338,7 +338,7 @@ Value* newClass(
     llvm::Function* callee = functionStruct->func;
     builder.CreateCall(callee, argValues);
     
-    auto pointerType = new PointerType(type);
+    auto pointerType = TypeManager::instance().getPointerType(type);
     Value* result = pointerType->createValue(ptrToStruct, ctx);
     return result;
 }
@@ -390,7 +390,7 @@ Value* newStruct(
         builder.CreateStore(memberValue->getLLVMValue(), fieldIGEP);
         delete memberValue;
     }
-    auto pointerType = new PointerType(structType);
+    auto pointerType = TypeManager::instance().getPointerType(structType);
     Value* result = pointerType->createValue(ptrToStruct, ctx);
 
     return result;
@@ -454,7 +454,7 @@ Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
         );
     }
 
-    PointerType* pointerType = new PointerType(resultCodegen->getType());
+    PointerType* pointerType = TypeManager::instance().getPointerType(resultCodegen->getType());
     Value* pointerValue = pointerType->createValue(alloca, ctx);
     delete resultCodegen;
     
@@ -468,7 +468,7 @@ Value* NullPtr::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::PointerType* ptrType = llvm::PointerType::getUnqual(type->getLLVMType(ctx));
     llvm::Value* nullPtr = llvm::ConstantPointerNull::get(ptrType);
-    type = new PointerType(type);
+    type = TypeManager::instance().getPointerType(type);
    
     return type->createValue(nullPtr, ctx);
 }

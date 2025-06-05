@@ -55,7 +55,7 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_ok",
                 name + "_overflow"
             );
-            Type* newType = new SignedIntType(64);
+            Type* newType = TypeManager::instance().getSignedIntType(64);
             return newType->createValue(result, ctx);
         }
         else{
@@ -90,7 +90,7 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_ok",
                 name + "_overflow"
             );
-            Type* newType = new SignedIntType(64);
+            Type* newType = TypeManager::instance().getSignedIntType(64);
             return newType->createValue(result, ctx);
         }
         else{
@@ -126,7 +126,7 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_ok",
                 name + "_overflow"
             );
-            Type* newType = new SignedIntType(64);
+            Type* newType = TypeManager::instance().getSignedIntType(64);
             return newType->createValue(result, ctx);
         }
         else{
@@ -202,7 +202,7 @@ Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
         // Continue Block
         builder.SetInsertPoint(okBlock);
         llvm::Value* result = builder.CreateSDiv(lhs, rhs, "divtmp");
-        Type* newType = new SignedIntType(64);
+        Type* newType = TypeManager::instance().getSignedIntType(64);
         return newType->createValue(result, ctx);
         
     }
@@ -221,7 +221,7 @@ Value* SignedIntValue::eq(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpEQ(this->getLLVMValue(), other->getLLVMValue(), "eqtmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -240,7 +240,7 @@ Value* SignedIntValue::neq(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpNE(this->getLLVMValue(), other->getLLVMValue(), "netmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -259,7 +259,7 @@ Value* SignedIntValue::lt(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSLT(this->getLLVMValue(), other->getLLVMValue(), "ltmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -278,7 +278,7 @@ Value* SignedIntValue::lte(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSLE(this->getLLVMValue(), other->getLLVMValue(), "leqtmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -297,7 +297,7 @@ Value* SignedIntValue::gt(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSGT(this->getLLVMValue(), other->getLLVMValue(), "gtmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -316,7 +316,7 @@ Value* SignedIntValue::gte(Value* other, llvm::IRBuilder<>& builder) {
     if (const SignedIntType* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         if (*this->getType() == *other->getType()) {
             llvm::Value* result = builder.CreateICmpSGE(this->getLLVMValue(), other->getLLVMValue(), "geqtmp");
-            Type* boolType = new BoolType();
+            Type* boolType = TypeManager::instance().getBoolType();
             return boolType->createValue(result, ctx);
         }
     }
@@ -347,12 +347,11 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
             "negtmp_ok",
             "negtmp_overflow"
         );
-        Type* newType = new SignedIntType(64);
+        Type* newType = TypeManager::instance().getSignedIntType(64);
         return newType->createValue(result, ctx);
     }
     else{
         //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
-        //return new SignedIntValue(this->getType()->clone(), result, ctx);
         return nullptr;
     }
 }
@@ -366,7 +365,7 @@ Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
         llvm::APInt(32, 0)),
         "ifconf"
     );
-    Type* boolType = new BoolType();
+    Type* boolType = TypeManager::instance().getBoolType();
     return boolType->createValue(result, ctx);
 }
 
@@ -377,10 +376,6 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
     if ( SignedIntType* otherType = dynamic_cast< SignedIntType*>(other)) {
         const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
         if (thisType->getBits() > otherType->getBits()) {
-            //todo Add runtime check for truncation whether or not there is data loss
-            /*llvm::Value* newValue = builder.CreateTrunc(this->getLLVMValue(), otherType->getLLVMType(ctx), "tronc_right");
-            return new SignedIntValue(otherType->clone(), newValue, ctx);
-            */
             llvm::Value* val = this->getLLVMValue();
             llvm::Type* srcTy = val->getType();
             llvm::Type* dstTy = otherType->getLLVMType(ctx);

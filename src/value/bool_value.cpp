@@ -17,7 +17,6 @@ Value* BoolValue::add(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const BoolType*>(other->getType())) {
         llvm::Value* result = builder.CreateOr(this->getLLVMValue(), other->getLLVMValue(), "addbooltmp");
-        //return new BoolValue(this->getType()->clone(), result, ctx);
         return this->getType()->createValue(result, ctx);
     }
 

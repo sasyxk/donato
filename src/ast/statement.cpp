@@ -11,7 +11,7 @@ DefineClass::DefineClass(
     StructType* structType = classType->getStructType();
     constructorArgs.insert(constructorArgs.begin(), {{structType, true}, "this"});
     Function* constructor = new Function(
-        {new VoidType(), false},
+        {TypeManager::instance().getVoidType(), false},
         nameClass,  
         constructorArgs,
         ConstructorBodyStatemets
@@ -40,15 +40,12 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
 
     StructType* structType = classType->getStructType();
 
-    //todo --------------------------------------------------->
     llvm::StructType* pointType = llvm::StructType::create(ctx, classType->getNameClass());
     std::vector<llvm::Type*> members;
     for(auto member : structType->getMembers()){
         members.push_back(member.first->getLLVMType(ctx));
     }
     pointType->setBody(members);
-    //todo generalize this part end the codegene parte of the DefineStruct: same code
-    //todo ---------------------------------------------------<
 
     generateAllocFunction(builder, classType->getNameClass(), pointType);
     generateFreeFunction(builder, classType->getNameClass(), pointType);
@@ -60,17 +57,6 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
 
 DefineStruct::DefineStruct(StructType* structType) {
     
-    for(auto st : symbolStructsType){
-        if(st->getNameStruct() == structType->getNameStruct()){
-            throw std::runtime_error("The Struct has already been defined: " + st->toString());
-        }
-    } 
-    for(auto ct : symbolClassType){
-        if(ct->getNameClass() == structType->getNameStruct()){
-            throw std::runtime_error("You cannto define a Struct with the name name of: " + ct->toString());
-        }
-    }
-    symbolStructsType.push_back(structType);
     this->structType = static_cast<StructType*>(structType);
 }
 

@@ -4,6 +4,7 @@
 #include "tokenizer.h"
 #include "statement.h"
 #include "type.h"
+#include "type_manager.h"
 
 extern std::vector<StructType* > symbolStructsType;
 

@@ -35,14 +35,14 @@ Statement* Parser::parseCode(){
 }
 
 
-void checkInSymbolClassType(ClassType* classType){
+void checkInSymbolType(std::string& nameType){
     for(auto st : symbolStructsType){
-        if(st->getNameStruct() == classType->getNameClass()){
+        if(st->getNameStruct() == nameType){
             throw std::runtime_error("The Class has already been defined: " + st->toString());
         }
     } 
     for(auto ct : symbolClassType){
-        if(ct->getNameClass() == classType->getNameClass()){
+        if(ct->getNameClass() == nameType){
             throw std::runtime_error("You cannot define a Class with the name name of: " + ct->toString());
         }
     }
@@ -102,6 +102,7 @@ Statement* Parser::parseStm(){
         isInsideClass = true;
         std::string nameClass = currentToken.value;
         nameOfClass = nameClass;
+        //checkInSymbolType(nameClass);
         eat(UPPERNAME);
         eat(LBRACE);
         bool havePrivateMembers = false;
@@ -111,33 +112,20 @@ Statement* Parser::parseStm(){
             eat(COLON);
         }
         std::vector<std::pair<Type*, std::string>> privateMembers;
-        StructType* structType = new StructType(nameClass);
-        ClassType* classType = new ClassType(structType);
+        ClassType* classType = TypeManager::instance().createClassType(nameClass);
+        symbolClassType.push_back(classType);
 
         if(currentToken.type != PUBLIC || havePrivateMembers){
             havePrivateMembers = true;
             do {
                 Type* type;
-                if(currentToken.value == nameClass){
-                    eat(UPPERNAME);
-                    type = new SpecialType(nameClass, classType);
-                    if(currentToken.value != "*"){
-                        throw std::runtime_error(
-                            "You cannot define private member '" +
-                            nameClass +
-                            "' of struct '" +
-                            nameClass +
-                            "' without pointer"
-                        );
-                    }
-                    do{
-                        eat(OP);
-                        type = new PointerType(type);
-                    }while(currentToken.value == "*");
+                TypeInfo typeInfo = parseType(currentToken.value);
+                type = typeInfo.type;
+                if(dynamic_cast<ClassType*>(type) != nullptr){
+                    throw std::runtime_error("You cannot declare other classes as members of the class without a pointer");
                 }
-                else{
-                    TypeInfo typeInfo = parseType(currentToken.value);
-                    type = typeInfo.type;
+                if(dynamic_cast<StructType*>(type) != nullptr){
+                    throw std::runtime_error("You cannot declare other structs without pointers as class members");
                 }
                 std::string privateMember = currentToken.value;
                 eat(VAR);
@@ -148,7 +136,6 @@ Statement* Parser::parseStm(){
         eat(PUBLIC);
         eat(COLON);
         classType->setMembers(privateMembers);
-        checkInSymbolClassType(classType);
 
         // Load current position
         size_t currPos = tokenizer.getCurrentPos();
@@ -161,8 +148,6 @@ Statement* Parser::parseStm(){
         // Restore position
         tokenizer.setPosition(currPos);
         currentToken = currentToken_;
-        
-        symbolClassType.push_back(classType);
 
         if(currentToken.value != nameClass){
             throw std::runtime_error(
@@ -223,42 +208,29 @@ Statement* Parser::parseStm(){
     if(currentToken.type == STRUCT){
         eat(STRUCT);
         std::string nameStruct = currentToken.value;
+        StructType* structType = TypeManager::instance().createStructType(nameStruct);
+        symbolStructsType.push_back(structType);
         eat(UPPERNAME);
         eat(LBRACE);
         std::vector<std::pair<Type*, std::string>> members;
-        StructType* structType = new StructType(nameStruct);
         do {
             Type* type;
-            if(currentToken.value == nameStruct){
-                eat(UPPERNAME);
-                type = new SpecialType(nameStruct, structType);
-                if(currentToken.value != "*"){
-                    throw std::runtime_error(
-                        "You cannot define private member '" +
-                        nameStruct +
-                        "' of struct '" +
-                        nameStruct +
-                        "' without pointer"
-                    );
-                }
-                do{
-                    eat(OP);
-                    type = new PointerType(type);
-                }while(currentToken.value == "*");
+            TypeInfo typeInfo = parseType(currentToken.value);
+            type = typeInfo.type;
+            if(dynamic_cast<ClassType*>(type) != nullptr){
+                throw std::runtime_error("You cannot declare other classes as members of the class without a pointer");
             }
-            else{
-                TypeInfo typeInfo = parseType(currentToken.value);
-                type = typeInfo.type;
+            if(dynamic_cast<StructType*>(type) != nullptr){
+                throw std::runtime_error("You cannot declare other structs without pointers as class members");
             }
             std::string member = currentToken.value;
             eat(VAR);
             members.emplace_back(type, member);
-
             eat(ENDEXPR);
         } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
         eat(RBRACE);
-
         structType->setMembers(members);
+
         return new DefineStruct(structType);
     }
     if (currentToken.type == TYPE  || currentToken.type == UPPERNAME) { 
@@ -618,7 +590,7 @@ Expr* Parser::parseNum(std::string val){
 
     if (val == "true" || val == "false") {
         bool boolVal = (val == "true");
-        type = new BoolType();
+        type = TypeManager::instance().getBoolType();
         return new BoolNum(boolVal, type);
     }
 
@@ -629,7 +601,7 @@ Expr* Parser::parseNum(std::string val){
             size_t pos;
             double num = std::stod(val, &pos);
             if (pos != val.size()) throw std::runtime_error("Invalid characters");
-            type = new DoubleType();
+            type = TypeManager::instance().getDoubleType();
             return new DoubleNum(num, type);
         } catch (const std::exception& e) {
             throw std::runtime_error("Invalid floating-point string value: " + val + " (" + e.what() + ")");
@@ -639,16 +611,7 @@ Expr* Parser::parseNum(std::string val){
     try {
         std::int64_t num = std::stoll(val); 
         SignedIntType* type = nullptr;
-        type = new SignedIntType(64);
-        /*if (num >= INT8_MIN && num <= INT8_MAX) {
-            type = new SignedIntType(8);
-        } else if (num >= INT16_MIN && num <= INT16_MAX) {
-            type = new SignedIntType(16);
-        } else if (num >= INT32_MIN && num <= INT32_MAX) {
-            type = new SignedIntType(32);
-        } else {
-            type = new SignedIntType(64);
-        }*/
+        type = TypeManager::instance().getSignedIntType(64);
         return new SignedIntNum(num, type);
     } catch (...) {
         throw std::runtime_error("Invalid integer string value: " + val);
@@ -660,31 +623,31 @@ Expr* Parser::parseNum(std::string val){
 Type* Parser::parseBaseType(std::string stringType){
     if (stringType == "double") {
         eat(TYPE);
-        return new DoubleType();
+        return TypeManager::instance().getDoubleType();
     } 
     else if (stringType == "bool") {
         eat(TYPE);
-        return new BoolType();
+        return TypeManager::instance().getBoolType();
     }
     else if(stringType == "int8"){
         eat(TYPE);
-        return new SignedIntType(8);
+        return TypeManager::instance().getSignedIntType(8);
     }
     else if(stringType == "int16"){
         eat(TYPE);
-        return new SignedIntType(16);
+        return TypeManager::instance().getSignedIntType(16);
     }
     else if(stringType == "int32"){
         eat(TYPE);
-        return new SignedIntType(32);
+        return TypeManager::instance().getSignedIntType(32);
     }
     else if(stringType == "int64" || stringType == "int"){
         eat(TYPE);
-        return new SignedIntType(64);
+        return TypeManager::instance().getSignedIntType(64);
     }
     if(stringType == "void"){
         eat(VOID);
-        return new VoidType();
+        return TypeManager::instance().getVoidType();
     }
     else if(isupper(stringType[0])){
         for(auto structType : symbolStructsType){
@@ -712,7 +675,7 @@ Type* Parser::wrapWithPointers(Type* baseType) {
 
     while (currentToken.value == "*") {
         eat(OP);
-        currentType = new PointerType(currentType);
+        currentType = TypeManager::instance().getPointerType(currentType);
     }
     return currentType;
 }

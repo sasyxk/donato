@@ -134,13 +134,14 @@ public:
 };
 
 class ClassType : public Type {
-    //std::string nameClass;
     StructType* structType;
     std::vector<std::string> nameFunctions;
 public:
     ClassType(StructType* structType){ this->structType = structType;}
     ClassType(StructType* structType, std::vector<std::string> nameFunctions);
-    ~ClassType() override = default;
+    ~ClassType() override {
+        delete structType;
+    };
     bool operator==(const Type& other) const override;
 
     llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
@@ -181,30 +182,3 @@ public:
 
     Type* getTypePointed() const {return typePointed;}
 };
-
-
-class SpecialType : public Type {
-    Type* symbolTypeREF;
-    std::string nameSymbol;
-    bool pointer = false;
-public:
-    SpecialType(std::string nameSymbol,  Type* symbolTypeREF);
-    ~SpecialType() override = default;
-
-    bool operator==(const Type& other) const override;
-
-    llvm::Type* getLLVMType(llvm::LLVMContext& ctx) const override;
-    Value* createValue(llvm::Value* llvmVal, llvm::LLVMContext& ctx , bool isReference = false) override;
-    std::string toString() const override {return "S_" + symbolTypeREF->toString();}
-    bool isCastTo(Type* other) const override;
-    llvm::Type* getAllocaType(llvm::LLVMContext& ctx) const override {
-        llvm::Type* baseType = getLLVMType(ctx); 
-        return llvm::PointerType::getUnqual(baseType);
-    }
-
-    std::string getNameSymbol() const {return nameSymbol;}
-    Type* getSybolREF() const {return symbolTypeREF;}
-
-};
-
-

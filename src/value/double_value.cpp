@@ -93,9 +93,7 @@ Value* DoubleValue::neq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpONE(this->getLLVMValue(), other->getLLVMValue(), "netmp");
-        //return new BoolValue(new BoolType(), result, ctx);
-        //Type* boolType = retriveType("bool");
-        Type* boolType = new BoolType();
+        Type* boolType = TypeManager::instance().getBoolType();
         return boolType->createValue(result, ctx);
     }
 
@@ -111,7 +109,7 @@ Value* DoubleValue::lt(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOLT(this->getLLVMValue(), other->getLLVMValue(), "ltmp");
-        Type* boolType = new BoolType();
+        Type* boolType = TypeManager::instance().getBoolType();
         return boolType->createValue(result, ctx);
     }
 
@@ -127,7 +125,7 @@ Value* DoubleValue::lte(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOLE(this->getLLVMValue(), other->getLLVMValue(), "leqtmp");
-        Type* boolType = new BoolType();
+        Type* boolType = TypeManager::instance().getBoolType();
         return boolType->createValue(result, ctx);
     }
 
@@ -143,7 +141,7 @@ Value* DoubleValue::gt(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOGT(this->getLLVMValue(), other->getLLVMValue(), "gtmp");
-        Type* boolType = new BoolType();
+        Type* boolType = TypeManager::instance().getBoolType();
         return boolType->createValue(result, ctx);
     }
 
@@ -160,7 +158,7 @@ Value* DoubleValue::gte(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOGE(this->getLLVMValue(), other->getLLVMValue(), "geqtmp");
-        Type* boolType = new BoolType();
+        Type* boolType = TypeManager::instance().getBoolType();
         return boolType->createValue(result, ctx);
     }
 
@@ -188,7 +186,7 @@ Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder) {
         "ifconf"
     );
 
-    Type* boolType = new BoolType();
+    Type* boolType = TypeManager::instance().getBoolType();
     return boolType->createValue(result, ctx);
 }
 

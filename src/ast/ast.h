@@ -12,6 +12,7 @@
 #include "signed_int_value.h"
 #include "bool_value.h"
 #include "pointer_value.h"
+#include "type_manager.h"
 
 class Expr;
 
