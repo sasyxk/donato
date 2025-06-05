@@ -3,7 +3,7 @@
 -[] Handle the Return issue in the parser, currently there
   is no mandatory presence, but this leads to llvm error problems
 
--[] Find a way to allow the declaration of a private variable
+-[Done] Find a way to allow the declaration of a private variable
   within a class that is of the class's type
 
 -[] At this moment I do not handle the fact that a pointer is nullptr,
@@ -16,7 +16,7 @@ debug running with all FLAG active, or Performance Running.
 FLAGS: OVERFLOW CHECK, TRUNC CHECK,
 () Implement the NULLPTR CKECK.
 
--[] To complete the checks errors from operations in ***Value
+-[Done] To complete the checks errors from operations in ***Value
 
 -[Done] If I have a statement like this: int x = p.getX();
   but in general if on the right I return a ptr,
