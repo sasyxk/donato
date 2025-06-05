@@ -34,21 +34,6 @@ Statement* Parser::parseCode(){
     return stm;
 }
 
-
-void checkInSymbolType(std::string& nameType){
-    for(auto st : symbolStructsType){
-        if(st->getNameStruct() == nameType){
-            throw std::runtime_error("The Class has already been defined: " + st->toString());
-        }
-    } 
-    for(auto ct : symbolClassType){
-        if(ct->getNameClass() == nameType){
-            throw std::runtime_error("You cannot define a Class with the name name of: " + ct->toString());
-        }
-    }
-}
-
-
 std::vector<std::string> Parser::parseClassFunctionNames(){
     std::vector<std::string> nameFunctions;
     eat(UPPERNAME);
@@ -102,7 +87,6 @@ Statement* Parser::parseStm(){
         isInsideClass = true;
         std::string nameClass = currentToken.value;
         nameOfClass = nameClass;
-        //checkInSymbolType(nameClass);
         eat(UPPERNAME);
         eat(LBRACE);
         bool havePrivateMembers = false;

@@ -56,8 +56,7 @@ void DefineClass::codegen(llvm::IRBuilder<> &builder) {
 }
 
 DefineStruct::DefineStruct(StructType* structType) {
-    
-    this->structType = static_cast<StructType*>(structType);
+    this->structType = structType;
 }
 
 void DefineStruct::codegen(llvm::IRBuilder<> &builder) {

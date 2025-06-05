@@ -6,8 +6,41 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 
 llvm::Module* module = nullptr;
+
+static size_t allocation_count = 0;
+static size_t allocation_size = 0;
+
+void* operator new(std::size_t size) {
+    ++allocation_count;
+    allocation_size += size;
+    
+    if (void* ptr = std::malloc(size))
+        return ptr;
+    throw std::bad_alloc();
+}
+
+void operator delete(void* ptr) noexcept {
+    std::free(ptr);
+}
+
+void printAllocations(size_t count, size_t size_in_bytes) {
+    std::cout << "allocation_count: " << count << "\n";
+
+    constexpr const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+    double size = static_cast<double>(size_in_bytes);
+    int unit_index = 0;
+
+    while (size >= 1024 && unit_index < 4) {
+        size /= 1024;
+        ++unit_index;
+    }
+
+    std::cout << "allocation_size: " << std::fixed << std::setprecision(2)
+              << size << " " << units[unit_index] << "\n";
+}
 
 int main(int argc, char** argv) {
     // Check if an argument (the input to compile) has been passed
@@ -38,6 +71,7 @@ int main(int argc, char** argv) {
     Tokenizer tokenizer(code);
     Parser parser(tokenizer);
     std::vector<Statement*> ast;
+    ast.reserve(10);
 
     // Generate ast
     try {
@@ -53,6 +87,7 @@ int main(int argc, char** argv) {
     llvm::LLVMContext context;
     module = new llvm::Module("donato_program", context);
     llvm::IRBuilder<> builder(context);
+    symbolTable.reserve(5);
     symbolTable.push_back({});
 
     // Generate code for default functions
@@ -72,34 +107,22 @@ int main(int argc, char** argv) {
     llvm::verifyModule(*module, &llvm::errs());
     generateExecutable(*module, "output");
 
-    // Cleanup - deallocation Functions
-    /*for (auto& pair : symbolFunctions) {
-        delete pair.second; 
-    }
-    symbolFunctions.clear();*/
 
-    // Cleanup - deallocating Variables
+    // Cleanup - clear vectors
     symbolTable.clear();
-
-    /*
-    for(auto& scope : symbolStructsType) {
-        delete scope;
-    }
     symbolStructsType.clear();
-    */
-
-    /*
-    for(auto& scope : symbolClassType) {
-        delete scope;
-    }
     symbolClassType.clear();
-    */
+    symbolFunctions.clear();
 
     // Cleanup - deallocating the AST
     for (Statement* stm : ast) {
         delete stm;
     }
     ast.clear();
+
+    delete module;
     
+    printAllocations(allocation_count,allocation_size);
+
     return 0;
 }
