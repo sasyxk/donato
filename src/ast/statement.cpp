@@ -127,12 +127,13 @@ void VarStructUpdt::codegen(llvm::IRBuilder<>& builder) {
     Value* memberValue = value->codegen(builder);
     
     if (memberValue->getLLVMValue() == nullptr){
-        llvm::Value* loadedVal = builder.CreateLoad(
+        memberValue->loadLLVMValue(memberChain.back(), builder);
+        /*llvm::Value* loadedVal = builder.CreateLoad(
             memberValue->getType()->getLLVMType(ctx),
             memberValue->getAllocation(),
             memberChain.back() + "_val"
         );
-        memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);
+        memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);*/
     }
 
     if(!(*memberType == *memberValue->getType())){
@@ -201,6 +202,8 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
     builder.SetInsertPoint(entry);
     symbolTable.emplace_back();
 
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+
     llvm::Function::arg_iterator argIt = function->arg_begin();
     for (const auto& [typeInfoparam, nameArg] : parameters) {
         llvm::Argument* arg = &*argIt++;
@@ -210,7 +213,10 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
             alloca = arg;
         } 
         else {
+            llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
+            builder.SetInsertPoint(&func->getEntryBlock(), func->getEntryBlock().begin());
             alloca = builder.CreateAlloca(arg->getType(), nullptr, nameArg);
+            builder.SetInsertPoint(currentBlock);
             builder.CreateStore(arg, alloca);
         }
         symbolTable.back()[nameArg] = {alloca, typeInfoparam.type};
@@ -482,12 +488,13 @@ void VarUpdt::codegen(llvm::IRBuilder<>& builder) {
 
     Value* val = value->codegen(builder);
     if (val->getLLVMValue() == nullptr){
-        llvm::Value* loadedVal = builder.CreateLoad(
+        val->loadLLVMValue(nameVar, builder);
+        /*llvm::Value* loadedVal = builder.CreateLoad(
             val->getType()->getLLVMType(ctx),
             val->getAllocation(),
             nameVar + "_val"
         );
-        val->setLLVMValue(loadedVal, val->getType(), ctx);
+        val->setLLVMValue(loadedVal, val->getType(), ctx);*/
     }
     
     if(!(*val->getType() == *type)){
@@ -526,12 +533,10 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
     }
     if(checkVariable) throw std::runtime_error("Variable already declared: " + nameVar);
  
-    Value* val = value->codegen(builder); //todo to see
-    llvm::outs() << "val: " << val << "\n";
-    if (val->isReference()){
-        throw std::runtime_error(
-            "You can't assign a variable a ptr without using ref"
-        );
+    Value* val = value->codegen(builder);
+
+    if (val->getLLVMValue() == nullptr){
+       val->loadLLVMValue(nameVar, builder);
     }
 
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
@@ -541,13 +546,7 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
         type = val->getType();
     }
     else{
-        llvm::outs() << "type: " << type <<"\n";
-        llvm::outs() << "val->getType(): " << val->getType() <<"\n";
-        llvm::outs() << "type: " << type->toString() << "\n";
-        llvm::outs() << "val->getType(): " << val->getType()->toString() << "\n";
-        //llvm::outs() << (*val->getType() == *type) << "\n";
         if(!(*val->getType() == *type)){
-            llvm::outs() << "Dentro if\n";
             if(!val->getType()->isCastTo(type)){
                 throw std::runtime_error(
                     "VarDecl::Type mismatch for variable '" + 
@@ -562,7 +561,6 @@ void VarDecl::codegen(llvm::IRBuilder<> &builder) {
             delete val;
             val = newVal;
         }
-        llvm::outs() << "Fuori if\n";
         typeVar = type->getLLVMType(ctx);
     }
     

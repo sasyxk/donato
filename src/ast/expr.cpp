@@ -31,12 +31,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
 
     Value* value = finalType->createValue(finalPtr, ctx, true);
-    llvm::Value* loadedVal = builder.CreateLoad(
-        finalType->getLLVMType(ctx),
-        finalPtr,
-        memberChain.back() + "_val"
-    );
-    value->setLLVMValue(loadedVal, finalType, ctx);
+    value->loadLLVMValue(memberChain.back(), builder);
     return value;
 }
 
@@ -175,12 +170,14 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
         auto found = it->find(name);
         if (found != it->end()) { 
             Value* value = found->second.type->createValue(found->second.alloca , ctx, true);
-            llvm::Value* llvmValue = builder.CreateLoad(
+            value->loadLLVMValue(name, builder);
+            /*llvm::Value* llvmValue = builder.CreateLoad(
                 found->second.type->getLLVMType(ctx), 
                 found->second.alloca, 
                 name + "_val"
             );
             value->setLLVMValue(llvmValue, found->second.type, ctx);
+            */
             return value;
         }
     }
@@ -270,7 +267,6 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 DereferenceOp::DereferenceOp(Expr* x) : x(x) {}
 
-
 Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     llvm::LLVMContext& ctx = builder.getContext();
     Value* value = x->codegen(builder);
@@ -281,26 +277,14 @@ Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
     }
 
     auto pointerType = static_cast<PointerType* >(pointerValue->getType()); 
-    llvm::Value* ptrAlloca;
-    if(value->isReference()){
-        ptrAlloca = builder.CreateLoad(
-            pointerType->getLLVMType(ctx),
-            pointerValue->getAllocation(),
-            "load_value"
-        );
-    }
-    else{
-        ptrAlloca = pointerValue->getLLVMValue();
-    }
     
-    llvm::Value* loadedVal = builder.CreateLoad(
-        pointerType->getTypePointed()->getLLVMType(ctx),
-        ptrAlloca,
-        "deref_val"
-    );
-    Value* result =  pointerType->getTypePointed()->createValue(loadedVal, ctx);
-    result->setAlloca(pointerValue->getLLVMValue(), pointerType->getTypePointed(), ctx);
-    llvm::outs() << "CIRCOLINO\n";
+    if(value->getLLVMValue() == nullptr){
+        value->loadLLVMValue("load_pointer", builder);
+    }
+    llvm::Value* ptrAlloca  = pointerValue->getLLVMValue();
+
+    Value* result =  pointerType->getTypePointed()->createValue(ptrAlloca, ctx, true);
+    //result->loadLLVMValue("deref_val", builder);
 
     return result;
 }
@@ -326,7 +310,6 @@ Value* newClass(
     
     auto pointerType = new PointerType(type);
     Value* result = pointerType->createValue(ptrToStruct, ctx);
-    llvm::outs() << "AURA:::"<<result->getType()->toString() <<"\n";
     return result;
 }
 
@@ -357,13 +340,13 @@ Value* newStruct(
         llvm::Value* fieldIGEP = builder.CreateStructGEP(llvmStructType, ptrToStruct, i, member.second);
         Value* memberValue = memberExpr->codegen(builder);
         if (memberValue->getLLVMValue() == nullptr){
-
-            llvm::Value* loadedVal = builder.CreateLoad(
+            memberValue->loadLLVMValue(member.second, builder);
+            /*llvm::Value* loadedVal = builder.CreateLoad(
                 memberValue->getType()->getLLVMType(ctx),
                 memberValue->getAllocation(),
                 member.second + "_val"
             );
-            memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);
+            memberValue->setLLVMValue(loadedVal, memberValue->getType(), ctx);*/
     
         }
         if(!(*member.first == *memberValue->getType())){

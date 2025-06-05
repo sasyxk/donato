@@ -4,8 +4,8 @@
 
 class SignedIntValue : public Value {
     Type* type;
-    llvm::Value* value;
-    llvm::Value* alloca;
+    llvm::Value* value = nullptr;
+    llvm::Value* alloca = nullptr;
 public:
     SignedIntValue(Type* type);
     ~SignedIntValue() = default;

@@ -157,41 +157,6 @@ bool StructType::operator==(const Type &other) const {
     }
     return false;
 
-    /*
-    if (!otherType){
-        llvm::outs() << "2)\n";
-        return false;
-    }
-        
-
-    if(this->nameStruct != otherType->nameStruct){
-        llvm::outs() << "3)\n";
-        return false;
-    }
-    
-    if (members.size() != otherType->members.size()){
-        llvm::outs() << "4)\n";
-        return false;
-    }
-
-    for (size_t i = 0; i < members.size(); ++i) {
-        const auto& [thisType, thisName] = members[i];
-        const auto& [otherTypeMember, otherName] = otherType->members[i];
-
-        if (!(*thisType == *otherTypeMember)){
-            llvm::outs() << "5)\n";
-            return false;
-        }
-           
-
-        if (thisName != otherName){
-            llvm::outs() << "6)\n";
-            return false;
-        }
-            
-    }
-    return true;
-    */
 }
 
 std::string StructType::toString() const {
