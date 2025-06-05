@@ -4,7 +4,7 @@
 class Expr {
 public:
     virtual ~Expr() = default;
-    virtual Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) = 0;
+    virtual Value* codegen(llvm::IRBuilder<>& builder) = 0;
 };
 
 class StructVar : public Expr {
@@ -13,7 +13,7 @@ class StructVar : public Expr {
 public:
     StructVar(const std::string& vsn, const std::vector<std::string> &mn);
     ~StructVar()  = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class CallFunc : public Expr {
@@ -27,7 +27,7 @@ public:
             delete arg;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
  class  ClassCallFunc : public Expr {
@@ -46,7 +46,7 @@ public:
             delete arg;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
  };
 
 class BinaryCond : public Expr {
@@ -59,7 +59,7 @@ public:
         delete left; 
         delete right; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class BinaryOp : public Expr {
@@ -72,7 +72,7 @@ public:
         delete left; 
         delete right; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class UnaryOp : public Expr {
@@ -83,7 +83,7 @@ public:
     ~UnaryOp() {
         delete x;  
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class DoubleNum : public Expr {
@@ -92,7 +92,7 @@ class DoubleNum : public Expr {
 public:
     DoubleNum(double v, Type* t);
     ~DoubleNum()  = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class SignedIntNum : public Expr {
@@ -101,7 +101,7 @@ class SignedIntNum : public Expr {
 public:
     SignedIntNum(std::int64_t v, Type* t);
     ~SignedIntNum()  = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class BoolNum : public Expr {
@@ -110,7 +110,7 @@ class BoolNum : public Expr {
 public:
     BoolNum(bool v, Type* t);
     ~BoolNum() = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class Var : public Expr {
@@ -118,7 +118,7 @@ class Var : public Expr {
 public:
     Var(const std::string& n);
     ~Var() = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class IfOp : public Expr {
@@ -132,7 +132,7 @@ public:
         delete thenExpr; 
         delete elseExpr; 
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class LetOp : public Expr {
@@ -146,9 +146,8 @@ public:
             delete binding.second;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
-
 
 class DereferenceOp : public Expr {
     Expr* x;
@@ -157,7 +156,7 @@ public:
     ~DereferenceOp() {
         delete x;
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class NewOp : public Expr {
@@ -171,7 +170,7 @@ public:
             delete arg;
         }
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class AddressOp : public Expr {
@@ -181,7 +180,7 @@ public:
     ~AddressOp(){
         delete value;
     }
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };
 
 class NullPtr : public Expr {
@@ -189,5 +188,5 @@ class NullPtr : public Expr {
 public:
     NullPtr(Type* t);
     ~NullPtr() = default;
-    Value* codegen(llvm::IRBuilder<>& builder, bool isPointer = false) override;
+    Value* codegen(llvm::IRBuilder<>& builder) override;
 };

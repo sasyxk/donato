@@ -2,7 +2,7 @@
 
 StructVar::StructVar(const std::string &vsn, const std::vector<std::string> &mc) : varStructName(vsn) , memberChain(mc) {}
 
-Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
+Value* StructVar::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* ptrToStruct = nullptr;
@@ -22,7 +22,6 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     if (!foundVar)
         throw std::runtime_error("Undeclared variable: " + varStructName);
 
-
     // Let's check if the variable found is actually a Struct
     StructType* rootStruct = dynamic_cast<StructType*>(type);
     if (!rootStruct)
@@ -37,7 +36,7 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
 
 CallFunc::CallFunc(const std::string &fn, const std::string noc,  std::vector<Expr *> a) : funcName(fn),nameOfClass(noc),  args(a) {}
 //todo nameOfClass here is useless
-Value* CallFunc::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
+Value* CallFunc::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     
     FunctionCallParams params;
@@ -67,7 +66,7 @@ ClassCallFunc::ClassCallFunc(
 // It manages how the retrieval of elements of the various
 // structs should be handled, which can be chained up to
 // the last element which must be a function call.
-Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder) {
     return generateClassFunctionCall(
         builder,
         firstVariableName,
@@ -80,7 +79,7 @@ Value* ClassCallFunc::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 BinaryCond::BinaryCond(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 
-Value* BinaryCond::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* BinaryCond::codegen(llvm::IRBuilder<>& builder) {
     Value* l = left->codegen(builder);
     Value* r = right->codegen(builder);
     if (l->getLLVMValue() == nullptr){
@@ -106,7 +105,7 @@ Value* BinaryCond::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 BinaryOp::BinaryOp(const std::string& o, Expr* l, Expr* r) : op(o), left(l), right(r) {}
 
-Value* BinaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* BinaryOp::codegen(llvm::IRBuilder<>& builder) {
     Value* l = left->codegen(builder);
     Value* r = right->codegen(builder);
     if (l->getLLVMValue() == nullptr){
@@ -130,7 +129,7 @@ Value* BinaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 UnaryOp::UnaryOp(const std::string& o, Expr* x) : op(o), x(x) {}
 
-Value* UnaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* UnaryOp::codegen(llvm::IRBuilder<>& builder) {
     Value* v = x->codegen(builder);
     if (v->getLLVMValue() == nullptr){
        v->loadLLVMValue("unary_op", builder);
@@ -143,7 +142,7 @@ Value* UnaryOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 DoubleNum::DoubleNum(double v, Type* t) : val(v) , type(t) {}
 
-Value* DoubleNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* DoubleNum::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* llvmValue = llvm::ConstantFP::get(ctx, llvm::APFloat(val));
     return type->createValue(llvmValue, ctx);
@@ -151,7 +150,7 @@ Value* DoubleNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 SignedIntNum::SignedIntNum(std::int64_t v, Type* t) : val(v) , type(t) {}
 
-Value* SignedIntNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* SignedIntNum::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     unsigned bits = static_cast<SignedIntType*>(type)->getBits();
@@ -166,7 +165,7 @@ Value* SignedIntNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 BoolNum::BoolNum(bool v, Type* t) : val(v) , type(t) {}
 
-Value* BoolNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* BoolNum::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::Value* llvmValue = llvm::ConstantInt::get(ctx, llvm::APInt(1, val ? 1 : 0));
     return type->createValue(llvmValue, ctx);
@@ -174,7 +173,7 @@ Value* BoolNum::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 Var::Var(const std::string& n) : name(n) {}
 
-Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* Var::codegen(llvm::IRBuilder<>& builder) {
     llvm::Function* func = builder.GetInsertBlock()->getParent();
     llvm::outs() << "Retrive Var : " << name << "\n";
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
@@ -186,13 +185,6 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
         if (found != it->end()) { 
             Value* value = found->second.type->createValue(found->second.alloca , ctx, true);
             value->loadLLVMValue(name, builder);
-            /*llvm::Value* llvmValue = builder.CreateLoad(
-                found->second.type->getLLVMType(ctx), 
-                found->second.alloca, 
-                name + "_val"
-            );
-            value->setLLVMValue(llvmValue, found->second.type, ctx);
-            */
             return value;
         }
     }
@@ -201,7 +193,7 @@ Value* Var::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 IfOp::IfOp(Expr* c, Expr* t, Expr* e) : cond(c), thenExpr(t), elseExpr(e) {}
 
-Value* IfOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     Value* condVal = cond->codegen(builder);
     if (condVal->getLLVMValue() == nullptr){
@@ -259,7 +251,7 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 LetOp::LetOp(const std::vector<std::pair<std::string, Expr*>>& b, Expr* bod) : bindings(b), body(bod) {}
 
-Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* LetOp::codegen(llvm::IRBuilder<>& builder) {
     symbolTable.emplace_back();
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
@@ -297,7 +289,7 @@ Value* LetOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 DereferenceOp::DereferenceOp(Expr* x) : x(x) {}
 
-Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* DereferenceOp::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     Value* value = x->codegen(builder);
 
@@ -419,7 +411,7 @@ NewOp::NewOp(std::string nc, std::vector<Expr*> a) : nameClass(nc) , args(a){
 }
 
 
-Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
+Value* NewOp::codegen(llvm::IRBuilder<>& builder){
     // Allocation 
     llvm::BasicBlock* currentBlock = builder.GetInsertBlock();
 
@@ -442,7 +434,7 @@ Value* NewOp::codegen(llvm::IRBuilder<>& builder, bool isPointer){
 
 AddressOp::AddressOp(Expr* v) : value(v) {}
 
-Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* AddressOp::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     Value* resultCodegen = value->codegen(builder);
@@ -464,7 +456,7 @@ Value* AddressOp::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
 
 NullPtr::NullPtr(Type* t) : type(t) {}
 
-Value* NullPtr::codegen(llvm::IRBuilder<>& builder, bool isPointer) {
+Value* NullPtr::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::PointerType* ptrType = llvm::PointerType::getUnqual(type->getLLVMType(ctx));
     llvm::Value* nullPtr = llvm::ConstantPointerNull::get(ptrType);
