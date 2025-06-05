@@ -35,19 +35,9 @@ void extendValue(
     return;
 }
 
-void examineIsPointerError(llvm::Value* t, llvm::Value* h){
-    if(t == nullptr || h == nullptr){
-        throw std::runtime_error(
-            "Unsupported addition for isPointer = true"
-        );
-    }
-}
-
 Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
-    examineIsPointerError(this->getLLVMValue(), other->getLLVMValue()); //todofix, create load
-    
     if (auto* otherType = dynamic_cast<const SignedIntType*>(other->getType())) {
         auto* otherValue = dynamic_cast<const SignedIntValue*>(other);
         llvm::Value* left = this->getLLVMValue();
