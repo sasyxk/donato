@@ -225,7 +225,7 @@ Value* SignedIntValue::eq(Value* other, llvm::IRBuilder<>& builder) {
             return boolType->createValue(result, ctx);
         }
     }
-
+    
     throw std::runtime_error(
         "Unsupported types for equality comparison: " +
         this->getType()->toString() +

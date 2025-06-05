@@ -22,13 +22,13 @@ Value* StructVar::codegen(llvm::IRBuilder<> &builder, bool isPointer) {
     if (!foundVar)
         throw std::runtime_error("Undeclared variable: " + varStructName);
 
+
     // Let's check if the variable found is actually a Struct
     StructType* rootStruct = dynamic_cast<StructType*>(type);
     if (!rootStruct)
         throw std::runtime_error("Variable '" + varStructName + "' is not a struct.");
 
     auto [finalPtr, finalType] = getStructMemberGEP(builder, ptrToStruct, rootStruct, memberChain);
-
 
     Value* value = finalType->createValue(finalPtr, ctx, true);
     value->loadLLVMValue(memberChain.back(), builder);

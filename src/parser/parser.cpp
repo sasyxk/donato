@@ -231,7 +231,6 @@ Statement* Parser::parseStm(){
             Type* type;
             if(currentToken.value == nameStruct){
                 eat(UPPERNAME);
-                Type* type;
                 type = new SpecialType(nameStruct, structType);
                 if(currentToken.value != "*"){
                     throw std::runtime_error(
@@ -254,12 +253,12 @@ Statement* Parser::parseStm(){
             std::string member = currentToken.value;
             eat(VAR);
             members.emplace_back(type, member);
+
             eat(ENDEXPR);
         } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
         eat(RBRACE);
 
         structType->setMembers(members);
-
         return new DefineStruct(structType);
     }
     if (currentToken.type == TYPE  || currentToken.type == UPPERNAME) { 
