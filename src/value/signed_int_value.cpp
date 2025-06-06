@@ -373,13 +373,18 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
 
     if ( SignedIntType* otherType = dynamic_cast< SignedIntType*>(other)) {
         const SignedIntType* thisType = dynamic_cast<const SignedIntType*>(this->getType());
-        if (thisType->getBits() > otherType->getBits()) {
-            llvm::Value* val = this->getLLVMValue();
+        bool bitCond = thisType->getBits() > otherType->getBits();
+        llvm::Value* result;
+        Type* type = otherType;
+        llvm::Value* val = this->getLLVMValue();
+        llvm::Type* dstTy = otherType->getLLVMType(ctx);
+        if (bitCond && CompilerFlags::instance().truncateEnabled) {
+           
             llvm::Type* srcTy = val->getType();
-            llvm::Type* dstTy = otherType->getLLVMType(ctx);
-
-            llvm::Value* truncated = builder.CreateTrunc(val, dstTy, "trunc_val");
-            llvm::Value* reextended = builder.CreateSExt(truncated, srcTy, "reext_val");
+            
+            // result is the truncated value
+            result = builder.CreateTrunc(val, dstTy, "trunc_val"); 
+            llvm::Value* reextended = builder.CreateSExt(result, srcTy, "reext_val");
             llvm::Value* isSame = builder.CreateICmpEQ(reextended, val, "check_lossless");
 
             llvm::Function* func = builder.GetInsertBlock()->getParent();
@@ -399,15 +404,15 @@ Value *SignedIntValue::castTo(Type *other, llvm::IRBuilder<> &builder) {
             builder.CreateUnreachable();
 
             builder.SetInsertPoint(okBlock);
-            Type* type = otherType;
-            return type->createValue(truncated, ctx);
-
+        
         } 
-        else if (thisType->getBits() < otherType->getBits()) {
-            llvm::Value* newValue = builder.CreateSExt(this->getLLVMValue(), otherType->getLLVMType(ctx), "sext_left_casting");
-            Type* type = otherType;
-            return type->createValue(newValue, ctx);
+        else if(!bitCond){
+            result = builder.CreateSExt(val, dstTy, "sext_left_casting");
         }
+        else{ // CompilerFlags::instance().truncateEnabled == false && bitCond
+            result = builder.CreateTrunc(val, dstTy, "trunc_val");
+        }
+        return type->createValue(result, ctx);
     }
     throw std::runtime_error(
         "Unsupported cast Operation: " +
