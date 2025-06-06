@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "codegen.h"
+#include "compiler_flags.h"
 #include "llvm/IR/Verifier.h"
 #include "setup_default_functions.h"
 #include <iostream>
@@ -43,23 +44,18 @@ void printAllocations(size_t count, size_t size_in_bytes) {
 }
 
 int main(int argc, char** argv) {
-    // Check if an argument (the input to compile) has been passed
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <file.donato>\n";
+
+    auto& flags = CompilerFlags::instance();
+
+    // Parsing flags and checking input validity
+    if (!flags.parseArgs(argc, argv)) {
         return 1;
     }
 
-    // Make sure the file name ends with ".donato"
-    std::string filename = argv[1];
-    const std::string ext = ".donato";
-    if (filename.size() < ext.size() || filename.substr(filename.size() - ext.size()) != ext) {
-        std::cerr << "Error: file extension must be " << ext << "\n";
-        return 1;
-    }
+    std::ifstream file(flags.filename);
 
-    std::ifstream file(argv[1]);
     if (!file) {
-        std::cerr << "Error opening file: " << argv[1] << "\n";
+        std::cerr << "Error opening file: " << flags.filename << "\n";
         return 1;
     }
 
@@ -105,7 +101,7 @@ int main(int argc, char** argv) {
     
     // Verify and generate executable
     llvm::verifyModule(*module, &llvm::errs());
-    generateExecutable(*module, "output");
+    generateExecutable(*module, flags.outputName);
 
 
     // Cleanup - clear vectors
