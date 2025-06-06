@@ -2,6 +2,7 @@
 #include "value.h"
 #include "type.h"
 #include "type_manager.h"
+#include "compiler_flags.h"
 
 class SignedIntValue : public Value {
     Type* type;

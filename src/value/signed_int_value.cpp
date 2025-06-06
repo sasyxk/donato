@@ -45,9 +45,11 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
         Type* leftType = this->getType();
         Type* rightType = otherValue->getType();
         extendValue(builder, left, right, leftType, rightType);
-        if(true){ //Change With Flag
+        Type* newType = TypeManager::instance().getSignedIntType(64);
+        llvm::Value* result;
+        if(CompilerFlags::instance().overflowCheck){
             std::string name = "addtmp";
-            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+            result = Value::createCheckedIntegerArithmetic(
                 llvm::Intrinsic::sadd_with_overflow,
                 left,
                 right,
@@ -55,12 +57,11 @@ Value* SignedIntValue::add(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_ok",
                 name + "_overflow"
             );
-            Type* newType = TypeManager::instance().getSignedIntType(64);
-            return newType->createValue(result, ctx);
         }
         else{
-            return nullptr;
+            result = builder.CreateAdd(left, right, "addtmp");
         }
+        return newType->createValue(result, ctx);
     }
     throw std::runtime_error(
         "Unsupported types for addition " + 
@@ -80,9 +81,11 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
         Type* leftType = this->getType();
         Type* rightType = otherValue->getType();
         extendValue(builder, left, right, leftType, rightType);
-        if(true){ //Change With Flag
-            std::string name = "addtmp";
-            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+        llvm::Value* result;
+        Type* newType = TypeManager::instance().getSignedIntType(64);
+        if(CompilerFlags::instance().overflowCheck){ 
+            std::string name = "subtmp";
+            result = Value::createCheckedIntegerArithmetic(
                 llvm::Intrinsic::ssub_with_overflow,
                 left,
                 right,
@@ -90,12 +93,11 @@ Value* SignedIntValue::sub(Value* other, llvm::IRBuilder<>& builder) {
                 name + "_ok",
                 name + "_overflow"
             );
-            Type* newType = TypeManager::instance().getSignedIntType(64);
-            return newType->createValue(result, ctx);
         }
         else{
-            return nullptr;
+            result = builder.CreateSub(left, right, "subtmp");
         }
+        return newType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -116,22 +118,23 @@ Value* SignedIntValue::mul(Value* other, llvm::IRBuilder<>& builder) {
         Type* leftType = this->getType();
         Type* rightType = otherValue->getType();
         extendValue(builder, left, right, leftType, rightType);
-        if(true){ //Change With Flag
-            std::string name = "addtmp";
-            llvm::Value* result = Value::createCheckedIntegerArithmetic(
+        llvm::Value* result;
+        Type* newType = TypeManager::instance().getSignedIntType(64);
+        if(CompilerFlags::instance().overflowCheck){ 
+            std::string name = "multmp";
+            result = Value::createCheckedIntegerArithmetic(
                 llvm::Intrinsic::smul_with_overflow,
                 left,
                 right,
                 builder,
                 name + "_ok",
                 name + "_overflow"
-            );
-            Type* newType = TypeManager::instance().getSignedIntType(64);
-            return newType->createValue(result, ctx);
+            );            
         }
-        else{
-            return nullptr;
+        else {
+            result = builder.CreateMul(left, right, "multmp");
         }
+        return newType->createValue(result, ctx);
     }
    
     throw std::runtime_error(
@@ -149,62 +152,57 @@ Value* SignedIntValue::div(Value* other, llvm::IRBuilder<>& builder) {
         
         llvm::Value* lhs = this->getLLVMValue();
         llvm::Value* rhs = other->getLLVMValue();
-        llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
+        extendValue(builder, lhs, rhs,  this->getType(), other->getType());
+        if(CompilerFlags::instance().overflowCheck){
+            llvm::Type* i64Ty = llvm::Type::getInt64Ty(ctx);
 
-        if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
-            lhs = builder.CreateSExt(lhs, i64Ty, "sext_lhs");
+            llvm::Module* module = builder.GetInsertBlock()->getModule();
+            llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
+
+            // Constants: INT_MIN , -1 AND 0
+            llvm::Value* intMin = llvm::ConstantInt::get(i64Ty, llvm::APInt::getSignedMinValue(i64Ty->getIntegerBitWidth()));
+            llvm::Value* minusOne = llvm::ConstantInt::getSigned(i64Ty, -1);
+            llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
+
+            // Division by zero check
+            llvm::Value* isZero = builder.CreateICmpEQ(rhs, zero, "iszero");
+
+            // Overflow control division INT_MIN / -1
+            llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
+            llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
+            llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
+
+            llvm::BasicBlock* divZeroBlock = llvm::BasicBlock::Create(ctx, "div_zero", currentFunc);
+            llvm::BasicBlock* overflowBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
+            llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
+            llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow_error", currentFunc);
+
+            builder.CreateCondBr(isZero, divZeroBlock, overflowBlock);
+
+            // Div Zero Error Block
+            builder.SetInsertPoint(divZeroBlock);
+            llvm::FunctionCallee errorFn = module->getFunction("llvm_error");
+            llvm::Value* errorCodeZero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_DIVISION_BY_ZERO);
+            builder.CreateCall(errorFn, { errorCodeZero });
+            builder.CreateUnreachable();
+
+            // Overflow Block
+            builder.SetInsertPoint(overflowBlock);
+            builder.CreateCondBr(willOverflow, errBlock, okBlock);
+
+            // Error overflow Block
+            builder.SetInsertPoint(errBlock);
+            llvm::Value* errorCodeOverflow = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_SIGNED_OVERFLOW);
+            builder.CreateCall(errorFn, { errorCodeOverflow });
+            builder.CreateUnreachable();
+
+            // Continue Block
+            builder.SetInsertPoint(okBlock);
         }
-
-        if (auto* rt = dynamic_cast<SignedIntType*>(other->getType()); rt && rt->getBits() < 64) {
-            rhs = builder.CreateSExt(rhs, i64Ty, "sext_rhs");
-        }
-
-        llvm::Module* module = builder.GetInsertBlock()->getModule();
-        llvm::Function* currentFunc = builder.GetInsertBlock()->getParent();
-
-        // Constants: INT_MIN , -1 AND 0
-        llvm::Value* intMin = llvm::ConstantInt::get(i64Ty, llvm::APInt::getSignedMinValue(i64Ty->getIntegerBitWidth()));
-        llvm::Value* minusOne = llvm::ConstantInt::getSigned(i64Ty, -1);
-        llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
-
-        // Division by zero check
-        llvm::Value* isZero = builder.CreateICmpEQ(rhs, zero, "iszero");
-
-        // Overflow control division INT_MIN / -1
-        llvm::Value* isMin = builder.CreateICmpEQ(lhs, intMin, "ismin");
-        llvm::Value* isNegOne = builder.CreateICmpEQ(rhs, minusOne, "isnegone");
-        llvm::Value* willOverflow = builder.CreateAnd(isMin, isNegOne, "will_overflow");
-
-        llvm::BasicBlock* divZeroBlock = llvm::BasicBlock::Create(ctx, "div_zero", currentFunc);
-        llvm::BasicBlock* overflowBlock = llvm::BasicBlock::Create(ctx, "div_overflow", currentFunc);
-        llvm::BasicBlock* okBlock = llvm::BasicBlock::Create(ctx, "div_ok", currentFunc);
-        llvm::BasicBlock* errBlock = llvm::BasicBlock::Create(ctx, "div_overflow_error", currentFunc);
-
-        builder.CreateCondBr(isZero, divZeroBlock, overflowBlock);
-
-        // Div Zero Error Block
-        builder.SetInsertPoint(divZeroBlock);
-        llvm::FunctionCallee errorFn = module->getFunction("llvm_error");
-        llvm::Value* errorCodeZero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_DIVISION_BY_ZERO);
-        builder.CreateCall(errorFn, { errorCodeZero });
-        builder.CreateUnreachable();
-
-        // Overflow Block
-        builder.SetInsertPoint(overflowBlock);
-        builder.CreateCondBr(willOverflow, errBlock, okBlock);
-
-        // Error overflow Block
-        builder.SetInsertPoint(errBlock);
-        llvm::Value* errorCodeOverflow = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ERROR_SIGNED_OVERFLOW);
-        builder.CreateCall(errorFn, { errorCodeOverflow });
-        builder.CreateUnreachable();
-
-        // Continue Block
-        builder.SetInsertPoint(okBlock);
-        llvm::Value* result = builder.CreateSDiv(lhs, rhs, "divtmp");
         Type* newType = TypeManager::instance().getSignedIntType(64);
-        return newType->createValue(result, ctx);
+        llvm::Value* result = builder.CreateSDiv(lhs, rhs, "divtmp");
         
+        return newType->createValue(result, ctx); 
     }
 
     throw std::runtime_error(
@@ -337,9 +335,11 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
     if (auto* lt = dynamic_cast<SignedIntType*>(this->getType()); lt && lt->getBits() < 64) {
         value = builder.CreateSExt(value, i64Ty, "sext_lhs");
     }
-    if(true){
+    Type* newType = TypeManager::instance().getSignedIntType(64);
+    llvm::Value* result;
+    if(CompilerFlags::instance().overflowCheck){
         llvm::Value* zero = llvm::ConstantInt::get(i64Ty, 0);
-        llvm::Value* result = createCheckedIntegerArithmetic(
+        result = createCheckedIntegerArithmetic(
             llvm::Intrinsic::ssub_with_overflow,
             zero,  // 0 - x
             value,
@@ -347,13 +347,11 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
             "negtmp_ok",
             "negtmp_overflow"
         );
-        Type* newType = TypeManager::instance().getSignedIntType(64);
-        return newType->createValue(result, ctx);
     }
-    else{
-        //llvm::Value* result = builder.CreateNeg(this->getLLVMValue(), "negtmp");
-        return nullptr;
+    else {
+        result = builder.CreateNeg(value, "negtmp");
     }
+    return newType->createValue(result, ctx);
 }
 
 Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
