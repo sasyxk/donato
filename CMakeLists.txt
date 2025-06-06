@@ -13,8 +13,6 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-configure_file(${CMAKE_SOURCE_DIR}/src/codegen/output_eval.c ${CMAKE_BINARY_DIR}/output_eval.c COPYONLY)
-
 file(GLOB_RECURSE SOURCES
     "src/*.cpp"  
     "src/ast/*.cpp"          
