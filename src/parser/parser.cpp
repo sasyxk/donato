@@ -54,9 +54,7 @@ std::vector<std::string> Parser::parseClassFunctionNames(){
     }
     while(currentToken.type == FUNCTION){
         eat(FUNCTION);
-        if(currentToken.type == VAR || currentToken.type == UPPERNAME || currentToken.type == VOID || TYPE){
-            eat(currentToken.type);
-        }
+        eat(currentToken.type);
         while(currentToken.value == "*"){
             eat(currentToken.type);
         }
@@ -327,11 +325,6 @@ Statement* Parser::parseStm(){
         } while (currentToken.type != RBRACE);
         eat(RBRACE);
         return new WhileStm(condLeft,whileStd);
-    }
-    if(currentToken.type == COMMENT){
-        eat(COMMENT);
-        Statement* next = parseStm();
-        return next;
     }
     if (currentToken.type == VAR ||
         currentToken.type == THIS) { // To the left of the class called with this it behaves exactly like a struct, we can leave it like that

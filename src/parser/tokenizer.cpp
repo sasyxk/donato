@@ -1,14 +1,46 @@
 #include "tokenizer.h"
 #include <stdexcept>
 #include <cctype>
+#include <iostream>
 
 Tokenizer::Tokenizer(const std::string& s) : input(s), pos(0) {}
 
 Token Tokenizer::nextToken() {
-    while (pos < input.size() && isspace(input[pos])) pos++;
-    if (pos >= input.size()) return Token(END);
+    while (pos < input.size()){
+        if (isspace(input[pos])) {
+            pos++;
+            continue;
+        }
+        // Comment operator management /* ... */
+        if (input[pos] == '/') {
+            if (pos + 1 < input.size() && input[pos + 1] == '*') {
+                pos += 2;
+                while (pos + 1 < input.size()) {
+                    if (input[pos] == '*' && input[pos + 1] == '/') {
+                        pos += 2;
+                        break;
+                    }
+                    pos++;
+                }
+                continue; 
+            }
+            else if (input[pos + 1] == '/') {
+                pos += 2;
+                while (pos < input.size() && input[pos] != '\n') {
+                    pos++;
+                }
+                continue;
+            }
+            
+        }
+        break;
+    } 
+
 
     char c = input[pos];
+    if (pos >= input.size()) return Token(END);
+
+    
     if (isdigit(c) || (c == '.' && isdigit(input[pos + 1])) || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
         size_t start = pos;
         if(input[pos] == '-') pos++;
@@ -84,31 +116,6 @@ Token Tokenizer::nextToken() {
         if (c == '<' || c == '>') {
             pos++;
             return Token(CONDOP, std::string(1, c));
-        }
-    }
-
-    // Comment operator management /* ... */
-    if (c == '/') {
-        if (pos + 1 < input.size() && input[pos + 1] == '*') {
-            pos += 2;
-            size_t start = pos;
-            while (pos + 1 < input.size() && !(input[pos] == '*' && input[pos + 1] == '/')) {
-                pos++;
-            }
-            std::string commentContent = input.substr(start, pos - start);
-            if (pos + 1 < input.size()) {
-                pos += 2;
-            }
-            return Token(COMMENT, commentContent);
-        }
-        if (pos + 1 < input.size() && input[pos + 1] == '/') {
-            pos += 2;
-            size_t start = pos;
-            while (pos < input.size() && input[pos] != '\n') {
-                pos++;
-            }
-            std::string commentContent = input.substr(start, pos - start);
-            return Token(COMMENT, commentContent);
         }
     }
 
