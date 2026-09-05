@@ -1,0 +1,32 @@
+# TODO
+
+- [ ] Handle the `return` issue in the parser, currently there
+  is no mandatory presence, but this leads to llvm error problems
+
+- [x] Find a way to allow the declaration of a private variable
+  within a class that is of the class's type
+
+- [ ] At this moment I do not handle the fact that a pointer is `nullptr`,
+  in that case it continues to access that memory that it had previously saved,
+  and therefore obviously that memory no longer depends directly on it, causing problems
+  But problably I need runtimeCheck
+
+- [ ] Create FLAG for the compiler, to become to handle the
+  debug running with all FLAG active, or Performance Running.
+  FLAGS: OVERFLOW CHECK, TRUNC CHECK,
+  Implement the `nullptr` check.
+
+- [x] To complete the checks errors from operations in `***Value`.
+
+- [x] If I have a statement like this: `int x = p.getX();`
+  but in general if on the right I return a ptr,
+  When I check if the result is of the same type,
+  I do not check if it is a ptr or not,
+  So a ptr will be saved on x instead of an i64
+
+- [x] Change every time I read `->isPointerTy()` to my `isPointer()` function.
+  This way I don't have problems with the subsequent development of pointers
+
+- [x] At this time for reference, functions can return a variable
+  that has been allocated on the function stack, this is not safe
+  but now allowing it if the save was done via `malloc`.

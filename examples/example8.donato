@@ -1,0 +1,389 @@
+class Node {
+  int value;
+  Node* next;
+  Node* prev;
+public:
+  Node(int value){
+    this.next = nullptr<Node>;
+    this.prev = nullptr<Node>;
+    this.value = value;
+    return;
+  }
+
+  function
+  void setNext(Node* node){
+    this.next = node;
+    return;
+  }
+
+  function
+  Node* getNext(){
+    return this.next;
+  }
+
+  function
+  void setPrev(Node* node){
+    this.prev = node;
+    return;
+  }
+
+  function
+  Node* getPrev(){
+    return this.prev;
+  }
+
+  function
+  int getValue(){
+    return this.value;
+  }
+}
+
+class LinkedList {
+  Node* head;
+  Node* tail;
+  int size;
+public:
+  LinkedList(){
+    this.head = nullptr<Node>;
+    this.tail = nullptr<Node>;
+    this.size = 0;
+    return;
+  }
+
+  function
+  void add(int value){
+    Node* newNode = new Node(value);
+  
+    if(this.head == nullptr<Node>){
+      this.head = newNode;
+      this.tail = newNode;
+      this.size = this.size + 1;
+      return;
+    }
+    
+    ref Node tailRef = *this.tail;
+    ref Node newRef = *newNode;
+    
+    tailRef.setNext(newNode);
+    newRef.setPrev(this.tail);
+    this.tail = newNode;
+    this.size = this.size + 1;
+    return;
+  }
+
+  function
+  void insertAt(int index, int value){
+    if(index < 0){
+      return;
+    }
+    if(index > this.size){
+      return;
+    }
+    
+    if(index == this.size){
+      this.add(value);
+      return;
+    }
+    
+    if(index == 0){
+      Node* newNode = new Node(value);
+      ref Node newRef = *newNode;
+      
+      if(this.head != nullptr<Node>){
+        ref Node headRef = *this.head;
+        newRef.setNext(this.head);
+        headRef.setPrev(newNode);
+      }
+      
+      this.head = newNode;
+      if(this.tail == nullptr<Node>){
+        this.tail = newNode;
+      }
+      this.size = this.size + 1;
+      return;
+    }
+    
+    Node* current = this.head;
+    int i = 0;
+    
+    while(i < index){
+      if(current == nullptr<Node>){
+        return;
+      }
+      ref Node currentRef = *current;
+      current = currentRef.getNext();
+      i = i + 1;
+    }
+    
+    if(current != nullptr<Node>){
+      Node* newNode = new Node(value);
+      ref Node newRef = *newNode;
+      ref Node currentRef = *current;
+      
+      Node* prevNode = currentRef.getPrev();
+      
+      newRef.setNext(current);
+      newRef.setPrev(prevNode);
+      currentRef.setPrev(newNode);
+      
+      if(prevNode != nullptr<Node>){
+        ref Node prevRef = *prevNode;
+        prevRef.setNext(newNode);
+      }
+      
+      this.size = this.size + 1;
+    }
+    return;
+  }
+
+  function
+  int getSize(){
+    return this.size;
+  }
+
+  function
+  void printList(){
+    Node* current = this.head;
+    
+    while(current != nullptr<Node>){
+      ref Node n = *current;
+      print(n.getValue());
+      current = n.getNext();
+    }
+    return;
+  }
+
+  function
+  void printReverse(){
+    Node* current = this.tail;
+    
+    while(current != nullptr<Node>){
+      ref Node n = *current;
+      print(n.getValue());
+      current = n.getPrev();
+    }
+    return;
+  }
+
+  function
+  void destroy(){
+    Node* current = this.head;
+    
+    while(current != nullptr<Node>){
+      ref Node currentRef = *current;
+      Node* next = currentRef.getNext();
+      
+      delete current;
+      
+      current = next;
+    }
+    
+    this.head = nullptr<Node>;
+    this.tail = nullptr<Node>;
+    this.size = 0;
+    return;
+  }
+    function
+	bool detectAndBreakCycles(){
+	if(this.head == nullptr<Node>){
+		return false;
+	}
+
+	// Floyd's Cycle Detection Algorithm (Tortoise and Hare)
+	Node* slow = this.head;
+	Node* fast = this.head;
+	bool cycleFound = false;
+	bool continueDetection = true;
+
+	// Phase 1: Detect if cycle exists
+	while(continueDetection == true){
+		if(fast == nullptr<Node>){
+			continueDetection = false;
+		}
+		
+		if(continueDetection == true){
+			ref Node fastRef = *fast;
+			Node* fastNext = fastRef.getNext();
+			
+			if(fastNext == nullptr<Node>){
+				continueDetection = false;
+			}
+			
+			if(continueDetection == true){
+				ref Node fastNextRef = *fastNext;
+				fast = fastNextRef.getNext();
+				
+				ref Node slowRef = *slow;
+				slow = slowRef.getNext();
+				
+				if(slow == fast){
+					if(slow != nullptr<Node>){
+						cycleFound = true;
+						continueDetection = false;
+					}
+				}
+			}
+		}
+	}
+
+	if(cycleFound == false){
+		return false;
+	}
+
+	// Phase 2: Find cycle start point
+	Node* ptr1 = this.head;
+	Node* ptr2 = slow;
+	Node* cycleStart = nullptr<Node>;
+	bool foundStart = false;
+
+	while(foundStart == false){
+		if(ptr1 == ptr2){
+			cycleStart = ptr1;
+			foundStart = true;
+		}
+		
+		if(foundStart == false){
+			ref Node ptr1Ref = *ptr1;
+			ref Node ptr2Ref = *ptr2;
+			
+			ptr1 = ptr1Ref.getNext();
+			ptr2 = ptr2Ref.getNext();
+		}
+	}
+
+	if(cycleStart == nullptr<Node>){
+		return false;
+	}
+
+	// Phase 3: Find the node just before cycle start
+	Node* beforeCycle = nullptr<Node>;
+	Node* current = cycleStart;
+	bool foundBefore = false;
+	int maxIterations = 1000;
+	int iterations = 0;
+
+	while(foundBefore == false){
+		if(iterations >= maxIterations){
+			foundBefore = true;
+		}
+		
+		if(foundBefore == false){
+			if(current == nullptr<Node>){
+				foundBefore = true;
+			}
+			
+			if(foundBefore == false){
+				ref Node currentRef = *current;
+				Node* nextNode = currentRef.getNext();
+				
+				if(nextNode == cycleStart){
+					beforeCycle = current;
+					foundBefore = true;
+				}
+				
+				if(foundBefore == false){
+					current = nextNode;
+					iterations = iterations + 1;
+				}
+			}
+		}
+	}
+
+	// Phase 4: Break the cycle and reconstruct proper tail
+	if(beforeCycle != nullptr<Node>){
+		ref Node beforeRef = *beforeCycle;
+		beforeRef.setNext(nullptr<Node>);
+		
+		this.tail = beforeCycle;
+		
+		// Recalculate size
+		int newSize = 0;
+		Node* counter = this.head;
+		int maxCount = 10000;
+		
+		while(newSize < maxCount){
+			if(counter == nullptr<Node>){
+				maxCount = newSize;
+			}
+			
+			if(newSize < maxCount){
+				newSize = newSize + 1;
+				ref Node counterRef = *counter;
+				counter = counterRef.getNext();
+			}
+		}
+		
+		this.size = newSize;
+	}
+
+	return true;
+  }
+	function
+	void createTestCycle(){
+		if(this.size < 3){
+			return;
+		}
+		
+		Node* current = this.head;
+		if(current != nullptr<Node>){
+			ref Node currentRef = *current;
+			current = currentRef.getNext();
+		}
+		
+		if(current != nullptr<Node>){
+			ref Node tailRef = *this.tail;
+			tailRef.setNext(current);
+		}
+		return;
+	} 
+}
+
+function 
+int main(){
+  LinkedList* list = new LinkedList();
+  ref LinkedList l = *list;
+
+  l.add(10);
+  l.add(20);
+  l.add(30);
+  
+  
+  print(-100);
+  l.printList(); 
+  
+  
+  print(-200);
+  print(l.getSize()); 
+  
+  print(-300);
+  l.insertAt(1, 15); 
+  
+  print(-400);
+  l.printList(); 
+  
+  print(-500);
+  print(l.getSize()); 
+  
+  print(-600);
+  l.printReverse();
+
+  print(-700);
+  l.createTestCycle();
+  
+  print(-800);
+  bool hasCycle = l.detectAndBreakCycles();
+  if(hasCycle == true){
+    print(1);
+  }
+  if(hasCycle == false){
+    print(0);
+  }
+  
+  print(-900);
+  l.printList();
+
+
+  l.destroy();
+
+  return 0;
+}

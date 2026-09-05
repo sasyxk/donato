@@ -3,6 +3,13 @@ project(dtc)
 
 cmake_policy(SET CMP0075 NEW)
 
+# Require C++26 explicitly, including with CMake versions that cannot select it.
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-std=c++26" DONATO_SUPPORTS_CXX26)
+if(NOT DONATO_SUPPORTS_CXX26)
+    message(FATAL_ERROR "Donato requires a C++ compiler supporting -std=c++26.")
+endif()
+
 # Find ZLIB, CURL and ZSTD
 find_package(ZLIB REQUIRED)
 find_package(CURL REQUIRED)
@@ -24,6 +31,7 @@ file(GLOB_RECURSE SOURCES
 
 # Add executable
 add_executable(dtc ${SOURCES})
+target_compile_options(dtc PRIVATE -std=c++26)
 
 # Add the "include" directory to the include paths
 target_include_directories(dtc PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -1,0 +1,84 @@
+class Node {
+  int value;
+  Node* next;
+public:
+  Node(int value){
+    this.next = nullptr<Node>;
+    this.value = value;
+    return;
+  }
+
+  function
+  void setNext(Node* node){
+    this.next = node;
+    return;
+  }
+
+  function
+  Node* getNext(){
+    return this.next;
+  }
+
+  function
+  int getValue(){
+    return this.value;
+  }
+}
+
+class LinkedList {
+  Node* head;
+public:
+  LinkedList(){
+    this.head = nullptr<Node>;
+    return;
+  }
+
+  function
+  void add(int value){
+    Node* newNode = new Node(value);
+    
+    // If the list is empty, the new node becomes head
+    if(this.head == nullptr<Node>){
+      this.head = newNode;
+      return;
+    }
+    
+    // Find the last node
+    Node* current = this.head;
+    while(current != nullptr<Node>){
+      ref Node n = *current;
+      if(n.getNext() == nullptr<Node>){
+        n.setNext(newNode);
+        return;
+      }
+      current = n.getNext();
+    }
+    return;
+  }
+
+  function
+  void printList(){
+    Node* current = this.head;
+    
+    while(current != nullptr<Node>){
+      ref Node n = *current;
+      print(n.getValue());
+      current = n.getNext();
+    }
+    return;
+  }
+}
+
+function 
+int main(){
+  LinkedList* list = new LinkedList();
+  ref LinkedList l = *list;
+
+  l.add(10);
+  l.add(20);
+  l.add(30);
+
+  l.printList();
+
+  return 0;
+}

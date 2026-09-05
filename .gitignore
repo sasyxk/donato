@@ -1,2 +1,26 @@
-build/*
-.vscode/
+# Local builds, downloaded toolchains, logs and temporary programs
+/build/
+/cmake-build-*/
+
+# Local analysis reports
+/report/
+
+# Accidental in-source CMake builds
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/compile_commands.json
+
+# Default compiler outputs accidentally generated in the repository root
+/dtc
+/dtc.exe
+/output
+/output.exe
+/output.ll
+/output.o
+
+# Local editor and operating-system files
+/.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,54 @@
+function
+void printVal(int x){
+  print(x);
+  return;
+}
+
+function
+void addOne(ref int x){
+  x = x + 1;
+  return;
+}
+
+function
+int getAddOne(int x){
+  addOne(x);
+  return x;
+}
+
+
+function
+int main(){
+  print(-1000);
+  int val = 10;
+  printVal(val);
+  printVal(999);
+  
+  print(-2000);
+  addOne(val);
+  printVal(val);
+
+  print(-3000);
+  while(val < 100){
+    addOne(val);
+  }
+  printVal(val);
+
+  print(-4000);
+  ref int y = val;
+  y = 1010;
+  printVal(val);
+
+  print(-5000);
+  int y2 = val;
+  val = 0;
+  y2 = 1000;
+  print(val);
+
+  print(-6000);
+  int add2 = getAddOne(val);
+  print(add2);
+  print(val);
+
+  return 0;
+}

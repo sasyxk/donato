@@ -1,0 +1,60 @@
+struct Function {
+  int value;
+}
+
+struct Script {
+  Function* func;
+}
+
+struct Module {
+  Script* script;
+}
+
+struct Engine {
+  Module* module;
+}
+
+function
+void setFunctionValue(Function***** f5, int newValue) {
+  ref Function fn = *****f5;
+  fn.value = newValue;
+  return;
+}
+
+function
+void printFunctionValue(Engine* engine){
+  // engine->module->script->func->value
+  ref Engine eg = *engine;
+  ref Module m = *eg.module;
+  ref Script s = *m.script;
+  ref Function f = *s.func;
+  print(f.value);
+
+  return;
+}
+
+function
+int main() {
+    Function* func = new Function(42);
+    Script* script = new Script(func);
+    Module* module = new Module(script);
+    Engine* engine = new Engine(module);
+    printFunctionValue(engine);
+   
+    Function** f2 = &func;
+    Function*** f3 = &f2;
+    Function**** f4 = &f3;
+    Function***** f5 = &f4;
+
+    setFunctionValue(f5, 999);
+
+    printFunctionValue(engine);
+
+    // Cleanup
+    delete func;
+    delete script;
+    delete module;
+    delete engine;
+
+    return 0;
+}

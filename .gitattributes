@@ -1,0 +1,3 @@
+# Keep scripts executable by Bash and expected output comparable after Windows clones.
+*.sh text eol=lf
+examples/expected/*.txt text eol=lf

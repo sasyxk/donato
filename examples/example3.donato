@@ -1,0 +1,30 @@
+function
+int fibonacci(int n){
+  if(n <= 1){
+    return n;
+  }
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+function
+void printFibonacci(int count){
+  int i = 0;
+  while(i < count){
+    int result = fibonacci(i);
+    print(result);
+    i = i + 1;
+  }
+  return;
+}
+
+function
+int main(){
+  print(-1000);
+  printFibonacci(10);
+  
+  print(-2000);
+  int fib7 = fibonacci(7);
+  print(fib7);
+  
+  return 0;
+}

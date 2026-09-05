@@ -1,0 +1,50 @@
+struct Node{
+  int x;
+  Node* next;
+}
+
+function
+void addNewNode(Node* node, int value){
+  ref Node nd = *node;
+  if(nd.next == nullptr<Node>){
+    nd.next = new Node(value, nullptr<Node>);
+    return;
+  }
+  addNewNode(nd.next, value);
+  return;
+}
+
+function
+void destroyList(Node* node){
+  ref Node nd = *node;
+  if(nd.next != nullptr<Node>){
+    destroyList(nd.next);
+  }
+  delete node;
+  return;
+}
+
+function
+void printValuesList(Node* node){
+  ref Node nd = *node;
+  print(nd.x);
+  if(nd.next == nullptr<Node>){
+    return;
+  }
+  printValuesList(nd.next);
+  return;
+}
+
+function
+int main(){
+  auto list = new Node(0 , nullptr<Node>);
+  int i = 1;
+  while(i <= 10){
+    addNewNode(list, i);
+    i = i + 1;
+  }
+  printValuesList(list);
+  destroyList(list);
+
+  return 0;
+}
