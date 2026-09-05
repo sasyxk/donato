@@ -6,6 +6,7 @@ class Statement {
 public:
     virtual ~Statement() = default;
     virtual void codegen(llvm::IRBuilder<>& builder) = 0;
+    virtual bool canFallThrough() const { return true; }
 };
 
 
@@ -136,8 +137,9 @@ class IfStm : public Statement {
     Expr* cond;
     std::vector<Statement*> thenExpr;
     std::vector<Statement*> elseExpr;
+    bool fallsThrough;
 public:
-    IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e);
+    IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e, bool ft);
     ~IfStm() {
         delete cond;
         for (Statement* stmt : thenExpr) {
@@ -149,6 +151,7 @@ public:
     }
 
     void codegen(llvm::IRBuilder<>& builder) override;
+    bool canFallThrough() const override { return fallsThrough; }
 };
 
  class ClassCallVoidFunc : public Statement {
@@ -190,6 +193,7 @@ public:
     ReturnVoid(std::string fn, std::string noc);
     ~ReturnVoid() = default;
     void codegen(llvm::IRBuilder<>& builder) override;
+    bool canFallThrough() const override { return false; }
 };
 
 class Return : public Statement {
@@ -202,6 +206,7 @@ public:
         delete expr;
     }
     void codegen(llvm::IRBuilder<>& builder) override;
+    bool canFallThrough() const override { return false; }
 };
 
 class DeleteVar : public Statement {

@@ -115,8 +115,14 @@ Constraints of the current implementation:
 - Use `function int main() { ... return 0; }` as the executable entry point.
   Declare functions and types before use; self-recursive functions are supported.
   Declarations of functions, structs and classes belong at the top level.
-- Blocks contain at least one statement. End functions and constructors with an
-  explicit `return`; `return;` is for `void` functions and constructors.
+- Blocks contain at least one statement. The parser rejects statements after a
+  `return` or an `if`/`else` whose two branches cannot fall through, at any nesting
+  depth. Comments after these statements are allowed.
+- Every function, method and constructor must return on all structurally checked
+  paths. A final `if`/`else` whose branches both return satisfies this rule without
+  an additional `return`. Use `return;` for `void` functions and constructors.
+  An `if` without `else` and a `while` can fall through; loop conditions are not
+  evaluated to prove termination or nontermination, even for `while (true)`.
 - A class has one constructor, with the class's exact name, followed by public
   methods. Fields precede `public:` and are private, even without `private:`.
   Struct fields are public. Aggregate fields require pointers to other aggregates.

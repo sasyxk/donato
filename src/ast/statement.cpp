@@ -211,16 +211,15 @@ void Function::codegen(llvm::IRBuilder<> &builder) {
         }
     );
 
-    size_t i = 0;
     for (Statement* stm : body) {
         stm->codegen(builder);
     }
-    /*llvm::BasicBlock* block = builder.GetInsertBlock();
+    llvm::BasicBlock* block = builder.GetInsertBlock();
     if (!block->getTerminator()) {
         throw std::runtime_error(
-            "The function " + nameFunc + " does not have a Return"
+            "Function '" + nameFunc + "' has no terminator after code generation"
         );
-    } */
+    }
 
     symbolTable.pop_back();
 }
@@ -385,14 +384,17 @@ void WhileStm::codegen(llvm::IRBuilder<>& builder) {
     for (Statement* stm : whileExpr) {
         stm->codegen(builder);
     }
-    builder.CreateBr(condWhileBB);
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(condWhileBB);
+    }
 
     symbolTable.pop_back();
 
     builder.SetInsertPoint(nextBB);
 }
 
-IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e) : cond(c), thenExpr(t), elseExpr(e) {}
+IfStm::IfStm(Expr* c, std::vector<Statement*> t, std::vector<Statement*> e, bool ft)
+    : cond(c), thenExpr(t), elseExpr(e), fallsThrough(ft) {}
 
 void IfStm::codegen(llvm::IRBuilder<>& builder) {
     Value* condVal = cond->codegen(builder);
@@ -410,7 +412,8 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(ctx, "then", func);
     llvm::BasicBlock* elseBB = !elseExpr.empty() ? llvm::BasicBlock::Create(ctx, "else", func) : nullptr;
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(ctx, "merge",func);
+    llvm::BasicBlock* mergeBB = canFallThrough()
+        ? llvm::BasicBlock::Create(ctx, "merge", func) : nullptr;
 
     if(!elseExpr.empty()){
         builder.CreateCondBr(condVal->getLLVMValue(), thenBB, elseBB);
@@ -447,7 +450,11 @@ void IfStm::codegen(llvm::IRBuilder<>& builder) {
 
     symbolTable.pop_back();
 
-    builder.SetInsertPoint(mergeBB);
+    // Without a continuation, retain the last terminated block so enclosing
+    // statements also see that this path is closed.
+    if (mergeBB) {
+        builder.SetInsertPoint(mergeBB);
+    }
 }
 
 VarUpdt::VarUpdt(const std::string n, Expr* v) : nameVar(n), value(v) {}

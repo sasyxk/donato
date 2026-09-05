@@ -269,6 +269,31 @@ creation of a fresh executable, execution status and exact output against
 [examples/expected/](examples/expected/). Executables and logs go to
 `build/examples-O0/` or `build/examples-O3/`. See the [example catalogue](examples/README.md).
 
+### Check returns and nested control flow
+
+After rebuilding `dtc`, run the input/output checks with Python 3 from the
+repository root in Ubuntu:
+
+```bash
+python3 scripts/check-control-flow.py 0
+python3 scripts/check-control-flow.py 3
+```
+
+From PowerShell, prefix each command with `wsl -d $Distro --exec`.
+The script generates `.donato` programs under `build/control-flow-O<level>/sources/`,
+compiles them sequentially and compares actual output with expected output.
+It covers `if`/`else` trees up to five levels, partially returning branches,
+loops, methods and constructors. Invalid programs must fail during parsing with
+the expected diagnostic, before LLVM IR or an executable is generated.
+Valid programs must also pass LLVM 18 `opt` verification and checks for unnecessary
+merge blocks. Each case retains its source, logs and, when valid, IR, executable
+and expected output under `build/control-flow-O<level>/`.
+
+The parser rejects code after a return or an `if`/`else` that closes both paths.
+Functions must return on every structurally checked path; a final `if`/`else`
+whose branches both return needs no extra return. A `while` is conservatively
+allowed to fall through. See [the implemented language rules](ProgramL-implemented.md).
+
 ## Known workflow limitations
 
 - Compiler exit status alone is insufficient: the current implementation does

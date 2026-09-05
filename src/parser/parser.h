@@ -19,6 +19,12 @@ public:
     Statement* parseCode();
     bool hasMoreTokens();
 private:
+    struct ParsedBlock {
+        std::vector<Statement*> statements;
+        bool canFallThrough = true;
+    };
+
+    ParsedBlock parseBlock();
     Statement* parseStm();
     Expr* parse();
     Expr* parseExpr();

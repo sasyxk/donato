@@ -34,6 +34,29 @@ Statement* Parser::parseCode(){
     return stm;
 }
 
+Parser::ParsedBlock Parser::parseBlock() {
+    eat(LBRACE);
+    ParsedBlock block;
+    // Keep the existing grammar: a block contains at least one statement.
+    do {
+        if (currentToken.type == END) {
+            throw std::runtime_error("Unexpected end of input: expected '}'");
+        }
+        if (!block.canFallThrough) {
+            throw std::runtime_error(
+                "Unreachable statement '" + currentToken.value +
+                "' in function '" + lastFuncion + "'"
+            );
+        }
+        errorFunction();
+        Statement* stm = parseStm();
+        block.statements.push_back(stm);
+        block.canFallThrough = stm->canFallThrough();
+    } while (currentToken.type != RBRACE);
+    eat(RBRACE);
+    return block;
+}
+
 std::vector<std::string> Parser::parseClassFunctionNames(){
     std::vector<std::string> nameFunctions;
     eat(UPPERNAME);
@@ -157,14 +180,14 @@ Statement* Parser::parseStm(){
             constructorArgs.emplace_back(typeInfo, arg);
         } while (currentToken.type == COMMA && (eat(COMMA), true));
         eat(RPAREN);
-        eat(LBRACE);
-        std::vector<Statement*> ConstructorBodyStatemets;
         lastFuncion = nameClass;
-        do { 
-            errorFunction();
-            ConstructorBodyStatemets.push_back(parseStm());
-        } while (currentToken.type != RBRACE); 
-        eat(RBRACE);
+        ParsedBlock constructorBody = parseBlock();
+        if (constructorBody.canFallThrough) {
+            throw std::runtime_error(
+                "Constructor '" + nameClass + "' can reach the end without a return"
+            );
+        }
+        lastFuncion = "";
         std::vector<Function*> publicFunctions;
         do{
             if(currentToken.type == RBRACE){break;} // End of the class
@@ -182,7 +205,7 @@ Statement* Parser::parseStm(){
         return new DefineClass(nameClass,
             privateMembers,
             constructorArgs,
-            ConstructorBodyStatemets,
+            constructorBody.statements,
             publicFunctions,
             classType
         );
@@ -265,15 +288,14 @@ Statement* Parser::parseStm(){
             parameters.emplace_back(type, param);
         } while (currentToken.type == COMMA && (eat(COMMA), true));
         eat(RPAREN);
-        eat(LBRACE);
-        std::vector<Statement*> functionBodyStatemets;
-        do {
-            errorFunction();
-            functionBodyStatemets.push_back(parseStm());
-        } while (currentToken.type != RBRACE); 
-        eat(RBRACE);
+        ParsedBlock body = parseBlock();
+        if (body.canFallThrough) {
+            throw std::runtime_error(
+                "Function '" + nameFunc + "' can reach the end without a return"
+            );
+        }
         lastFuncion = "";
-        return new Function(typeFunc, nameFunc, parameters, functionBodyStatemets);
+        return new Function(typeFunc, nameFunc, parameters, body.statements);
     }
     if(currentToken.type == IF) {
         eat(IF);
@@ -287,24 +309,15 @@ Statement* Parser::parseStm(){
             condLeft = new BinaryCond(op, condLeft,condRight);
         }
         eat(RPAREN);
-        eat(LBRACE);
-        std::vector<Statement*> elseStd;
-        std::vector<Statement*> thenStd;
-        do {
-            errorFunction();
-            thenStd.push_back(parseStm());
-        } while (currentToken.type != RBRACE);
-        eat(RBRACE);
+        ParsedBlock thenBlock = parseBlock();
+        // A missing else leaves the false path open.
+        ParsedBlock elseBlock;
         if(currentToken.type == ELSE){
             eat(ELSE);
-            eat(LBRACE);
-            do {
-                errorFunction();
-                elseStd.push_back(parseStm());
-            } while (currentToken.type != RBRACE);
-            eat(RBRACE);
+            elseBlock = parseBlock();
         }
-        return new IfStm(condLeft,thenStd,elseStd);
+        return new IfStm(condLeft, thenBlock.statements, elseBlock.statements,
+                         thenBlock.canFallThrough || elseBlock.canFallThrough);
     }
     if (currentToken.type == WHILE){
         eat(WHILE);
@@ -317,14 +330,9 @@ Statement* Parser::parseStm(){
             condLeft = new BinaryCond(op, condLeft,condRight);
         }
         eat(RPAREN);
-        eat(LBRACE);
-        std::vector<Statement*> whileStd;
-        do {
-            errorFunction();
-            whileStd.push_back(parseStm());
-        } while (currentToken.type != RBRACE);
-        eat(RBRACE);
-        return new WhileStm(condLeft,whileStd);
+        ParsedBlock body = parseBlock();
+        // The condition may be false initially, even when the body always returns.
+        return new WhileStm(condLeft, body.statements);
     }
     if (currentToken.type == VAR ||
         currentToken.type == THIS) { // To the left of the class called with this it behaves exactly like a struct, we can leave it like that
