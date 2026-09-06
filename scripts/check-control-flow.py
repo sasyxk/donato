@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile real Donato inputs and check output, parser diagnostics and LLVM IR."""
+"""Compile real Donato inputs and check output, compiler diagnostics and LLVM IR."""
 
 import argparse
 import json
@@ -40,9 +40,131 @@ def cases():
         tests.append(dict(name=name, source=source, values=values,
                           merges=merges, flags=flags, observer=observer))
 
-    def invalid(name, source, diagnostic, timeout=60):
+    def invalid(name, source, diagnostic, timeout=60, phase="parsing"):
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
-                          flags=(), timeout=timeout))
+                          flags=(), timeout=timeout, phase=phase))
+
+    print_class = """
+        class PrintBox {
+            TYPE value;
+        public:
+            PrintBox(TYPE initial) { this.value = initial; return; }
+            function TYPE read() { return this.value; }
+            function ref TYPE get() { return this.value; }
+            function void show() { print(this.value); return; }
+        }
+    """
+    for type_name, bits in (("int8", 8), ("int16", 16), ("int32", 32),
+                            ("int64", 64), ("int", 64), ("bool", 1)):
+        if type_name == "bool":
+            literals, numbers = ["false", "true"], [0, 1]
+            first, next_value = "false", "true"
+            first_number, next_number = 0, 1
+        else:
+            numbers = [-(2 ** (bits - 1)), 2 ** (bits - 1) - 1, -1, 0, 1]
+            literals = [str(number) for number in numbers]
+            first, next_value = "-1", "7"
+            first_number, next_number = -1, 7
+        body = "\n".join(
+            f"{type_name} x{i} = {literal}; print(x{i}); print(x{i});"
+            for i, literal in enumerate(literals)
+        )
+        for suffix, flags in (("", ()), ("_checked", ("-t", "-f"))):
+            valid(f"print_bounds_{type_name}{suffix}",
+                  function(body + "\nreturn 0;", "main", ""),
+                  [number for number in numbers for _ in range(2)], flags=flags)
+
+        # Calling typed functions after print checks that the original type and
+        # address remain usable; aliases also observe later writes to storage.
+        helpers = function("return x;", "echo", f"{type_name} x", type_name)
+        helpers += function("count = count + 1; return x;", "touch",
+                            f"ref {type_name} x, ref int count", f"ref {type_name}")
+        valid(f"print_references_{type_name}", helpers + function(f"""
+            {type_name} x = {first};
+            {type_name}* p = &x;
+            ref {type_name} alias = x;
+            int count = 0;
+            print(alias);
+            print(*p);
+            print(touch(x, count));
+            print(count);
+            print(echo(x));
+            alias = {next_value};
+            print(touch(x, count));
+            print(count);
+            print(*p);
+            print(echo(x));
+            return 0;
+        """, "main", ""),
+              [first_number] * 3 + [1, first_number, next_number, 2,
+                                    next_number, next_number])
+
+        aggregate = f"struct PrintPair {{ {type_name} value; {type_name} guard; }}\n"
+        aggregate += print_class.replace("TYPE", type_name)
+        valid(f"print_fields_{type_name}", aggregate + function(f"""
+            {type_name} start = {first};
+            {type_name} next = {next_value};
+            PrintPair* pairPointer = new PrintPair(start, next);
+            ref PrintPair pair = *pairPointer;
+            PrintBox* boxPointer = new PrintBox(start);
+            ref PrintBox box = *boxPointer;
+            print(pair.value);
+            print(pair.guard);
+            print(box.read());
+            print(box.get());
+            box.show();
+            ref {type_name} alias = box.get();
+            alias = next;
+            print(box.get());
+            box.show();
+            print(pair.value);
+            print(pair.guard);
+            delete pairPointer;
+            delete boxPointer;
+            return 0;
+        """, "main", ""),
+              [first_number, next_number] + [first_number] * 3
+              + [next_number] * 2 + [first_number, next_number])
+
+    valid("print_literals", function("""
+        print(42); print(-1); print(false); print(true);
+        print(if true then false else true);
+        return 0;
+    """, "main", ""), [42, -1, 0, 1, 0])
+    valid("print_promoted_expression", function("""
+        int8 x = -1;
+        print(x + 0);
+        print(x);
+        return 0;
+    """, "main", ""), [-1, -1])
+
+    for name, declarations, body, actual_type in (
+        ("double_literal", "", "print(1.5);", "double"),
+        ("double_variable", "", "double x = 1.5; print(x);", "double"),
+        ("double_expression", "", "print(1.5 + 2.5);", "double"),
+        ("double_reference", "function ref double get(ref double x) { return x; }",
+         "double x = 1.5; print(get(x));", "double"),
+        ("double_method", print_class.replace("TYPE", "double").replace(
+            "print(this.value);", ""),
+         "PrintBox* p = new PrintBox(1.5); ref PrintBox box = *p; print(box.get());",
+         "double"),
+        ("pointer", "", "int x = 7; int* p = &x; print(p);", "PointerType to int64"),
+        ("null_pointer", "", "print(nullptr<int>);", "PointerType to int64"),
+        ("pointer_reference", "function ref int* get(ref int* x) { return x; }",
+         "int* p = nullptr<int>; print(get(p));", "PointerType to int64"),
+        ("struct", "struct PrintPair { int value; }",
+         "PrintPair* p = new PrintPair(7); ref PrintPair pair = *p; print(pair);",
+         "PrintPairstruct"),
+        ("class", print_class.replace("TYPE", "int"),
+         "PrintBox* p = new PrintBox(7); ref PrintBox box = *p; print(box);",
+         "classPrintBox"),
+    ):
+        invalid(f"print_reject_{name}", declarations + function(body + " return 0;", "main", ""),
+                "print only supports signed integers and bool; got " + actual_type,
+                phase="codegen")
+    invalid("print_reject_void", "function void nothing() { return; }"
+            + function("print(nothing()); return 0;", "main", ""),
+            "VoidType does not support createValue.", phase="codegen")
 
     top_level_error = "Expected 'function', 'struct' or 'class' at top level, got "
     main_function = function("print(1); return 0;", "main", "")
@@ -565,10 +687,13 @@ def check(case, source, directory, level, env):
          str(binary.relative_to(BUILD)), str(source)], directory, "compile", env,
         timeout=case.get("timeout", 60))
     if "diagnostic" in case:
-        if status != 1 or "Error in parsing::" not in errors or case["diagnostic"] not in errors:
-            raise RuntimeError(f"wrong parser result (status {status}): {errors.strip()}")
+        prefix = f"Error in {case['phase']}::"
+        if status != 1 or prefix not in errors or case["diagnostic"] not in errors:
+            raise RuntimeError(f"wrong {case['phase']} result (status {status}): {errors.strip()}")
+        if case["phase"] == "codegen" and errors != f"{prefix} {case['diagnostic']}\n":
+            raise RuntimeError(f"unexpected codegen diagnostic: {errors.strip()}")
         if any(product.exists() for product in (binary, BUILD / "output.ll", BUILD / "output.o")):
-            raise RuntimeError("parser rejection produced codegen output")
+            raise RuntimeError("rejected source produced codegen output")
         return
     if status != 0 or errors or not binary.is_file():
         raise RuntimeError(f"compilation failed (status {status}): {errors.strip()}")

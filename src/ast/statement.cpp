@@ -648,6 +648,14 @@ void PrintVar::codegen(llvm::IRBuilder<> &builder){
     llvm::LLVMContext& ctx = builder.getContext();
 
     Value* result = value->codegen(builder);
+    Type* type = result->getType();
+    auto* integerType = dynamic_cast<SignedIntType*>(type);
+    bool isBool = dynamic_cast<BoolType*>(type) != nullptr;
+    if (!integerType && !isBool) {
+        throw std::runtime_error(
+            "print only supports signed integers and bool; got " + type->toString()
+        );
+    }
     if (result->getLLVMValue() == nullptr){
         result->loadLLVMValue("print", builder);
     }
@@ -658,5 +666,12 @@ void PrintVar::codegen(llvm::IRBuilder<> &builder){
         throw std::runtime_error("Function not found: " + printFunctionName);
     }
 
-    builder.CreateCall(d_printFunction, {result->getLLVMValue()});
+    // Promote only the call argument; preserve the source value and its storage.
+    llvm::Value* printValue = result->getLLVMValue();
+    if (integerType && integerType->getBits() < 64) {
+        printValue = builder.CreateSExt(printValue, llvm::Type::getInt64Ty(ctx), "print_i64");
+    } else if (isBool) {
+        printValue = builder.CreateZExt(printValue, llvm::Type::getInt64Ty(ctx), "print_bool_i64");
+    }
+    builder.CreateCall(d_printFunction, {printValue});
 }

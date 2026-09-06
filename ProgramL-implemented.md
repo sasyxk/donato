@@ -155,7 +155,13 @@ Constraints of the current implementation:
   `bool b = x < y;`. Logical operators and chained comparisons are not implemented.
 - Calls used as standalone statements require a `void` return type. Use the
   result of a value-returning function in an expression or assignment.
-- `print` currently expects an `int`/`int64` value and prints `value: <number>`.
+- `print` accepts `int8`, `int16`, `int32`, `int64`, the `int` alias and `bool`,
+  and prints `value: <number>`. Smaller signed integers are sign-extended to
+  `int64` for the runtime call; booleans print `0` for false and `1` for true.
+  Promotion affects only the print argument, preserving the original variable's
+  type and value, including through references. The argument expression is
+  evaluated once. Other types, including `double`, pointers and aggregates, are
+  rejected during code generation before the print runtime call is emitted.
 - Nested `let` bindings temporarily shadow outer bindings and restore them on exit.
 
 Implementation: [tokenizer](src/parser/tokenizer.cpp),
