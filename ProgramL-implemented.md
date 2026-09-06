@@ -155,6 +155,14 @@ Constraints of the current implementation:
 - `new StructName(...)` initializes fields in declaration order;
   `new ClassName(...)` calls the constructor. Both yield pointers.
   `nullptr<T>` has type `T*`; `delete` takes a pointer.
+- A pointer condition is true when the pointer is non-null. Unary `-` on a
+  pointer negates that boolean value: it returns `bool`, true for null and false
+  otherwise, in any expression context and at any pointer depth. It evaluates
+  its operand once without dereferencing or changing the pointer. Binary pointer
+  arithmetic, including subtraction, remains unsupported.
+- For booleans, unary `-` is NOT, `+` is OR and `*` is AND. Both operands of
+  `+` and `*` are evaluated; these operators do not short-circuit. Mixed operations
+  between booleans and integers or pointers are rejected without implicit conversion.
 - A `ref` binding or argument must refer to suitable existing storage. Unary `*`
   reads through a pointer; assignment through `*p = ...` is not a statement form.
   `&` consumes an entire `Expr` in this parser and requires an addressable result.
@@ -163,7 +171,7 @@ Constraints of the current implementation:
   an ordinary value declaration copies the result. Reference returns also
   support pointer and aggregate types.
 - Comparisons occur only in `Condition`, not as general expressions such as
-  `bool b = x < y;`. Logical operators and chained comparisons are not implemented.
+  `bool b = x < y;`. Dedicated logical operators and chained comparisons are not implemented.
 - Calls used as standalone statements require a `void` return type. Use the
   result of a value-returning function in an expression or assignment.
 - `print` accepts `int8`, `int16`, `int32`, `int64`, the `int` alias and `bool`,

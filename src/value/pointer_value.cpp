@@ -84,11 +84,10 @@ Value* PointerValue::gte(Value* other, llvm::IRBuilder<>& builder) {
 }
 
 Value* PointerValue::neg(llvm::IRBuilder<>& builder) {
-    llvm::LLVMContext& ctx = builder.getContext();
-
-    llvm::Value* result = builder.CreateNot(this->getLLVMValue(), "negbooltmp");
-    Type* boolType = TypeManager::instance().getBoolType();
-    return boolType->createValue(result, ctx);
+    Value* boolValue = getBoolValue(builder);
+    Value* result = boolValue->neg(builder);
+    delete boolValue;
+    return result;
 }
 
 Value* PointerValue::getBoolValue(llvm::IRBuilder<> &builder) {

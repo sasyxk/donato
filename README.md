@@ -327,6 +327,14 @@ status `1`, identify the duplicate and produce no new IR, object or executable.
 Valid controls use distinct, case-sensitive names in allocations, fields, methods
 and function parameters, and check pointers to the type being declared.
 
+Pointer-negation checks require unary `-p` to return a boolean: true for null and
+false otherwise. They cover primitive and aggregate pointers, depths through six
+levels, aliases, fields, value/reference returns, single evaluation, conditions,
+assignments and boolean combinations. They also preserve numeric/boolean negation
+and the rejection of mixed types and binary pointer arithmetic. Valid cases must
+verify LLVM IR and run fresh executables with exact output; rejected cases require
+a controlled diagnostic, status `1` and no new compilation artifacts.
+
 Parameter and argument list checks reject trailing commas in functions, methods,
 constructors and `new`, including calls through `this`, comments after commas,
 and LF/CRLF endings. Leading and repeated commas and comma-only lists are rejected

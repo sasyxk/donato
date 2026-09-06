@@ -878,6 +878,143 @@ def cases():
             return 0;
         }
     """, [11, 7])
+    pointer_prefix = "int x = 7; int* p = &x; "
+    valid("pointer_negation_original", function(
+        pointer_prefix + "print(if -p then 1 else 0); return 0;", "main", ""), [0])
+    valid("pointer_negation_nullptr", function(
+        "print(if -nullptr<int> then 1 else 0); return 0;", "main", ""), [1])
+    for base, initial in (("int8", "0"), ("int16", "0"), ("int32", "0"),
+                          ("int64", "0"), ("int", "0"), ("double", "0.0"),
+                          ("bool", "false")):
+        valid(f"pointer_negation_{base}", function(f"""
+            {base} value = {initial};
+            {base}* p = &value;
+            {base}* q = nullptr<{base}>;
+            ref {base}* alias = p;
+            print(-p); print(-q); print(-alias);
+            alias = q; print(-p);
+            alias = &value; print(-p);
+            print(-nullptr<{base}>);
+            print(-(-p)); print(-(-q));
+            print(if p == &value then 1 else 0);
+            return 0;
+        """, "main", ""), [0, 1, 0, 1, 0, 1, 1, 0, 1])
+    for depth in range(2, 7):
+        inner_type = "int" + "*" * (depth - 1)
+        valid(f"pointer_negation_depth{depth}", function(f"""
+            {inner_type} inner = nullptr<{'int' + '*' * (depth - 2)}>;
+            {inner_type}* p = &inner;
+            {inner_type}* q = nullptr<{inner_type}>;
+            ref {inner_type}* alias = p;
+            print(-p); print(-q); print(-*p); print(-alias);
+            print(-nullptr<{inner_type}>); print(-(-p));
+            return 0;
+        """, "main", ""), [0, 1, 1, 0, 1, 1])
+
+    valid("pointer_negation_aggregates", """
+        struct Data { int* pointer; }
+        class Box {
+            int* pointer;
+        public:
+            Box(int* p) { this.pointer = p; return; }
+            function int* get() { return this.pointer; }
+            function ref int* refget() { return this.pointer; }
+            function bool empty() { return -this.pointer; }
+        }
+        function int main() {
+            int x = 7; int* p = &x;
+            auto d = new Data(p); ref Data data = *d;
+            auto b = new Box(p); ref Box box = *b;
+            print(-d); print(-nullptr<Data>);
+            print(-b); print(-nullptr<Box>);
+            print(-data.pointer); data.pointer = nullptr<int>; print(-data.pointer);
+            print(-box.get()); print(-box.refget()); print(box.empty());
+            ref int* alias = box.refget(); alias = nullptr<int>;
+            print(-box.get()); print(-box.refget()); print(box.empty());
+            delete d; delete b; return 0;
+        }
+    """, [0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1])
+    pointer_probe = """
+        function int* probe(ref int count, int* p) { count = count + 1; return p; }
+        function ref int* forward(ref int* p) { return p; }
+        function bool empty(int* p) { return -p; }
+        function void show(bool b) { print(b); return; }
+    """
+    valid("pointer_negation_calls", pointer_probe + function(pointer_prefix + """
+        int count = 0;
+        print(-probe(count, p)); print(count);
+        print(-probe(count, nullptr<int>)); print(count);
+        print(-forward(p));
+        ref int* alias = forward(p); alias = nullptr<int>; print(-forward(p));
+        p = &x; show(-p); show(-nullptr<int>);
+        print(empty(p)); print(empty(nullptr<int>)); print(*p);
+        return 0;
+    """, "main", ""), [0, 1, 1, 2, 0, 1, 0, 1, 0, 1, 7])
+    valid("pointer_negation_contexts", function(pointer_prefix + """
+        int* q = nullptr<int>;
+        bool present = -p; auto absent = -q;
+        print(present); print(absent);
+        if (-p) { print(9); } else { print(0); }
+        if (-q) { print(1); } else { print(9); }
+        int count = 0;
+        while (-q) { count = count + 1; q = p; }
+        print(count); print(-q);
+        print(let missing = -p in missing);
+        print(if -p == false then 1 else 0);
+        return 0;
+    """, "main", ""), [0, 1, 0, 1, 1, 0, 0, 1])
+    valid("pointer_negation_boolean_operations", """
+        function bool either(int* p, int* q) { return (-p) + (-q); }
+        function bool both(int* p, int* q) { return (-p) * (-q); }
+        function int main() {
+            int x = 7; int* p = &x; int* q = nullptr<int>;
+            print(either(p, p)); print(either(p, q));
+            print(either(q, p)); print(either(q, q));
+            print(both(p, p)); print(both(p, q));
+            print(both(q, p)); print(both(q, q));
+            return 0;
+        }
+    """, [0, 1, 1, 1, 0, 0, 0, 1])
+    valid("pointer_negation_eager_boolean_operations", pointer_probe + function(
+        pointer_prefix + "int count = 0; print(true + -probe(count, p)); print(count); "
+        "print(false * -probe(count, p)); print(count); return 0;", "main", ""), [1, 1, 0, 2])
+    for suffix, flags in (("plain", ()), ("checked", ("-t", "-f"))):
+        valid(f"pointer_negation_preserve_{suffix}", function("""
+            int8 small = 7; int x = 9; double d = 1.5; int* p = &x;
+            print(-small); print(-x); print(if -d == -1.5 then 1 else 0);
+            print(-true); print(-false); print(-*p); print(x);
+            print(-p); print(-nullptr<int>); return 0;
+        """, "main", ""), [-7, -9, 1, 0, 1, -9, 9, 0, 1], flags=flags)
+
+    for name, expression, diagnostic in (
+        ("bool_plus_int", "(-p) + 1", "Unsupported types for addition (logical or): bool !+ int64"),
+        ("int_plus_bool", "1 + (-p)", "Unsupported types for addition int64 !+ bool"),
+        ("bool_plus_pointer", "(-p) + p", "Unsupported types for addition (logical or): bool !+ PointerType to int64"),
+        ("pointer_plus_bool", "p + (-p)", "Add is not supported for pointer values."),
+        ("bool_times_int", "(-p) * 1", "Unsupported types for multiplication (logical and): bool !* int64"),
+        ("bool_minus_bool", "(-p) - false", "Substraction is not supported for boolean values."),
+        ("pointer_minus_pointer", "p - p", "Substraction is not supported for pointer values."),
+        ("pointer_minus_int", "p - 1", "Substraction is not supported for pointer values."),
+        ("pointer_times_pointer", "p * p", "mul is not supported for pointer values."),
+        ("pointer_div_pointer", "p / p", "Division is not supported for pointer values."),
+        ("bool_compare_int", "if -p == 1 then 1 else 0", "Unsupported types for equality comparison: bool == int64"),
+        ("bool_compare_pointer", "if -p == p then 1 else 0", "Unsupported types for equality comparison: bool == PointerType to int64"),
+    ):
+        invalid(f"pointer_negation_reject_{name}", function(
+            pointer_prefix + f"print({expression}); return 0;", "main", ""), diagnostic, phase="codegen")
+    for name, declaration, diagnostic in (
+        ("assign_int", "int result = -p;", "VarDecl::Type mismatch for variable 'result': expected int64, got bool"),
+        ("assign_pointer", "int* result = -p;", "VarDecl::Type mismatch for variable 'result': expected PointerType to int64, got bool"),
+        ("implicit_bool", "bool result = p;", "VarDecl::Type mismatch for variable 'result': expected bool, got PointerType to int64"),
+    ):
+        invalid(f"pointer_negation_reject_{name}", function(
+            pointer_prefix + declaration + " return 0;", "main", ""), diagnostic, phase="codegen")
+    for name, parameter, argument in (("int_argument", "int", "-p"),
+                                      ("implicit_bool_argument", "bool", "p")):
+        invalid(f"pointer_negation_reject_{name}",
+                function("return;", "accept", parameter + " value", "void") + function(
+                    pointer_prefix + f"accept({argument}); return 0;", "main", ""),
+                "Type mismatch in argument 1", phase="codegen")
     return tests
 
 
