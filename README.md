@@ -413,6 +413,25 @@ and reference returns, pointers and `nullptr<int>`. They reuse the control-flow
 suite's IR verification and execution checks. Sources, diagnostics and valid
 artifacts stay under `build/void-types-O<level>/`.
 
+### Check inline condition parentheses
+
+After rebuilding `dtc`, run these checks sequentially in Ubuntu:
+
+```bash
+python3 scripts/check-inline-conditions.py 0
+python3 scripts/check-inline-conditions.py 3
+```
+
+From PowerShell, prefix each command with `wsl -d $Distro --exec`.
+The cases cover grouped operands and whole conditions, all six comparisons,
+arithmetic precedence, nested inline `if`/`let`, calls, references, methods and
+comments. Valid programs must produce fresh executables, pass LLVM IR verification
+and run with the exact expected output. Invalid programs must return status `1`
+with a diagnostic and no new IR, object or executable. EOF cases preserve LF/CRLF
+and missing final newlines and have a five-second compilation timeout. Comparisons
+as general expressions and chained comparisons remain rejected. Sources and logs
+stay under `build/inline-conditions-O<level>/`.
+
 ### Check command-line arguments
 
 After rebuilding `dtc`, run these checks in Ubuntu:

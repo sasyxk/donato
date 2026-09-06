@@ -29,6 +29,8 @@ private:
     std::vector<Expr*> parseArgumentList();
     Statement* parseStm();
     Expr* parse();
+    Expr* parseCondition();
+    bool hasParenthesizedInlineCondition();
     Expr* parseExpr();
     Expr* parseTerm();
     Expr* parseFactor();

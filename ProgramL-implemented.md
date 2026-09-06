@@ -182,6 +182,12 @@ Constraints of the current implementation:
   evaluated once. Other types, including `double`, pointers and aggregates, are
   rejected during code generation before the print runtime call is emitted.
 - Nested `let` bindings temporarily shadow outer bindings and restore them on exit.
+- An inline `if` may parenthesize the entire condition or only an operand.
+  For example, `if (x + 1) > 2 then 1 else 0` and
+  `if ((x + 1) > 2) then 1 else 0` have the same meaning as
+  `if x + 1 > 2 then 1 else 0`. Operators following a grouped operand continue
+  the expression with the precedence above. Comparisons remain restricted to
+  `Condition`; grouping does not make them general expressions.
 
 Implementation: [tokenizer](src/parser/tokenizer.cpp),
 [parser](src/parser/parser.cpp), [AST](src/ast/), [types](src/type/),

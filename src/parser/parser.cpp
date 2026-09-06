@@ -342,14 +342,7 @@ Statement* Parser::parseStm(){
     if(currentToken.type == IF) {
         eat(IF);
         eat(LPAREN);
-        Expr* condLeft = parseExpr();
-        if(currentToken.type == CONDOP){
-            std::string op = currentToken.value;
-            eat(CONDOP);
-            Expr* condRight = parseExpr();
-            //optional, check 'and' 'or' with while
-            condLeft = new BinaryCond(op, condLeft,condRight);
-        }
+        Expr* condLeft = parseCondition();
         eat(RPAREN);
         ParsedBlock thenBlock = parseBlock();
         // A missing else leaves the false path open.
@@ -364,13 +357,7 @@ Statement* Parser::parseStm(){
     if (currentToken.type == WHILE){
         eat(WHILE);
         eat(LPAREN);
-        Expr* condLeft = parseExpr();
-        if(currentToken.type == CONDOP){
-            std::string op = currentToken.value;
-            eat(CONDOP);
-            Expr* condRight = parseExpr();
-            condLeft = new BinaryCond(op, condLeft,condRight);
-        }
+        Expr* condLeft = parseCondition();
         eat(RPAREN);
         ParsedBlock body = parseBlock();
         // The condition may be false initially, even when the body always returns.
@@ -441,6 +428,39 @@ Expr* Parser::parse() {
     return expr;
 }
 
+Expr* Parser::parseCondition() {
+    Expr* left = parseExpr();
+    if (currentToken.type == CONDOP) {
+        std::string op = currentToken.value;
+        eat(CONDOP);
+        Expr* right = parseExpr();
+        left = new BinaryCond(op, left, right);
+    }
+    return left;
+}
+
+bool Parser::hasParenthesizedInlineCondition() {
+    if (currentToken.type != LPAREN) return false;
+
+    // currentToken already holds the opening '('; the cursor follows it.
+    const size_t position = tokenizer.getCurrentPos();
+    size_t depth = 1;
+    while (depth > 0) {
+        Token token = tokenizer.nextToken();
+        if (token.type == END) {
+            throw std::runtime_error(
+                "Unexpected end of input: expected ')' in inline if condition");
+        }
+        if (token.type == LPAREN) depth++;
+        else if (token.type == RPAREN) depth--;
+    }
+    // Only '(Condition) then' owns this pair; otherwise parseExpr handles it.
+    const bool wrapped = tokenizer.nextToken().type == THEN;
+    tokenizer.setPosition(position);
+    // On a lexical/EOF exception, leave the cursor at the failure for diagnostics.
+    return wrapped;
+}
+
 Expr* Parser::parseExpr() {
     Expr* left = parseTerm();
     while (currentToken.type == OP && (currentToken.value == "+" || currentToken.value == "-")) {
@@ -484,21 +504,10 @@ Expr* Parser::parseFactor() {
     }
     if (currentToken.type == IF) {
         eat(IF);
-        //Expr* cond = parseExpr();
-        bool isParent = false;
-        if(currentToken.type == LPAREN) {
-            eat(LPAREN);
-            isParent = true;
-        }
-        Expr* condLeft = parseExpr();
-        if(currentToken.type == CONDOP){
-            std::string op = currentToken.value;
-            eat(CONDOP);
-            Expr* condRight = parseExpr();
-            //optional, check 'and' 'or' with while
-            condLeft = new BinaryCond(op, condLeft,condRight);
-        }
-        if(isParent) eat(RPAREN);
+        const bool isParent = hasParenthesizedInlineCondition();
+        if (isParent) eat(LPAREN);
+        Expr* condLeft = parseCondition();
+        if (isParent) eat(RPAREN);
         eat(THEN);
         Expr* thenExpr = parseExpr();
         eat(ELSE);
