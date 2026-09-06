@@ -1,7 +1,6 @@
 #include "parser.h"
 #include "codegen.h"
 #include "compiler_flags.h"
-#include "llvm/IR/Verifier.h"
 #include "setup_default_functions.h"
 #include <iostream>
 #include <fstream>
@@ -97,16 +96,12 @@ int main(int argc, char** argv) {
         for (Statement* stm : ast) {
             if(stm) stm->codegen(builder);
         }
+        generateExecutable(*module, flags.outputName);
     } catch (const std::exception& e) {
         std::cerr << "Error in codegen:: " << e.what() << "\n"; 
         return 1;
     } 
     
-    // Verify and generate executable
-    llvm::verifyModule(*module, &llvm::errs());
-    generateExecutable(*module, flags.outputName);
-
-
     // Cleanup - clear vectors
     symbolTable.clear();
     symbolStructsType.clear();

@@ -1,3 +1,4 @@
 # Keep scripts executable by Bash and expected output comparable after Windows clones.
 *.sh text eol=lf
+scripts/fixtures/driver-tool.py text eol=lf
 examples/expected/*.txt text eol=lf

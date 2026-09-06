@@ -60,3 +60,13 @@ target_link_libraries(dtc
     ${CURL_LIBRARIES}
     $<TARGET_NAME_IF_EXISTS:zstd::libzstd_shared>
 )
+
+# Optional harness for driver regressions, independent of Donato parser bugs.
+add_executable(check-codegen-driver EXCLUDE_FROM_ALL
+    scripts/fixtures/codegen-driver.cpp
+    src/codegen/codegen.cpp
+    src/codegen/compiler_flags.cpp
+)
+target_compile_options(check-codegen-driver PRIVATE -std=c++26)
+target_include_directories(check-codegen-driver PRIVATE ${CMAKE_SOURCE_DIR}/src/codegen)
+target_link_libraries(check-codegen-driver PRIVATE LLVMCore LLVMSupport)

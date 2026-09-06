@@ -168,8 +168,7 @@ From the repository root in Ubuntu:
 
 ```bash
 cd build
-env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -O 3 -o hello ../examples/hello.donato
-./hello
+env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -O 3 -o hello ../examples/hello.donato && ./hello
 ```
 
 The program prints:
@@ -189,14 +188,27 @@ function int main() {
 
 **Run `dtc` from this repository's `build/` directory.** The compiler currently
 finds the runtime C sources through `../src/error_handling`. Source paths are
-relative to that working directory. Quote source paths containing spaces and use
-Linux forward slashes. Keep output names simple, such as `hello` or
-`my_program`: the linker command does not quote output names.
+relative to that working directory. Quote source and output paths containing
+spaces and use Linux forward slashes. Tools receive separate arguments directly,
+without a shell command.
 
 The default executable name is `output`; run it with `./output`. Each compilation
-also overwrites `output.ll` and `output.o` in the working directory, even with
-`-o`. Compile programs sequentially in that directory. Editing a `.donato` file
-requires recompiling that file, without rebuilding `dtc`.
+also writes `output.ll` and `output.o` in the working directory, even with `-o`.
+Compile programs sequentially in that directory. Editing a `.donato` file
+requires recompiling that file, without rebuilding `dtc`. Input, output and
+intermediate paths must identify distinct files.
+
+LLVM verification, IR writing, object generation and linking errors stop
+compilation with status `1`. `dtc` replaces the requested executable only after
+all stages succeed, using a temporary directory on the destination filesystem.
+If executable generation fails, an existing executable is preserved and the
+diagnostic says it was not updated; intermediate files may be incomplete or left
+from a previous run.
+Run the program only when compilation succeeds, for example:
+
+```bash
+env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -o hello ../examples/hello.donato && ./hello
+```
 
 ### Compiler options
 
@@ -217,8 +229,7 @@ It does not select the CMake build type or add a full LLVM IR optimization pipel
 For example, compile a program with level 3 and both runtime checks:
 
 ```bash
-env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -O3 -t -f -o checked ../examples/hello.donato
-./checked
+env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -O3 -t -f -o checked ../examples/hello.donato && ./checked
 ```
 
 ### From Windows PowerShell, staying in the project folder
@@ -240,7 +251,7 @@ Compile and run the included sample:
 
 ```powershell
 wsl -d $Distro --cd "$PWD\build" --exec env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -O 3 -o hello ../examples/hello.donato
-wsl -d $Distro --cd "$PWD\build" --exec ./hello
+if ($LASTEXITCODE -eq 0) { wsl -d $Distro --cd "$PWD\build" --exec ./hello }
 ```
 
 `--cd` makes the Linux process run in `build/` while PowerShell stays in the
@@ -352,13 +363,31 @@ program must generate a fresh executable, pass LLVM 18 IR verification, and run
 with the expected output and exit status. Sources, logs and valid compilation
 artifacts stay under `build/comments-O<level>/`.
 
+### Check compiler driver failures
+
+Build the optional driver fixture and run these checks sequentially in Ubuntu:
+
+```bash
+cmake --build build --target dtc check-codegen-driver --parallel 2
+python3 scripts/check-driver.py 0
+python3 scripts/check-driver.py 3
+```
+
+From PowerShell, prefix each command with `wsl -d $Distro --exec`.
+The fixture passes a deliberately invalid LLVM module to the production driver,
+so verifier coverage does not depend on a particular Donato code-generation bug.
+Other cases exercise real linking without `main`, missing tools, tool startup
+errors, nonzero exits, signals, missing or unusable tool outputs, IR open/write
+errors, object copying, conflicting paths and final executable replacement.
+Tool stand-ins and file-size limits affect only test subprocesses; system tools
+are not modified. Each failure must return `1`, identify the failed stage, stop
+later stages and preserve the previous executable when one exists. Valid
+controls verify LLVM IR and run fresh executables, including paths with spaces.
+The suite saves and restores existing `output.ll` and `output.o`. Sources and logs
+remain in unique run directories under `build/driver-O<level>/`.
+
 ## Known workflow limitations
 
-- Compiler exit status alone is insufficient: the current implementation does
-  not propagate all LLVM verification or external tool failures. Inspect
-  diagnostics and ensure a new executable was generated before running it.
-  An old executable can remain after failure; the example checker removes its
-  previous binary before each compilation.
 - If `llc` or runtime linking fails, check the selected LLVM 18 tools and the
   working directory. The `env PATH=...` commands above select the expected tools.
 - LLVM 18 headers may emit deprecation warnings with Clang 23 and libstdc++ 13.
