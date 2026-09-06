@@ -145,7 +145,9 @@ Function::Function(
 : typeFunc(tf),
   nameFunc(nf),
   parameters(p),
-  body(b) {}
+  body(b),
+  classFunction(classFunction),
+  className(className) {}
 
 void Function::codegen(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();

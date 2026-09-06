@@ -432,6 +432,24 @@ and missing final newlines and have a five-second compilation timeout. Compariso
 as general expressions and chained comparisons remain rejected. Sources and logs
 stay under `build/inline-conditions-O<level>/`.
 
+### Check function initialization
+
+After rebuilding `dtc`, run these regressions sequentially in Ubuntu:
+
+```bash
+python3 scripts/check-function-initialization.py 0
+python3 scripts/check-function-initialization.py 3
+```
+
+The checks compile ordinary functions, recursive calls, constructors and methods
+with `MALLOC_PERTURB_` set to `0`, `1`, `85` and `170` in the test processes.
+They require fresh executables, valid LLVM IR, the expected function names
+(including `main`, without an accidental leading underscore), and exact output.
+Methods in different classes may share a name with an ordinary function.
+Logs remain under `build/function-initialization-O<level>/`.
+Use `--build-dir <directory>` to exercise a separate compiler build; it must
+contain `dtc` and resolve runtime sources at `../src/error_handling`.
+
 ### Check command-line arguments
 
 After rebuilding `dtc`, run these checks in Ubuntu:
