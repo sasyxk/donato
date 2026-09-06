@@ -1,0 +1,3 @@
+interface:
+  display_name: "GitHub Issues"
+  short_description: "Manage Donato issues, features and milestones"

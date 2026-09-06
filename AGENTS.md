@@ -3,6 +3,7 @@
 ## Repository skills
 
 - For Git commit requests, use the repository's [commit skill](.agents/skills/commit/SKILL.md) to review the scope, select validation and write the commit message.
+- For GitHub issues, feature requests and milestones, use the repository's [github-issues skill](.agents/skills/github-issues/SKILL.md) for authentication checks, publication commands and links to branches, PRs and commits.
 
 ## Project and sources of truth
 
