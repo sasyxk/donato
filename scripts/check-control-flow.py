@@ -40,9 +40,9 @@ def cases():
         tests.append(dict(name=name, source=source, values=values,
                           merges=merges, flags=flags, observer=observer))
 
-    def invalid(name, source, diagnostic):
+    def invalid(name, source, diagnostic, timeout=60):
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
-                          flags=()))
+                          flags=(), timeout=timeout))
 
     for type_name in ("int8", "int16", "int32", "int64", "int", "bool"):
         if type_name == "bool":
@@ -424,14 +424,85 @@ def cases():
             "Unexpected end of input: expected '}'")
     invalid("nested_function", function("function int other() { return 1; } return 0;"),
             "Unexpected Statement token 'FUNCTION'")
+
+    eof_class_prefix = b"class Broken { public: Broken() { return; } "
+    for name, source, delimiter, context in (
+        ("constructor_parameters", b"class Broken { public: Broken(",
+         ")", "parameters of constructor 'Broken'"),
+        ("constructor_body", b"class Broken { public: Broken() { return;",
+         "}", "body of constructor 'Broken'"),
+        ("method_parameters", eof_class_prefix + b"function int get(",
+         ")", "parameters of method 'Broken.get'"),
+        ("method_body", eof_class_prefix + b"function int get() { return 1;",
+         "}", "body of method 'Broken.get'"),
+        ("ref_method_parameters", eof_class_prefix + b"function ref int get(",
+         ")", "parameters of method 'Broken.get'"),
+        ("ref_method_body", eof_class_prefix + b"function ref int get() { return value;",
+         "}", "body of method 'Broken.get'"),
+        ("ref_pointer_parameters", eof_class_prefix + b"function ref int** get(",
+         ")", "parameters of method 'Broken.get'"),
+        ("ref_pointer_body", eof_class_prefix + b"function ref int** get() { return value;",
+         "}", "body of method 'Broken.get'"),
+    ):
+        for ending_name, ending in (("eof", b""), ("lf", b"\n"), ("crlf", b"\r\n")):
+            invalid(f"eof_{name}_{ending_name}", source + ending,
+                    f"Unexpected end of input: expected '{delimiter}' in {context}", timeout=5)
+
+    for depth in (1, 2, 5):
+        for kind, prefix, statement, context in (
+            ("constructor", b"class Broken { public: Broken() { ", b"return;",
+             "constructor 'Broken'"),
+            ("method", eof_class_prefix + b"function int get() { ", b"return 1;",
+             "method 'Broken.get'"),
+        ):
+            invalid(f"eof_{kind}_nested_{depth}",
+                    prefix + b"if (true) { " * depth + statement + b" }" * depth,
+                    f"Unexpected end of input: expected '}}' in body of {context}", timeout=5)
+
+    invalid("eof_parameters_after_block_comment",
+            b"class Broken { public: Broken(/* ) } */",
+            "Unexpected end of input: expected ')' in parameters of constructor 'Broken'", timeout=5)
+    invalid("eof_body_after_block_comment",
+            eof_class_prefix + b"function int get() { return 1; /* } */",
+            "Unexpected end of input: expected '}' in body of method 'Broken.get'", timeout=5)
+    invalid("eof_body_after_line_comment",
+            eof_class_prefix + b"function int get() { return 1; // }",
+            "Unexpected end of input: expected '}' in body of method 'Broken.get'", timeout=5)
+    invalid("eof_class_after_constructor", eof_class_prefix,
+            "Unexpected Statement Token: ''", timeout=5)
+    invalid("eof_class_after_method", eof_class_prefix + b"function int get() { return 1; }",
+            "Unexpected end of input", timeout=5)
+    invalid("eof_before_constructor_parameters", b"class Broken { public: Broken",
+            "Unexpected end of input", timeout=5)
+    invalid("eof_before_constructor_body", b"class Broken { public: Broken()",
+            "Unexpected end of input", timeout=5)
+
+    valid("class_eof_closed_comments", """class Sample {
+        int value;
+    public:
+        Sample(int x /* ) } */) { this.value = x; return; /* } */ }
+        function int get(/* ) } */) { return this.value; /* } */ }
+    }
+    function int main() {
+        auto p = new Sample(7);
+        ref Sample object = *p;
+        print(object.get());
+        delete p;
+        return 0;
+    }""", [7])
+    for name, methods in (("constructor", b""),
+                          ("method", b"function int get() { return 7; }")):
+        valid(f"class_eof_complete_{name}",
+              b"function int main() { print(7); return 0; }\n"
+              b"class Sample { public: Sample() { return; } " + methods + b"}", [7])
     return tests
 
 
-def run(command, directory, prefix, env):
+def run(command, directory, prefix, env, timeout=60):
     with (directory / f"{prefix}.stdout.txt").open("w") as out, \
          (directory / f"{prefix}.stderr.txt").open("w") as err:
         result = subprocess.run(command, cwd=BUILD, env=env, stdout=out,
-                                stderr=err, timeout=60)
+                                stderr=err, timeout=timeout)
     return (result.returncode,
             (directory / f"{prefix}.stdout.txt").read_text(),
             (directory / f"{prefix}.stderr.txt").read_text())
@@ -444,11 +515,12 @@ def check(case, source, directory, level, env):
         product.unlink(missing_ok=True)
     status, _, errors = run(
         [str(BUILD / "dtc"), "-O", str(level), *case["flags"], "-o",
-         str(binary.relative_to(BUILD)), str(source)], directory, "compile", env)
+         str(binary.relative_to(BUILD)), str(source)], directory, "compile", env,
+        timeout=case.get("timeout", 60))
     if "diagnostic" in case:
         if status != 1 or "Error in parsing::" not in errors or case["diagnostic"] not in errors:
             raise RuntimeError(f"wrong parser result (status {status}): {errors.strip()}")
-        if binary.exists() or (BUILD / "output.ll").exists():
+        if any(product.exists() for product in (binary, BUILD / "output.ll", BUILD / "output.o")):
             raise RuntimeError("parser rejection produced codegen output")
         return
     if status != 0 or errors or not binary.is_file():
@@ -510,7 +582,11 @@ def main():
     records = []
     for case in cases():
         source = sources / (case["name"] + ".donato")
-        source.write_text(textwrap.dedent(case["source"]).strip() + "\n")
+        if isinstance(case["source"], bytes):
+            # EOF cases preserve the exact final bytes, including LF and CRLF.
+            source.write_bytes(case["source"])
+        else:
+            source.write_text(textwrap.dedent(case["source"]).strip() + "\n")
         directory = results / case["name"]
         directory.mkdir(exist_ok=True)
         try:

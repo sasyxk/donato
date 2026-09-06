@@ -5,6 +5,9 @@
 Parser::Parser(Tokenizer& t, std::string lf) : tokenizer(t), currentToken(t.nextToken()) {}
 
 void Parser::eat(TokenType expected) {
+    if (currentToken.type == END) {
+        throw std::runtime_error("Unexpected end of input");
+    }
     if (currentToken.type != expected)
         throw std::runtime_error("Unexpected Token: '" + currentToken.value + "' with type '"+ std::to_string(currentToken.type)+ "'");
     currentToken = tokenizer.nextToken();
@@ -59,15 +62,26 @@ Parser::ParsedBlock Parser::parseBlock() {
 
 std::vector<std::string> Parser::parseClassFunctionNames(){
     std::vector<std::string> nameFunctions;
+    const std::string constructorName = currentToken.value;
     eat(UPPERNAME);
     eat(LPAREN);
     while(currentToken.type != RPAREN){
+        if (currentToken.type == END) {
+            throw std::runtime_error(
+                "Unexpected end of input: expected ')' in parameters of constructor '" +
+                constructorName + "'");
+        }
         eat(currentToken.type);
     }
     eat(RPAREN);
     int braceCount = 1;
     eat(LBRACE);
     while (braceCount > 0) {
+        if (currentToken.type == END) {
+            throw std::runtime_error(
+                "Unexpected end of input: expected '}' in body of constructor '" +
+                constructorName + "'");
+        }
         if (currentToken.type == LBRACE) {
             braceCount++;
         } else if (currentToken.type == RBRACE) {
@@ -81,16 +95,27 @@ std::vector<std::string> Parser::parseClassFunctionNames(){
             eat(REF);
         }
         parseType(currentToken.value);
+        const std::string methodName = nameOfClass + "." + currentToken.value;
         nameFunctions.push_back(currentToken.value);
         eat(VAR);
         eat(LPAREN);
         while(currentToken.type != RPAREN){
+            if (currentToken.type == END) {
+                throw std::runtime_error(
+                    "Unexpected end of input: expected ')' in parameters of method '" +
+                    methodName + "'");
+            }
             eat(currentToken.type);
         }
         eat(RPAREN);
         eat(LBRACE);
         int braceCount = 1;
         while (braceCount > 0) {
+            if (currentToken.type == END) {
+                throw std::runtime_error(
+                    "Unexpected end of input: expected '}' in body of method '" +
+                    methodName + "'");
+            }
             if (currentToken.type == LBRACE) {
                 braceCount++;
             } else if (currentToken.type == RBRACE) {

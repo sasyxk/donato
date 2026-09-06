@@ -135,6 +135,8 @@ Constraints of the current implementation:
 - A class has one constructor, with the class's exact name, followed by public
   methods. Fields precede `public:` and are private, even without `private:`.
   Struct fields are public. Aggregate fields require pointers to other aggregates.
+  Unclosed constructor or method parameter lists and bodies are rejected at EOF
+  with a syntax diagnostic identifying the missing closing delimiter and context.
 - `this` is available inside classes. Member access starts with a name or `this`;
   arbitrary postfix chains such as `obj.get().field` are not implemented.
 - `new StructName(...)` initializes fields in declaration order;

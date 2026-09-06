@@ -294,6 +294,13 @@ Valid programs must also pass LLVM 18 `opt` verification and checks for unnecess
 merge blocks. Each case retains its source, logs and, when valid, IR, executable
 and expected output under `build/control-flow-O<level>/`.
 
+Incomplete class tests check constructor and method parameter lists and bodies,
+including nested braces, comments and reference return types. These inputs
+preserve EOF, LF and CRLF exactly and must fail with status `1`, the expected
+syntax diagnostic and no new IR, object or executable. A five-second compilation
+timeout makes a parser hang fail the test. Valid classes ending exactly at EOF
+must still compile and run normally.
+
 The same suite tests `double` equality in `if`, `while` and inline `if`. Its
 [C observer](scripts/fixtures/double-observer.c) independently checks arithmetic,
 chained expressions, all six comparisons, signed zero, infinities and NaN.
