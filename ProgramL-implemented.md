@@ -114,6 +114,9 @@ Constraints of the current implementation:
   point or exponent are `double`.
 - Integer conditions in `if`, `while` and inline `if` are false for zero and
   true for any nonzero value, for every supported integer width.
+- `double` arithmetic and negation produce `double`; comparisons produce `bool`.
+  Double comparisons are ordered: any comparison involving NaN, including `!=`,
+  is false. Positive and negative zero compare equal.
 - Use `function int main() { ... return 0; }` as the executable entry point.
   Declare functions and types before use; self-recursive functions are supported.
   Declarations of functions, structs and classes belong at the top level.

@@ -36,9 +36,9 @@ def tree(depth, first=0, open_leaf=None):
 def cases():
     tests = []
 
-    def valid(name, source, values, merges=None, flags=()):
+    def valid(name, source, values, merges=None, flags=(), observer=None):
         tests.append(dict(name=name, source=source, values=values,
-                          merges=merges, flags=flags))
+                          merges=merges, flags=flags, observer=observer))
 
     def invalid(name, source, diagnostic):
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
@@ -64,6 +64,41 @@ def cases():
             valid(f"condition_{type_name}_{form}",
                   function(body, params=f"{type_name} x")
                   + function(calls + "\nreturn 0;", "main", ""), expected)
+
+    double_calls = """
+        print(eval(1.0, 2.0));
+        print(eval(0.0, 0.0));
+        print(eval(-1.0, -1.0));
+        print(eval(2.0, 1.0));
+        return 0;
+    """
+    for form, body in (
+        ("if", "if (x == y) { return 1; } else { return 0; }"),
+        ("while", "while (x == y) { return 1; } return 0;"),
+        ("inline", "return if x == y then 1 else 0;"),
+    ):
+        valid(f"double_equality_{form}",
+              function(body, params="double x, double y")
+              + function(double_calls, "main", ""), [0, 1, 1, 0])
+
+    double_exports = ""
+    for name, expression in (
+        ("dadd", "x + y"), ("dsub", "x - y"),
+        ("dmul", "x * y"), ("ddiv", "x / y"),
+        ("dchain", "(x + y) * (x - y) / y"),
+    ):
+        double_exports += function(f"return {expression};", name,
+                                   "double x, double y", "double")
+    for name, expression in (("dneg", "-x"), ("dcube", "x * x * x")):
+        double_exports += function(f"return {expression};", name, "double x", "double")
+    for name, operator in (
+        ("deq", "=="), ("dneq", "!="), ("dlt", "<"),
+        ("dlte", "<="), ("dgt", ">"), ("dgte", ">="),
+    ):
+        double_exports += function(f"return if x {operator} y then 1 else 0;",
+                                   name, "double x, double y")
+    valid("double_c_observer", double_exports + function("return 0;", "main", ""), [],
+          observer=ROOT / "scripts" / "fixtures" / "double-observer.c")
 
     original = """
         auto start = x;
@@ -345,6 +380,30 @@ def check(case, source, directory, level, env):
     status, output, errors = run([str(binary)], directory, "run", env)
     if status != 0 or errors or output != expected:
         raise RuntimeError(f"unexpected execution: status={status}, stdout={output!r}, stderr={errors!r}")
+    if case.get("observer"):
+        check_observer(case["observer"], directory, env)
+
+
+def check_observer(source, directory, env):
+    # Rename only main in a copy of the object emitted by dtc.
+    original = directory / "output.o"
+    renamed = directory / "observer.o"
+    binary = directory / "observer"
+    for product in (original, renamed, binary):
+        product.unlink(missing_ok=True)
+    shutil.copyfile(BUILD / "output.o", original)
+    commands = (
+        ("rename", ["objcopy", "--redefine-sym", "main=donatomain", str(original), str(renamed)]),
+        ("link", ["clang", "-std=c17", "-Wall", "-Wextra", "-Werror", str(source), str(renamed),
+                  str(ROOT / "src" / "error_handling" / "errors.c"), "-lm", "-o", str(binary)]),
+        ("run", [str(binary)]),
+    )
+    for step, command in commands:
+        status, output, errors = run(command, directory, f"observer-{step}", env)
+        if status != 0 or errors:
+            raise RuntimeError(f"C observer {step} failed (status {status}): {errors.strip()}")
+        if step == "run" and output != "PASS double observer\n":
+            raise RuntimeError(f"unexpected C observer output: {output!r}")
 
 
 def main():

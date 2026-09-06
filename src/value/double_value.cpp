@@ -18,7 +18,7 @@ Value* DoubleValue::add(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())){
         llvm::Value* result = builder.CreateFAdd(this->getLLVMValue(), other->getLLVMValue(), "addtmp");
-        return this->getType()->createValue(this->getLLVMValue(), ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -33,7 +33,7 @@ Value* DoubleValue::sub(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFSub(this->getLLVMValue(), other->getLLVMValue(), "subtmp");
-        return this->getType()->createValue(this->getLLVMValue(), ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -48,7 +48,7 @@ Value* DoubleValue::mul(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFMul(this->getLLVMValue(), other->getLLVMValue(), "multmp");
-        return this->getType()->createValue(this->getLLVMValue(), ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -63,7 +63,7 @@ Value* DoubleValue::div(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFDiv(this->getLLVMValue(), other->getLLVMValue(), "divtmp");
-        return this->getType()->createValue(this->getLLVMValue(), ctx);
+        return this->getType()->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -78,7 +78,8 @@ Value* DoubleValue::eq(Value* other, llvm::IRBuilder<>& builder) {
 
     if (dynamic_cast<const DoubleType*>(other->getType())) {
         llvm::Value* result = builder.CreateFCmpOEQ(this->getLLVMValue(), other->getLLVMValue(), "eqtmp");
-        return this->getType()->createValue(this->getLLVMValue(), ctx);
+        Type* boolType = TypeManager::instance().getBoolType();
+        return boolType->createValue(result, ctx);
     }
 
     throw std::runtime_error(
@@ -173,7 +174,7 @@ Value* DoubleValue::neg(llvm::IRBuilder<>& builder) {
     llvm::LLVMContext& ctx = builder.getContext();
 
     llvm::Value* result = builder.CreateFNeg(this->getLLVMValue(), "negtmp");
-    return this->getType()->createValue(this->getLLVMValue(), ctx);
+    return this->getType()->createValue(result, ctx);
 }
 
 Value* DoubleValue::getBoolValue(llvm::IRBuilder<> &builder) {
