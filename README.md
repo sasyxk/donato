@@ -320,6 +320,13 @@ status `1`, a diagnostic naming the allowed declarations and no new IR, object
 or executable. Empty and comment-only inputs and declarations nested inside a
 function are also rejected; local variables remain valid.
 
+Type-name checks reject duplicate struct and class names during parsing, including
+conflicts between the two categories in either declaration order, equal layouts,
+unused types and declarations separated by functions. Each rejection must return
+status `1`, identify the duplicate and produce no new IR, object or executable.
+Valid controls use distinct, case-sensitive names in allocations, fields, methods
+and function parameters, and check pointers to the type being declared.
+
 Parameter and argument list checks reject trailing commas in functions, methods,
 constructors and `new`, including calls through `this`, comments after commas,
 and LF/CRLF endings. Leading and repeated commas and comma-only lists are rejected

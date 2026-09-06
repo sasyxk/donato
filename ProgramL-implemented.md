@@ -129,6 +129,10 @@ Constraints of the current implementation:
   Declarations of functions, structs and classes belong at the top level.
   Variables and other statements at the top level are rejected during parsing,
   before code generation; global variables are not supported.
+- Struct and class names share one namespace across the program. A type name
+  can be declared only once, regardless of category, declaration order, layout
+  or use. Duplicate names are rejected during parsing, before code generation.
+  Names are case-sensitive.
 - Blocks contain at least one statement. The parser rejects statements after a
   `return` or an `if`/`else` whose two branches cannot fall through, at any nesting
   depth. Comments after these statements are allowed.

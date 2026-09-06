@@ -783,6 +783,101 @@ def cases():
         valid(f"class_eof_complete_{name}",
               b"function int main() { print(7); return 0; }\n"
               b"class Sample { public: Sample() { return; } " + methods + b"}", [7])
+    same_struct = "struct Same { int x; }\n"
+    unused_main = function("print(1); return 0;", "main", "")
+    for layout, fields, initialization in (
+        ("equal", "int x;", "this.x = 1;"),
+        ("different", "int x; int y;", "this.x = 1; this.y = 2;"),
+    ):
+        same_class = ("class Same { " + fields + " public: Same() { "
+                      + initialization + " return; } }\n")
+        for order, first, second, new_kind, old_kind in (
+            ("struct_class", same_struct, same_class, "class", "struct"),
+            ("class_struct", same_class, same_struct, "struct", "class"),
+        ):
+            diagnostic = (f"Cannot define {new_kind} 'Same': "
+                          f"a {old_kind} with that name is already defined.")
+            for usage, main in (
+                ("unused", unused_main),
+                ("typed_new", function("Same* p = new Same(); delete p; return 0;",
+                                       "main", "")),
+                ("auto_new", function("auto p = new Same(); delete p; return 0;",
+                                      "main", "")),
+            ):
+                invalid(f"type_name_{order}_{layout}_{usage}",
+                        first + second + main, diagnostic)
+            # The first type has already been used in a function signature and
+            # allocation when the second declaration tries to reuse its name.
+            argument = "7" if old_kind == "struct" else ""
+            between = function("return;", "accept", "ref Same value", "void")
+            between += function(f"auto p = new Same({argument}); "
+                                "accept(*p); delete p; return 0;", "main", "")
+            invalid(f"type_name_{order}_{layout}_after_use",
+                    first + between + second, diagnostic)
+
+    invalid("type_name_duplicate_struct", same_struct + same_struct + unused_main,
+            "The Struct has already been defined: Same")
+    same_class = "class Same { public: Same() { return; } }\n"
+    invalid("type_name_duplicate_class", same_class + same_class + unused_main,
+            "The Class has already been defined: Same")
+
+    # Exercise both name resolution paths, including function parameters, using
+    # the same argument list for a struct initializer and a class constructor.
+    for names, struct_name, class_name in (
+        ("distinct", "Record", "Object"),
+        ("case_sensitive", "Same", "SAME"),
+    ):
+        struct_source = f"struct {struct_name} {{ int x; }}\n"
+        class_source = f"""class {class_name} {{
+            int x;
+        public:
+            {class_name}(int value) {{ this.x = value + 1; return; }}
+            function int read() {{ return this.x; }}
+        }}
+        """
+        calls = function("return record.x + object.read();", "sum",
+                         f"ref {struct_name} record, ref {class_name} object")
+        calls += function(f"""
+            {struct_name}* p = new {struct_name}(11);
+            {class_name}* q = new {class_name}(11);
+            ref {struct_name} record = *p;
+            ref {class_name} object = *q;
+            print(record.x);
+            print(object.read());
+            print(sum(record, object));
+            record.x = 20;
+            print(sum(record, object));
+            delete p;
+            delete q;
+            return 0;
+        """, "main", "")
+        for order, declarations in (
+            ("struct_class", struct_source + class_source),
+            ("class_struct", class_source + struct_source),
+        ):
+            valid(f"type_name_{names}_{order}", declarations + calls, [11, 12, 23, 32])
+
+    valid("type_name_self_pointers", """
+        struct Node { int x; Node* next; }
+        class Box {
+            int x;
+            Box* next;
+        public:
+            Box(int value) { this.x = value; this.next = nullptr<Box>; return; }
+            function int read() { return this.x; }
+        }
+        function int main() {
+            Node* p = new Node(11, nullptr<Node>);
+            Box* q = new Box(7);
+            ref Node node = *p;
+            ref Box box = *q;
+            print(node.x);
+            print(box.read());
+            delete p;
+            delete q;
+            return 0;
+        }
+    """, [11, 7])
     return tests
 
 

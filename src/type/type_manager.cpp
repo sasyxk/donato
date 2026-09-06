@@ -43,6 +43,10 @@ ClassType* TypeManager::createClassType(const std::string& name) {
     if (it != classTypes.end()) {
         throw std::runtime_error("The Class has already been defined: " + name);
     }
+    if (structTypes.contains(name)) {
+        throw std::runtime_error("Cannot define class '" + name +
+                                 "': a struct with that name is already defined.");
+    }
 
     StructType* structType = new StructType(name);
     ClassType* newClass = new ClassType(structType);
@@ -62,6 +66,10 @@ StructType* TypeManager::createStructType(const std::string& name) {
     auto it = structTypes.find(name);
     if (it != structTypes.end()) {
         throw std::runtime_error("The Struct has already been defined: " + name);
+    }
+    if (classTypes.contains(name)) {
+        throw std::runtime_error("Cannot define struct '" + name +
+                                 "': a class with that name is already defined.");
     }
 
     StructType* newStruct = new StructType(name);
