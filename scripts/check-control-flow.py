@@ -44,6 +44,27 @@ def cases():
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
                           flags=()))
 
+    for type_name in ("int8", "int16", "int32", "int64", "int", "bool"):
+        if type_name == "bool":
+            inputs, expected, zero = ["true", "false"], [1, 0], "false"
+        else:
+            inputs, expected, zero = [5, 0, -1, 2], [1, 0, 1, 1], "0"
+            if type_name in ("int64", "int"):
+                inputs.append(4294967296)
+                expected.append(1)
+        calls = "\n".join(
+            f"{type_name} input{i} = {value}; print(eval(input{i}));"
+            for i, value in enumerate(inputs)
+        )
+        for form, body in (
+            ("if", "if (x) { return 1; } else { return 0; }"),
+            ("while", f"int result = 0; while (x) {{ result = 1; x = {zero}; }} return result;"),
+            ("inline", "return if x then 1 else 0;"),
+        ):
+            valid(f"condition_{type_name}_{form}",
+                  function(body, params=f"{type_name} x")
+                  + function(calls + "\nreturn 0;", "main", ""), expected)
+
     original = """
         auto start = x;
         auto y = start + 5;

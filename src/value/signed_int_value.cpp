@@ -356,11 +356,11 @@ Value* SignedIntValue::neg(llvm::IRBuilder<>& builder) {
 
 Value* SignedIntValue::getBoolValue(llvm::IRBuilder<> &builder) {
     llvm::LLVMContext& ctx = builder.getContext();
+    llvm::Value* value = this->getLLVMValue();
 
     llvm::Value* result = builder.CreateICmpNE(
-        this->getLLVMValue(),
-        llvm::ConstantInt::get(ctx,
-        llvm::APInt(32, 0)),
+        value,
+        llvm::ConstantInt::get(value->getType(), 0),
         "ifconf"
     );
     Type* boolType = TypeManager::instance().getBoolType();

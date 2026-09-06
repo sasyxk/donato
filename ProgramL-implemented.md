@@ -112,6 +112,8 @@ Constraints of the current implementation:
   Write subtraction as `x - 1`; `x-1` and `x -1` do not parse as subtraction.
 - `int` means `int64`. Integer literals are `int64`; literals with a decimal
   point or exponent are `double`.
+- Integer conditions in `if`, `while` and inline `if` are false for zero and
+  true for any nonzero value, for every supported integer width.
 - Use `function int main() { ... return 0; }` as the executable entry point.
   Declare functions and types before use; self-recursive functions are supported.
   Declarations of functions, structs and classes belong at the top level.
