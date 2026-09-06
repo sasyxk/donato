@@ -25,6 +25,8 @@ private:
     };
 
     ParsedBlock parseBlock();
+    std::vector<std::pair<TypeInfo, std::string>> parseParameterList();
+    std::vector<Expr*> parseArgumentList();
     Statement* parseStm();
     Expr* parse();
     Expr* parseExpr();

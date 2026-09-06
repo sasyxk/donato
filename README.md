@@ -320,6 +320,13 @@ status `1`, a diagnostic naming the allowed declarations and no new IR, object
 or executable. Empty and comment-only inputs and declarations nested inside a
 function are also rejected; local variables remain valid.
 
+Parameter and argument list checks reject trailing commas in functions, methods,
+constructors and `new`, including calls through `this`, comments after commas,
+and LF/CRLF endings. Leading and repeated commas and comma-only lists are rejected
+too. Valid controls exercise empty lists, nested calls, references, pointers and
+comments between elements. Truncated lists must fail with a parsing diagnostic,
+status `1` and no new IR, object or executable.
+
 Incomplete class tests check constructor and method parameter lists and bodies,
 including nested braces, comments and reference return types. These inputs
 preserve EOF, LF and CRLF exactly and must fail with status `1`, the expected

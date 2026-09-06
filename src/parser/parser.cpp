@@ -69,6 +69,52 @@ Parser::ParsedBlock Parser::parseBlock() {
     return block;
 }
 
+std::vector<std::pair<TypeInfo, std::string>> Parser::parseParameterList() {
+    eat(LPAREN);
+    std::vector<std::pair<TypeInfo, std::string>> parameters;
+    if (currentToken.type != RPAREN) {
+        do {
+            bool isReference = false;
+            if (currentToken.type == REF) {
+                eat(REF);
+                isReference = true;
+            }
+            TypeInfo type = parseType(currentToken.value, isReference);
+            std::string name = currentToken.value;
+            eat(VAR);
+            parameters.emplace_back(type, name);
+            if (currentToken.type != COMMA) {
+                break;
+            }
+            eat(COMMA);
+            if (currentToken.type == RPAREN || currentToken.type == END) {
+                throw std::runtime_error("Expected a parameter after ','");
+            }
+        } while (true);
+    }
+    eat(RPAREN);
+    return parameters;
+}
+
+std::vector<Expr*> Parser::parseArgumentList() {
+    eat(LPAREN);
+    std::vector<Expr*> args;
+    if (currentToken.type != RPAREN) {
+        do {
+            args.push_back(parseExpr());
+            if (currentToken.type != COMMA) {
+                break;
+            }
+            eat(COMMA);
+            if (currentToken.type == RPAREN || currentToken.type == END) {
+                throw std::runtime_error("Expected an argument after ','");
+            }
+        } while (true);
+    }
+    eat(RPAREN);
+    return args;
+}
+
 std::vector<std::string> Parser::parseClassFunctionNames(){
     std::vector<std::string> nameFunctions;
     const std::string constructorName = currentToken.value;
@@ -198,22 +244,7 @@ Statement* Parser::parseStm(){
             );
         }
         eat(UPPERNAME);
-        eat(LPAREN);
-        std::vector<std::pair<TypeInfo, std::string>> constructorArgs; // (type name),
-        do {
-            if(currentToken.type == RPAREN){break;}
-            bool isReference = false;
-            if(currentToken.type == REF) {
-                eat(REF);
-                isReference = true;
-            }
-            TypeInfo typeInfo = parseType(currentToken.value, isReference);
-            //eat(TYPE);
-            std::string arg = currentToken.value;
-            eat(VAR);
-            constructorArgs.emplace_back(typeInfo, arg);
-        } while (currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RPAREN);
+        auto constructorArgs = parseParameterList();
         lastFuncion = nameClass;
         ParsedBlock constructorBody = parseBlock();
         if (constructorBody.canFallThrough) {
@@ -306,22 +337,7 @@ Statement* Parser::parseStm(){
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
-        eat(LPAREN);
-        std::vector<std::pair<TypeInfo, std::string>> parameters; // (type name),
-        do {
-            if(currentToken.type == RPAREN){break;}
-            bool isReference = false;
-            if(currentToken.type == REF) {
-                eat(REF);
-                isReference = true;
-            }
-            TypeInfo type = parseType(currentToken.value, isReference);
-            //eat(TYPE);
-            std::string param = currentToken.value;
-            eat(VAR);
-            parameters.emplace_back(type, param);
-        } while (currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RPAREN);
+        auto parameters = parseParameterList();
         ParsedBlock body = parseBlock();
         if (body.canFallThrough) {
             throw std::runtime_error(
@@ -372,14 +388,7 @@ Statement* Parser::parseStm(){
         currentToken.type == THIS) { // To the left of the class called with this it behaves exactly like a struct, we can leave it like that
         std::string var = parseVar(currentToken.value);
         if(currentToken.type == LPAREN){ //VAR is function name CallFuncStatement
-            eat(LPAREN);
-            std::vector<Expr*> args;
-            do {
-                if(currentToken.type == RPAREN){break;}
-                Expr* arg = parseExpr();
-                args.push_back(arg);
-            } while (currentToken.type == COMMA && (eat(COMMA), true));
-            eat(RPAREN);
+            auto args = parseArgumentList();
             eat(ENDEXPR);
             return new CallFuncStatement(var, args);
         }
@@ -392,15 +401,8 @@ Statement* Parser::parseStm(){
                 memberChain.push_back(memberName);
 
             } while(currentToken.type == POINT);
-            std::vector<Expr*> args;
             if(currentToken.type == LPAREN){ //Function Class call VOID
-                eat(LPAREN);
-                do{
-                    if(currentToken.type == RPAREN){break;}
-                    Expr* arg = parseExpr();
-                    args.push_back(arg);
-                } while (currentToken.type == COMMA && (eat(COMMA), true));
-                eat(RPAREN);
+                auto args = parseArgumentList();
                 eat(ENDEXPR);
                 //throw std::runtime_error("Not yet implemented");
                 return new ClassCallVoidFunc(var, memberChain, var == "this" ? nameOfClass : "", args);
@@ -534,14 +536,7 @@ Expr* Parser::parseFactor() {
         currentToken.type == THIS) {
         std::string name = parseVar(currentToken.value);
         if(currentToken.type == LPAREN){ //VAR is function name CallFunc
-            eat(LPAREN);
-            std::vector<Expr*> args;
-            do {
-                if(currentToken.type == RPAREN){break;}
-                Expr* arg = parseExpr();
-                args.push_back(arg);
-            } while (currentToken.type == COMMA && (eat(COMMA), true));
-            eat(RPAREN);
+            auto args = parseArgumentList();
             return new CallFunc(name, nameOfClass, args);
         }
         if(currentToken.type == POINT){ //Var is struct
@@ -553,15 +548,8 @@ Expr* Parser::parseFactor() {
                 memberChain.push_back(memberName);
 
             } while(currentToken.type == POINT);
-            std::vector<Expr*> args;
             if(currentToken.type == LPAREN){ //Function Class call
-                eat(LPAREN);
-                do{
-                    if(currentToken.type == RPAREN){break;}
-                    Expr* arg = parseExpr();
-                    args.push_back(arg);
-                } while (currentToken.type == COMMA && (eat(COMMA), true));
-                eat(RPAREN);
+                auto args = parseArgumentList();
                 return new ClassCallFunc(name, memberChain, name == "this" ? nameOfClass : "", args);
             }
             return new StructVar(name, memberChain);
@@ -572,14 +560,7 @@ Expr* Parser::parseFactor() {
         eat(NEW);
         std::string className = currentToken.value;
         eat(UPPERNAME);
-        eat(LPAREN);
-        std::vector<Expr*> args;
-        do {
-            if(currentToken.type == RPAREN){break;}
-            Expr* arg = parseExpr();
-            args.push_back(arg);
-        } while (currentToken.type == COMMA && (eat(COMMA), true));
-        eat(RPAREN);
+        auto args = parseArgumentList();
         return new NewOp(className, args);
     }
     if(currentToken.type == MEM){

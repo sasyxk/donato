@@ -44,6 +44,125 @@ def cases():
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
                           flags=(), timeout=timeout, phase=phase))
 
+    list_box = """class ListBox {
+        int value;
+    public:
+        ListBox(int initial) { this.value = initial; return; }
+        function int read() { return this.value; }
+        function int eval(int x) { return x; }
+        function void show(int x) { print(x); return; }
+        EXTRA
+    }
+    """
+
+    def list_object(body, declaration=None):
+        if declaration is None:
+            declaration = list_box.replace("EXTRA", "")
+        return declaration + function(
+            "auto p = new ListBox(7); ref ListBox box = *p;\n"
+            + body + "\ndelete p; return 0;", "main", "")
+
+    list_eval = function("return x;", params="int x")
+    list_show = function("print(x); return;", "show", "int x", "void")
+    list_forms = (
+        ("function_parameters", function("return x;", params="LIST")
+         + function("print(eval(7)); return 0;", "main", ""), "int x", "parameter", [7]),
+        ("constructor_parameters", list_object("print(box.read());",
+         list_box.replace("int initial", "LIST").replace("EXTRA", "")),
+         "int initial", "parameter", [7]),
+        ("method_parameters", list_object("print(box.eval(7));",
+         list_box.replace("eval(int x)", "eval(LIST)").replace("EXTRA", "")),
+         "int x", "parameter", [7]),
+        ("function_expression", list_eval
+         + function("print(eval(LIST)); return 0;", "main", ""), "7", "argument", [7]),
+        ("function_statement", list_show
+         + function("show(LIST); return 0;", "main", ""), "7", "argument", [7]),
+        ("method_expression", list_object("print(box.eval(LIST));"), "7", "argument", [7]),
+        ("method_statement", list_object("box.show(LIST);"), "7", "argument", [7]),
+        ("this_expression", list_object("print(box.forward());", list_box.replace(
+            "EXTRA", "function int forward() { return this.eval(LIST); }")),
+         "7", "argument", [7]),
+        ("this_statement", list_object("box.emit();", list_box.replace(
+            "EXTRA", "function void emit() { this.show(LIST); return; }")),
+         "7", "argument", [7]),
+        ("struct_new", "struct Pair { int left; int right; }\n" + function(
+            "auto p = new Pair(LIST); ref Pair pair = *p; "
+            "print(pair.left + pair.right); delete p; return 0;", "main", ""),
+         "2, 3", "argument", [5]),
+        ("class_new", list_box.replace("EXTRA", "") + function(
+            "auto p = new ListBox(LIST); ref ListBox box = *p; "
+            "print(box.read()); delete p; return 0;", "main", ""), "7", "argument", [7]),
+    )
+    for context, source, elements, kind, values in list_forms:
+        valid(f"list_valid_{context}", source.replace("LIST", elements), values)
+        article = "a" if kind == "parameter" else "an"
+        for suffix_name, suffix in (("plain", ""), ("comment", " /* ) ignored */ "),
+                                    ("lf", "\n"), ("line_comment_crlf", " // ignored\r\n")):
+            invalid(f"list_trailing_{context}_{suffix_name}",
+                    source.replace("LIST", elements + "," + suffix).encode(),
+                    f"Expected {article} {kind} after ','", timeout=5)
+        malformed_diagnostic = ("Type ',' does not exist." if kind == "parameter"
+                                else "Unexpected factor: ,")
+        for name, contents in (("leading", "," + elements),
+                               ("double", elements + ",,"), ("comma_only", ",")):
+            invalid(f"list_{name}_{context}", source.replace("LIST", contents),
+                    malformed_diagnostic, timeout=5)
+
+    valid("list_empty", """function int eval() { return 7; }
+        function void show() { print(7); return; }
+        class Empty {
+        public:
+            Empty() { return; }
+            function int get() { return eval(); }
+            function void emit() { show(); return; }
+            function int forward() { return this.get(); }
+            function void relay() { this.emit(); return; }
+        }
+        function int main() {
+            print(eval()); show();
+            auto p = new Empty(); ref Empty object = *p;
+            print(object.get()); object.emit();
+            print(object.forward()); object.relay();
+            delete p; return 0;
+        }
+    """, [7] * 6)
+    valid("list_nested_comments_references", """
+        function int adjust(ref int x, /* separator */ int* p,
+                            // another parameter follows
+                            int y) { x = x + y; return *p; }
+        function int echo(int x) { return x; }
+        function int main() {
+            int value = 2;
+            print(adjust(value, /* separator */ &value,
+                         // nested calls and let bindings contain their own lists
+                         echo(let a = 2, b = 3 in a + b)));
+            print(value);
+            return 0;
+        }
+    """, [7, 7])
+    for context, prefix, diagnostic in (
+        ("function_parameters", "function int eval(int x,", "Expected a parameter after ','"),
+        ("constructor_parameters", "class Broken { public: Broken(int x,",
+         "Unexpected end of input: expected ')' in parameters of constructor 'Broken'"),
+        ("method_parameters", "class Broken { public: Broken() { return; } function int eval(int x,",
+         "Unexpected end of input: expected ')' in parameters of method 'Broken.eval'"),
+        ("function_expression", list_eval + "function int main() { print(eval(7,",
+         "Expected an argument after ','"),
+        ("function_statement", list_show + "function int main() { show(7,",
+         "Expected an argument after ','"),
+        ("method_expression", list_box.replace("EXTRA", "")
+         + "function int main() { print(box.eval(7,", "Expected an argument after ','"),
+        ("method_statement", list_box.replace("EXTRA", "")
+         + "function int main() { box.show(7,", "Expected an argument after ','"),
+        ("struct_new", "struct Pair { int left; int right; } function int main() { auto p = new Pair(2,",
+         "Expected an argument after ','"),
+        ("class_new", list_box.replace("EXTRA", "")
+         + "function int main() { auto p = new ListBox(7,", "Expected an argument after ','"),
+    ):
+        for ending_name, ending in (("eof", ""), ("lf", "\n"), ("crlf", "\r\n")):
+            invalid(f"list_eof_{context}_{ending_name}", (prefix + ending).encode(),
+                    diagnostic, timeout=5)
+
     print_class = """
         class PrintBox {
             TYPE value;

@@ -106,6 +106,9 @@ ReservedWord     = "if" | "then" | "else" | "let" | "in" | "while"
 
 Constraints of the current implementation:
 
+- Commas separate parameters and arguments; trailing commas are rejected, even
+  with whitespace or comments before `)`. Empty lists `()` remain allowed where
+  the grammar has `ParamList?` or `ArgList?`.
 - Identifiers exclude reserved words and underscores. Whitespace, `//` line
   comments and non-nested `/* ... */` comments are ignored between tokens.
   A block comment must end with `*/`, which may occur at the end of the file.
