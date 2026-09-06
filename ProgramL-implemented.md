@@ -117,6 +117,10 @@ Constraints of the current implementation:
   may end at EOF without a newline.
 - A minus immediately followed by a digit or `.` is part of a number token.
   Write subtraction as `x - 1`; `x-1` and `x -1` do not parse as subtraction.
+- `void` is permitted only as a plain return type for functions and methods.
+  Parameters, fields, local variables and the type inside `nullptr<T>` must use
+  ordinary `Type` values. `ref void` and pointers to `void` at any depth are
+  rejected during parsing. Constructors keep their implicit return without a value.
 - `int` means `int64`. Integer literals are `int64`; literals with a decimal
   point or exponent are `double`.
 - Integer conditions in `if`, `while` and inline `if` are false for zero and

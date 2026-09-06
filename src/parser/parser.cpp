@@ -146,10 +146,7 @@ std::vector<std::string> Parser::parseClassFunctionNames(){
     }
     while(currentToken.type == FUNCTION){
         eat(FUNCTION);
-        if(currentToken.type == REF){
-            eat(REF);
-        }
-        parseType(currentToken.value);
+        parseReturnType();
         const std::string methodName = nameOfClass + "." + currentToken.value;
         nameFunctions.push_back(currentToken.value);
         eat(VAR);
@@ -216,7 +213,7 @@ Statement* Parser::parseStm(){
                 eat(VAR);
                 privateMembers.emplace_back(type, privateMember);
                 eat(ENDEXPR);
-            } while (currentToken.type == TYPE || currentToken.type == UPPERNAME);
+            } while (currentToken.type == TYPE || currentToken.type == UPPERNAME || currentToken.type == VOID);
         }
         eat(PUBLIC);
         eat(COLON);
@@ -297,13 +294,13 @@ Statement* Parser::parseStm(){
             eat(VAR);
             members.emplace_back(type, member);
             eat(ENDEXPR);
-        } while (currentToken.type == TYPE || currentToken.type  == UPPERNAME);
+        } while (currentToken.type == TYPE || currentToken.type == UPPERNAME || currentToken.type == VOID);
         eat(RBRACE);
         structType->setMembers(members);
 
         return new DefineStruct(structType);
     }
-    if (currentToken.type == TYPE  || currentToken.type == UPPERNAME) { 
+    if (currentToken.type == TYPE || currentToken.type == UPPERNAME || currentToken.type == VOID) {
         TypeInfo typeVar = parseType(currentToken.value);
         std::string var = parseVar(currentToken.value);
         eat(EQ);
@@ -328,12 +325,7 @@ Statement* Parser::parseStm(){
     }
     if(currentToken.type == FUNCTION) {
         eat(FUNCTION);
-        bool isReference = false;
-        if(currentToken.type == REF) {
-            eat(REF);
-            isReference = true;
-        }
-        TypeInfo typeFunc = parseType(currentToken.value, isReference);
+        TypeInfo typeFunc = parseReturnType();
         std::string nameFunc = currentToken.value;
         lastFuncion = nameFunc;
         eat(VAR);
@@ -646,8 +638,7 @@ Type* Parser::parseBaseType(std::string stringType){
         return TypeManager::instance().getSignedIntType(64);
     }
     if(stringType == "void"){
-        eat(VOID);
-        return TypeManager::instance().getVoidType();
+        throw std::runtime_error("'void' is only allowed as a non-reference function return type");
     }
     else if(isupper(stringType[0])){
         for(auto structType : symbolStructsType){
@@ -680,6 +671,25 @@ Type* Parser::wrapWithPointers(Type* baseType) {
     return currentType;
 }
 
+
+TypeInfo Parser::parseReturnType() {
+    bool isReference = false;
+    if (currentToken.type == REF) {
+        eat(REF);
+        isReference = true;
+    }
+    if (currentToken.type == VOID) {
+        if (isReference) {
+            throw std::runtime_error("'ref void' is not a valid return type");
+        }
+        eat(VOID);
+        if (currentToken.value == "*") {
+            throw std::runtime_error("Pointers to 'void' are not supported");
+        }
+        return {TypeManager::instance().getVoidType(), false};
+    }
+    return parseType(currentToken.value, isReference);
+}
 
 TypeInfo Parser::parseType(std::string stringType, bool isReference){   
 

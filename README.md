@@ -377,6 +377,27 @@ program must generate a fresh executable, pass LLVM 18 IR verification, and run
 with the expected output and exit status. Sources, logs and valid compilation
 artifacts stay under `build/comments-O<level>/`.
 
+### Check void type restrictions
+
+After rebuilding `dtc`, run these regressions sequentially in Ubuntu:
+
+```bash
+python3 scripts/check-void-types.py 0
+python3 scripts/check-void-types.py 3
+```
+
+From PowerShell, prefix each command with `wsl -d $Distro --exec`.
+`void` is allowed only as a plain return type for functions and methods. The
+parser rejects `ref void`, pointers to `void` at any depth, `nullptr<void>` and
+`void` parameters, fields and local variables. The checks cover functions,
+methods and constructors, first and second positions, comments and exact EOF,
+LF and CRLF endings. Every invalid source must report a parsing error, return
+status `1` and produce no new IR, object or executable.
+Valid controls preserve void functions/methods, constructors, ordinary value
+and reference returns, pointers and `nullptr<int>`. They reuse the control-flow
+suite's IR verification and execution checks. Sources, diagnostics and valid
+artifacts stay under `build/void-types-O<level>/`.
+
 ### Check compiler driver failures
 
 Build the optional driver fixture and run these checks sequentially in Ubuntu:
