@@ -154,6 +154,28 @@ def cases():
             return if (x < 0) then 20 else 21;
         }
     """, [2, 1, -1, 0]), [10, 11, 20, 21])
+    valid("inline_reference_original", function("""
+        int x = 7;
+        int* p = &x;
+        print(if false then 9 else *p);
+        return 0;
+    """, "main", ""), [7])
+    reference_helper = function("return value;", "getref", "ref int value", "ref int")
+    for name, expression, expected in (
+        ("deref_then", "if (x > 0) then *p else 9", [7, 9]),
+        ("deref_else", "if (x > 0) then 9 else *p", [9, 7]),
+        ("deref_both", "if (x > 0) then *p else *q", [7, 13]),
+        ("call_then", "if (x > 0) then getref(first) else 9", [7, 9]),
+        ("call_else", "if (x > 0) then 9 else getref(first)", [9, 7]),
+        ("call_both", "if (x > 0) then getref(first) else getref(second)", [7, 13]),
+    ):
+        valid(f"inline_reference_{name}", reference_helper + program(f"""
+            int first = 7;
+            int second = 13;
+            int* p = &first;
+            int* q = &second;
+            return {expression};
+        """, [1, 0]), expected)
     valid("comments_after_returns", program("""
         if (x > 0) { return 1; /* comment */ } else {
             return 2; // comment

@@ -41,6 +41,14 @@ own authorization.
 
 - Use an informative, imperative subject in the repository's message language
   (currently English), unless the user requests another language or convention.
+- When the commit relates to an issue, start the subject with the issue reference,
+  followed by a short description of the change:
+  - `Fixes #N <description>` when the commit completely resolves a bug issue.
+  - `Closes #N <description>` when the commit completes a feature issue.
+  - `#N <description>` when the commit contributes to an issue without closing it.
+  Use the last form for individual fixes in a general bug tracker; resolving one
+  tracked bug does not complete the entire tracker. Do not add closing keywords
+  elsewhere in the message unless the whole issue is resolved.
 - Scale the body to the change. For substantial commits, explain the concrete
   configuration or behavior changes, supporting documentation/examples, and
   relevant validation. Include versions or commands only when they aid review.

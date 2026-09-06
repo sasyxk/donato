@@ -283,7 +283,8 @@ From PowerShell, prefix each command with `wsl -d $Distro --exec`.
 The script generates `.donato` programs under `build/control-flow-O<level>/sources/`,
 compiles them sequentially and compares actual output with expected output.
 It covers `if`/`else` trees up to five levels, partially returning branches,
-loops, methods and constructors. Invalid programs must fail during parsing with
+loops, methods, constructors, and inline `if` branches with pointer dereferences
+or calls returning `ref` values. Invalid programs must fail during parsing with
 the expected diagnostic, before LLVM IR or an executable is generated.
 Valid programs must also pass LLVM 18 `opt` verification and checks for unnecessary
 merge blocks. Each case retains its source, logs and, when valid, IR, executable

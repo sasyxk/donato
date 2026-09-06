@@ -225,7 +225,7 @@ Value* IfOp::codegen(llvm::IRBuilder<>& builder) {
     builder.SetInsertPoint(elseBB);
     Value* elseVal = elseExpr->codegen(builder);
     if (elseVal->getLLVMValue() == nullptr){
-       thenVal->loadLLVMValue("else_op", builder);
+       elseVal->loadLLVMValue("else_op", builder);
     }
     llvm::BasicBlock* elseExitBB = builder.GetInsertBlock();
     builder.CreateBr(mergeBB);
