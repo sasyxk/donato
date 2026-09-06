@@ -143,6 +143,10 @@ Constraints of the current implementation:
 - A `ref` binding or argument must refer to suitable existing storage. Unary `*`
   reads through a pointer; assignment through `*p = ...` is not a statement form.
   `&` consumes an entire `Expr` in this parser and requires an addressable result.
+- Functions and methods may return `ref Type` to existing storage. Binding the
+  result with `ref` creates an alias, so writes affect the original storage;
+  an ordinary value declaration copies the result. Reference returns also
+  support pointer and aggregate types.
 - Comparisons occur only in `Condition`, not as general expressions such as
   `bool b = x < y;`. Logical operators and chained comparisons are not implemented.
 - Calls used as standalone statements require a `void` return type. Use the

@@ -276,6 +276,97 @@ def cases():
         "CALLS", "\n".join(f"print(first.choose({x}));" for x in range(32))),
         [10, 20, 99] + list(range(32)), 0)
 
+    reference_class = """
+        class Box {
+            TYPE value;
+        public:
+            Box(TYPE initial) { this.value = initial; return; }
+            function TYPE read() { return this.value; }
+            function ref TYPE get() { return this.value; }
+            function ref TYPE forward() { return this.get(); }
+            function void set(TYPE next) { this.value = next; return; }
+        }
+    """
+    valid("class_reference_original", reference_class.replace("TYPE", "int")
+          + function("""
+              Box* p = new Box(7);
+              ref Box box = *p;
+              ref int alias = box.get();
+              alias = 9;
+              print(alias);
+              print(box.read());
+              delete p;
+              return 0;
+          """, "main", ""), [9, 9])
+
+    for name, type_name, setup in (
+        ("int8", "int8", "int8 start = 7; int8 next = 9;"),
+        ("int16", "int16", "int16 start = 7; int16 next = 9;"),
+        ("int32", "int32", "int32 start = 7; int32 next = 9;"),
+        ("int64", "int64", "int64 start = 7; int64 next = 9;"),
+        ("int", "int", "int start = 7; int next = 9;"),
+        ("double", "double", "double start = 7.0; double next = 9.0;"),
+        ("bool", "bool", "bool start = false; bool next = true;"),
+        ("pointer", "int*", "int first = 7; int second = 9; "
+         "int* start = &first; int* next = &second;"),
+        ("pointer_pointer", "int**", "int first = 7; int second = 9; "
+         "int* p = &first; int* q = &second; int** start = &p; int** next = &q;"),
+    ):
+        source = function("return value;", "getref", f"ref {type_name} value",
+                          f"ref {type_name}") + reference_class.replace("TYPE", type_name)
+        body = setup + """
+            auto allocation = new Box(start);
+            ref Box box = *allocation;
+            TYPE copy = box.get();
+            ref TYPE alias = box.get();
+            alias = next;
+            print(if box.read() == next then 1 else 0);
+            print(if box.get() == next then 1 else 0);
+            print(if copy == start then 1 else 0);
+            ref TYPE forwarded = box.forward();
+            forwarded = start;
+            print(if box.read() == start then 1 else 0);
+            box.set(next);
+            print(if alias == next then 1 else 0);
+            ref TYPE freealias = getref(alias);
+            freealias = start;
+            print(if box.read() == start then 1 else 0);
+            delete allocation;
+            return 0;
+        """.replace("TYPE", type_name)
+        valid(f"class_reference_{name}", source + function(body, "main", ""), [1] * 6)
+
+    for kind, declaration, read, update in (
+        ("struct", "struct Item { int value; }", "return item.value;", "alias.value = 9;"),
+        ("class", """class Item {
+            int value;
+        public:
+            Item(int initial) { this.value = initial; return; }
+            function int read() { return this.value; }
+            function void set(int next) { this.value = next; return; }
+        }""", "return item.read();", "alias.set(9);"),
+    ):
+        source = declaration + """
+            class Holder {
+                Item* value;
+            public:
+                Holder(Item* initial) { this.value = initial; return; }
+                function ref Item get() { return *this.value; }
+                function int read() { ref Item item = *this.value; READ }
+            }
+        """.replace("READ", read)
+        valid(f"class_reference_{kind}", source + function("""
+            auto item = new Item(7);
+            auto allocation = new Holder(item);
+            ref Holder holder = *allocation;
+            ref Item alias = holder.get();
+            UPDATE
+            print(holder.read());
+            delete allocation;
+            delete item;
+            return 0;
+        """.replace("UPDATE", update), "main", ""), [9])
+
     for name, statement, token in (
         ("return", "return missing;", "return"),
         ("print", "print(999);", "print"),

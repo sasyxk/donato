@@ -56,6 +56,24 @@ For strings or other undefined semantics, include a design task rather than
 presenting a proposed syntax or API as already decided. Follow the repository's
 current issue language, presently English, unless the user requests otherwise.
 
+## Maintain tracker checklists
+
+The repository owner requests automatic maintenance of the relevant tracker
+entry during related work. Add one unchecked item for a newly reported bug or
+task, preserving its identifier (for example, F5). Update an existing item in
+place rather than duplicating it, and check it only after implementation and
+validation are complete. Analysis alone leaves the item unchecked.
+
+After a related commit is created, record a short fix summary, the validation
+result and a Markdown link to `https://github.com/<owner>/<repo>/commit/<full-sha>`
+in that entry. If a later corrective commit addresses the same item, replace
+its fix link with the latest relevant commit and update the summary as needed.
+Do not substitute an unrelated newer commit. If the commit is still local,
+mark the link as pending the owner's push; on later related work, check its
+publication status and remove that note once it is available on GitHub.
+Updating the tracker does not authorize pushing. Preserve other checklist
+entries and keep the tracker open when completing an individual item.
+
 ## Authentication and private information
 
 Never put passwords, access tokens, authorization headers, private keys,

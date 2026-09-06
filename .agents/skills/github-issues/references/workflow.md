@@ -53,7 +53,7 @@ Existing anchors (fetch current state; these are not a snapshot of completion):
 | Resource | URL |
 | --- | --- |
 | Road to 0.1.0 | https://github.com/sasyxk/donato/milestone/1 |
-| Integer condition conversion | https://github.com/sasyxk/donato/issues/1 |
+| Integer condition conversion (F1, consolidated in tracker) | https://github.com/sasyxk/donato/issues/6 |
 | Double arithmetic and equality | https://github.com/sasyxk/donato/issues/2 |
 | Pattern matching | https://github.com/sasyxk/donato/issues/3 |
 | Native Windows 11 | https://github.com/sasyxk/donato/issues/4 |

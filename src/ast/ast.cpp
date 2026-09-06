@@ -347,7 +347,7 @@ Value* invokeMemberFunction(
    if (wantReturn) {
         Type* returnType = functionStruct->returnType.type;
         llvm::Value* llvmValueReturn = builder.CreateCall(callee, argValues, "calltmp");
-        return returnType->createValue(llvmValueReturn, ctx);
+        return returnType->createValue(llvmValueReturn, ctx, functionStruct->returnType.isReference);
     } else {
         if (!dynamic_cast<VoidType*>(functionStruct->returnType.type)) {
             throw std::runtime_error("Expected void return type in " + memberName);

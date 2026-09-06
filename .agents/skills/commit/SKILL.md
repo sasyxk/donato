@@ -62,3 +62,8 @@ own authorization.
 - After committing, verify the commit's file list and working-tree status. Report
   its hash, subject, substantive changes and validation; identify any remaining
   work without implying a push has occurred.
+- For work tracked by a checklist issue, automatically update the relevant item
+  after the commit using the repository's `github-issues` skill. Record the
+  validation and link the latest relevant corrective commit; distinguish a local
+  commit awaiting push from a published one. Check completed items and leave the
+  tracker open, following the checklist rules in that skill.

@@ -77,10 +77,10 @@ std::vector<std::string> Parser::parseClassFunctionNames(){
     }
     while(currentToken.type == FUNCTION){
         eat(FUNCTION);
-        eat(currentToken.type);
-        while(currentToken.value == "*"){
-            eat(currentToken.type);
+        if(currentToken.type == REF){
+            eat(REF);
         }
+        parseType(currentToken.value);
         nameFunctions.push_back(currentToken.value);
         eat(VAR);
         eat(LPAREN);
