@@ -305,6 +305,28 @@ Functions must return on every structurally checked path; a final `if`/`else`
 whose branches both return needs no extra return. A `while` is conservatively
 allowed to fall through. See [the implemented language rules](ProgramL-implemented.md).
 
+### Check comments and lexical diagnostics
+
+After rebuilding `dtc`, run these regression checks sequentially in Ubuntu:
+
+```bash
+python3 scripts/check-comments.py 0
+python3 scripts/check-comments.py 3
+```
+
+From PowerShell, prefix each command with `wsl -d $Distro --exec`.
+The script preserves the exact source bytes, including missing final newlines
+and CRLF endings. It checks unterminated block comments before the first token,
+after `return`, after a complete function and during class scanning. Every such
+input must exit with status `1`, report `Unterminated block comment` at the opening
+`/*` (one-based line and byte column), and produce no IR, object or executable.
+
+Valid controls cover empty and non-nested comments, closing delimiters at EOF,
+comments after terminating branches, line comments and division. Each valid
+program must generate a fresh executable, pass LLVM 18 IR verification, and run
+with the expected output and exit status. Sources, logs and valid compilation
+artifacts stay under `build/comments-O<level>/`.
+
 ## Known workflow limitations
 
 - Compiler exit status alone is insufficient: the current implementation does

@@ -65,15 +65,18 @@ int main(int argc, char** argv) {
 	
     // Parsing configuration
     Tokenizer tokenizer(code);
-    Parser parser(tokenizer);
     std::vector<Statement*> ast;
     ast.reserve(10);
 
     // Generate ast
     try {
+        Parser parser(tokenizer);
         do {
             ast.push_back(parser.parseCode());
         } while (parser.hasMoreTokens());
+    } catch (const LexicalError& e) {
+        std::cerr << "Error in tokenizer:: " << e.what() << "\n";
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Error in parsing:: " << e.what() << " " << tokenizer.getPos() << "\n"; 
         return 1;

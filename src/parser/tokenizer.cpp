@@ -14,17 +14,15 @@ Token Tokenizer::nextToken() {
         // Comment operator management /* ... */
         if (input[pos] == '/') {
             if (pos + 1 < input.size() && input[pos + 1] == '*') {
-                pos += 2;
-                while (pos + 1 < input.size()) {
-                    if (input[pos] == '*' && input[pos + 1] == '/') {
-                        pos += 2;
-                        break;
-                    }
-                    pos++;
+                const size_t commentStart = pos;
+                const size_t commentEnd = input.find("*/", commentStart + 2);
+                if (commentEnd == std::string::npos) {
+                    throw LexicalError("Unterminated block comment", getPos(commentStart));
                 }
-                continue; 
+                pos = commentEnd + 2;
+                continue;
             }
-            else if (input[pos + 1] == '/') {
+            else if (pos + 1 < input.size() && input[pos + 1] == '/') {
                 pos += 2;
                 while (pos < input.size() && input[pos] != '\n') {
                     pos++;
@@ -37,8 +35,8 @@ Token Tokenizer::nextToken() {
     } 
 
 
-    char c = input[pos];
     if (pos >= input.size()) return Token(END);
+    char c = input[pos];
 
     
     if (isdigit(c) || (c == '.' && isdigit(input[pos + 1])) || (c == '-' && (isdigit(input[pos + 1]) || input[pos + 1] == '.'))) {
@@ -131,21 +129,23 @@ Token Tokenizer::nextToken() {
     throw std::runtime_error("Unknown token: " + std::string(1, c));
 }
 
-std::string Tokenizer::getPos() {
+std::string Tokenizer::getPos(size_t position) const {
+    if (position == std::string::npos) {
+        // Keep parser diagnostics at the last consumed character.
+        position = pos == 0 ? 0 : pos - 1;
+    }
+    if (position > input.size()) {
+        return "[Precise location in file not identified]";
+    }
     size_t row = 1;
     size_t col = 1;
-    size_t posStart = 0;
-    std::string position = "";
-    for (const auto& c : input) {
-        if(++posStart == pos){
-            position += "[" + std::to_string(row) + ", " + std::to_string(col) +  "]" ;
-            return position;
-        }
-        col++;
-        if(c == '\n'){
+    for (size_t i = 0; i < position; ++i) {
+        if (input[i] == '\n') {
             col = 1;
             row++;
+        } else {
+            col++;
         }
     }
-    return "[Precise location in file not identified]";
+    return "[" + std::to_string(row) + ", " + std::to_string(col) + "]";
 }

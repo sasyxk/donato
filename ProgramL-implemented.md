@@ -108,6 +108,10 @@ Constraints of the current implementation:
 
 - Identifiers exclude reserved words and underscores. Whitespace, `//` line
   comments and non-nested `/* ... */` comments are ignored between tokens.
+  A block comment must end with `*/`, which may occur at the end of the file.
+  Reaching EOF without that delimiter is a lexical error reporting the opening
+  `/*` location, regardless of the final character or newline. A `//` comment
+  may end at EOF without a newline.
 - A minus immediately followed by a digit or `.` is part of a number token.
   Write subtraction as `x - 1`; `x-1` and `x -1` do not parse as subtraction.
 - `int` means `int64`. Integer literals are `int64`; literals with a decimal
