@@ -1,5 +1,7 @@
 #include "compiler_flags.h"
+#include <charconv>
 #include <iostream>
+#include <string_view>
 #include <unistd.h>   
 #include <cstring>    
 #include <cstdlib>    
@@ -27,13 +29,19 @@ bool CompilerFlags::parseArgs(int argc, char** argv) {
     int opt;
     while ((opt = getopt(argc, argv, "O:tfo:")) != -1) {
         switch (opt) {
-            case 'O':
-                optimizationLevel = std::stoi(optarg);
-                if (optimizationLevel < 0 || optimizationLevel > 3) {
-                    std::cerr << "Error: optimization level must be between 0 and 3.\n";
+            case 'O': {
+                std::string_view argument(optarg);
+                int level = 0;
+                const char* end = argument.data() + argument.size();
+                auto result = std::from_chars(argument.data(), end, level);
+                if (result.ec != std::errc{} || result.ptr != end ||
+                    level < 0 || level > 3) {
+                    std::cerr << "Error: -O requires a decimal integer between 0 and 3.\n";
                     return false;
                 }
+                optimizationLevel = level;
                 break;
+            }
             case 't':
                 truncateEnabled = true;
                 break;

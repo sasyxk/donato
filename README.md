@@ -224,6 +224,13 @@ env PATH=/usr/lib/llvm-18/bin:/usr/bin:/bin ./dtc -o hello ../examples/hello.don
 | `-f` | Enable runtime checks for signed arithmetic overflow and integer division by zero. Off by default. |
 | `--help` | Print usage. Currently exits with status `1`. |
 
+The entire `-O` value must be a decimal integer between 0 and 3. Empty values,
+non-numeric text, suffixes such as `2junk`, fractions, oversized integers,
+whitespace and a leading `+` are rejected with a diagnostic and status `1` before
+compilation. Leading zeros and negative zero remain valid: `02` selects level 2
+and `-0` selects level 0. If `-O` is repeated, every value must be valid and the
+last one selects the optimization level.
+
 The optimization setting controls [LLVM machine-code generation via `llc`](https://llvm.org/docs/CommandGuide/llc.html#options).
 It does not select the CMake build type or add a full LLVM IR optimization pipeline.
 For example, compile a program with level 3 and both runtime checks:
@@ -405,6 +412,28 @@ Valid controls preserve void functions/methods, constructors, ordinary value
 and reference returns, pointers and `nullptr<int>`. They reuse the control-flow
 suite's IR verification and execution checks. Sources, diagnostics and valid
 artifacts stay under `build/void-types-O<level>/`.
+
+### Check command-line arguments
+
+After rebuilding `dtc`, run these checks in Ubuntu:
+
+```bash
+python3 scripts/check-cli.py
+```
+
+From PowerShell, prefix the command with `wsl -d $Distro --exec`.
+The suite passes exact argument arrays to fresh compiler processes, including
+empty strings and whitespace, and covers all four levels in separate and compact
+forms, repeated options, malformed values, missing arguments, `--help`, unknown
+options and combined `-tf` flags. Rejected commands must return `1`, report the
+expected diagnostic, call neither `llc` nor `clang` and preserve existing output
+files or leave fresh paths absent. The existing driver tool fixture records
+arguments before executing the real LLVM 18 tools, so valid cases also verify
+the effective optimization level. Generated programs must pass IR verification,
+print `value: 7` and exit with `7`, separately from `dtc`'s successful status `0`.
+Sources, exact commands and logs stay in unique directories under `build/cli/`.
+Run this suite sequentially with other compiler checks because intermediates
+are shared within the build directory.
 
 ### Check compiler driver failures
 

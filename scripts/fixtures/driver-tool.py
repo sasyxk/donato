@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Local llc/clang stand-ins used only by check-driver.py on Linux."""
+"""Local llc/clang stand-ins for compiler CLI and driver checks on Linux."""
 
 import json
 import os
