@@ -124,6 +124,8 @@ Constraints of the current implementation:
 - Use `function int main() { ... return 0; }` as the executable entry point.
   Declare functions and types before use; self-recursive functions are supported.
   Declarations of functions, structs and classes belong at the top level.
+  Variables and other statements at the top level are rejected during parsing,
+  before code generation; global variables are not supported.
 - Blocks contain at least one statement. The parser rejects statements after a
   `return` or an `if`/`else` whose two branches cannot fall through, at any nesting
   depth. Comments after these statements are allowed.

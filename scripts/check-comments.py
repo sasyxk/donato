@@ -79,9 +79,9 @@ def cases():
     valid("line_comment_before_code", b"// /* ignored\r\n" + printing_main)
     valid("division", b"function int main() { print(8 / 2); return 0; }", "value: 4\n")
 
-    # Preserve ordinary parser diagnostics and the trailing slash operator.
+    # Check parser diagnostics, including an invalid token at the top level.
     invalid("slash_at_eof", main + b"/",
-            "Error in parsing:: Unexpected Statement Token: '/' [1, 34]\n")
+            "Error in parsing:: Expected 'function', 'struct' or 'class' at top level, got '/' [1, 34]\n")
     invalid("missing_semicolon", b"function int main() { return 0 /**/ }",
             "Error in parsing:: Unexpected tokens '}' after expression [1, 37]\n")
     invalid("unknown_first_token", b"@",

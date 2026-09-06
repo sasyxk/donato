@@ -44,6 +44,53 @@ def cases():
         tests.append(dict(name=name, source=source, diagnostic=diagnostic,
                           flags=(), timeout=timeout))
 
+    top_level_error = "Expected 'function', 'struct' or 'class' at top level, got "
+    main_function = function("print(1); return 0;", "main", "")
+    helper_function = function("return 1;", "helper", "")
+    for name, statement, token in (
+        ("variable", "int x = 1;", "int"),
+        ("auto", "auto x = 1;", "auto"),
+        ("reference", "ref int x = 1;", "ref"),
+        ("assignment", "x = 1;", "x"),
+        ("print", "print(1);", "print"),
+        ("call", "helper();", "helper"),
+        ("return", "return 0;", "return"),
+        ("if", "if (true) { print(1); }", "if"),
+        ("while", "while (false) { print(1); }", "while"),
+        ("delete", "delete nullptr<int>;", "delete"),
+    ):
+        for place, prefix, suffix in (
+            ("before_function", "", main_function),
+            ("between_functions", helper_function, main_function),
+            ("after_function", helper_function + main_function, ""),
+        ):
+            invalid(f"top_level_{name}_{place}", prefix + statement + "\n" + suffix,
+                    top_level_error + f"'{token}'", timeout=5)
+
+    for kind, declaration in (
+        ("struct", "struct Sample { int value; }\n"),
+        ("class", "class Sample { public: Sample() { return; } }\n"),
+    ):
+        for name, statement, token in (
+            ("variable", "int x = 1;", "int"),
+            ("aggregate_pointer", "Sample* x = nullptr<Sample>;", "Sample"),
+        ):
+            invalid(f"top_level_{name}_after_{kind}",
+                    declaration + statement + "\n" + main_function,
+                    top_level_error + f"'{token}'", timeout=5)
+
+    for name, source in (("empty", b""), ("comments_only", b"/* closed */ // eof")):
+        invalid(f"top_level_{name}", source, top_level_error + "''", timeout=5)
+    for keyword, declaration in (
+        ("function", helper_function),
+        ("struct", "struct Sample { int value; }"),
+        ("class", "class Sample { public: Sample() { return; } }"),
+    ):
+        invalid(f"top_level_nested_{keyword}",
+                function(declaration + "\nreturn 0;", "main", ""),
+                f"Unexpected Statement token '{keyword.upper()}'", timeout=5)
+    valid("top_level_local_variable", function("int x = 1; print(x); return 0;", "main", ""), [1])
+
     for type_name in ("int8", "int16", "int32", "int64", "int", "bool"):
         if type_name == "bool":
             inputs, expected, zero = ["true", "false"], [1, 0], "false"

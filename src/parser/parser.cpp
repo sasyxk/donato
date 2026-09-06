@@ -33,8 +33,17 @@ void Parser::errorFunction(){
 }
 
 Statement* Parser::parseCode(){
-    Statement* stm = parseStm();
-    return stm;
+    switch (currentToken.type) {
+    case FUNCTION:
+    case STRUCT:
+    case CLASS:
+        return parseStm();
+    default:
+        throw std::runtime_error(
+            "Expected 'function', 'struct' or 'class' at top level, got '" +
+            currentToken.value + "'"
+        );
+    }
 }
 
 Parser::ParsedBlock Parser::parseBlock() {

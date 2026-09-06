@@ -294,6 +294,12 @@ Valid programs must also pass LLVM 18 `opt` verification and checks for unnecess
 merge blocks. Each case retains its source, logs and, when valid, IR, executable
 and expected output under `build/control-flow-O<level>/`.
 
+Top-level checks reject variables and other statements before, between and after
+functions, and variable declarations after structs and classes. They require
+status `1`, a diagnostic naming the allowed declarations and no new IR, object
+or executable. Empty and comment-only inputs and declarations nested inside a
+function are also rejected; local variables remain valid.
+
 Incomplete class tests check constructor and method parameter lists and bodies,
 including nested braces, comments and reference return types. These inputs
 preserve EOF, LF and CRLF exactly and must fail with status `1`, the expected
